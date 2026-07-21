@@ -1,0 +1,29 @@
+id: cv
+name: CV 循环伏安曲线
+category: electrochemistry/cv
+version: 0.1.0
+description: 保留原始扫描顺序的通用 CV 单循环或多循环绘图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 30
+family: electrochemistry
+examples:
+  - id: standard
+    name_zh: CV 多循环样例
+    file: example_standard.csv
+    description_zh: 保留扫描顺序的电位—电流响应。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 绘制一个电位列与一个或多个电流/电流密度系列。
+  required_columns: [电位或电压列, 一个或多个电流系列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Potential/Voltage/E, 电位/电压, Current/Current density, 电流/电流密度]
+  notes_zh: [严格保留原始扫描顺序, 不自动做峰积分或基线处理]

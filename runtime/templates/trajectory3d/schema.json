@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "trajectory3d",
+  "layout": "long",
+  "required_roles": ["x3d", "y3d", "z3d", "series_id"],
+  "third_axis_requires_semantic_name_and_unit": true,
+  "min_series": 1,
+  "max_series": 6,
+  "min_points_per_series": 2,
+  "min_columns": 4,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

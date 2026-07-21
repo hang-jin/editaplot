@@ -1,0 +1,17 @@
+id: xps_adaptive
+name: XPS Adaptive Spectrum
+category: chemistry/xps
+version: 0.1.0
+description: Adaptive XPS plot for raw scans, background, envelope, variable components, and residual columns.
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs:
+  - opju
+  - png
+  - pdf
+  - tif
+status: implemented
+visibility: internal
+workflow: xps_renderer

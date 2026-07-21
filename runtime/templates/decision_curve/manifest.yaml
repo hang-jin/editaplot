@@ -1,0 +1,32 @@
+id: decision_curve
+name: 医学决策曲线分析
+category: medical-ai/clinical-utility
+version: 0.1.0
+description: 使用用户提供的阈值概率和净获益序列绘制决策曲线
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 142
+family: medical_ai_evidence
+examples:
+  - id: external_validation_dca
+    name_zh: 多模型临床净获益教学样例
+    file: example_standard.csv
+    description_zh: 模型、Treat all 和 Treat none 都由用户显式提供，不在绘图层计算净获益。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较模型在临床阈值范围内的净获益。
+  required_columns: [Threshold, 一个或多个模型 Net benefit, Treat all, Treat none]
+  optional_columns: []
+  accepted_layouts: [宽表，每条曲线一列]
+  aliases: [Threshold/阈值概率, Treat all/全部干预, Treat none/不干预]
+  notes_zh:
+    - 阈值必须位于 0–1。
+    - 不从标签、预测概率或患病率静默计算净获益。
+    - Treat all 与 Treat none 使用中性灰，模型使用同一医学蓝青色族。

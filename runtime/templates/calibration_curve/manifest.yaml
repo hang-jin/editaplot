@@ -1,0 +1,32 @@
+id: calibration_curve
+name: 医学模型校准曲线
+category: medical-ai/reliability
+version: 0.1.0
+description: 使用用户提供的分箱预测概率、观察比例和样本数绘制校准证据图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 141
+family: medical_ai_evidence
+examples:
+  - id: external_calibration
+    name_zh: 外部验证校准教学样例
+    file: example_standard.csv
+    description_zh: 使用预先计算的分箱观察比例，底部仅显示按最大箱样本数缩放的分布条。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 展示预测概率与实际发生率的一致性，不在绘图阶段静默分箱或拟合。
+  required_columns: [Predicted probability, Observed fraction, Bin count]
+  optional_columns: []
+  accepted_layouts: [一行一个预计算概率箱]
+  aliases: [预测概率/平均预测概率, 观察比例/实际发生率, 分箱样本数/频数]
+  notes_zh:
+    - 所有概率必须位于 0–1，Bin count 必须非负且至少一个大于 0。
+    - 不计算校准斜率、截距、Brier score、置信区间或平滑曲线。
+    - 底部分布条是工作簿 helper column，仅用于显示，原始数据保持不变。

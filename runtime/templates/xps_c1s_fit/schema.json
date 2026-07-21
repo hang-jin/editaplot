@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "xps_c1s_fit",
+  "required": [
+    "BindingEnergy",
+    "Raw",
+    "Background",
+    "Envelope",
+    "Peak_CC",
+    "Peak_CO",
+    "Peak_CeqO",
+    "Peak_OCeqO"
+  ],
+  "numeric_columns": [
+    "BindingEnergy",
+    "Raw",
+    "Background",
+    "Envelope",
+    "Peak_CC",
+    "Peak_CO",
+    "Peak_CeqO",
+    "Peak_OCeqO"
+  ],
+  "min_rows": 20,
+  "binding_energy": {
+    "unit": "eV",
+    "warn_min": 275.0,
+    "warn_max": 300.0,
+    "typical_low": 280.0,
+    "typical_high": 292.5
+  }
+}

@@ -1,0 +1,31 @@
+id: bubble
+name: 气泡关系图
+category: general/multivariate
+version: 0.1.0
+description: 以 X、Y 和显式正值 Size 同时表达位置与规模
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 124
+family: general_multivariate
+examples:
+  - id: basic
+    name_zh: 位置与规模
+    file: example_standard.csv
+    description_zh: 十个观测用气泡面积编码一个额外正值变量。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 在连续 X/Y 关系上用气泡大小表达第三个正值变量。
+  required_columns: [一个数值 X, 一个数值 Y, 一个正值 Size]
+  optional_columns: []
+  accepted_layouts: [X/Y/Size 三列]
+  aliases: [Exposure/Response/Sample size, 暴露/响应/样本量]
+  notes_zh:
+    - Size 必须为正；缩放规则和原始范围写入计划与反读报告。
+    - 不把颜色同时编码为第四变量，避免难以解释的默认多重编码。

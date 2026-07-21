@@ -1,0 +1,6 @@
+Metric,Baseline,Enhanced,Proposed
+Accuracy,0.72,0.82,0.88
+Robustness,0.68,0.77,0.83
+Efficiency,0.81,0.79,0.77
+Recall,0.7,0.8,0.86
+Calibration,0.66,0.75,0.8

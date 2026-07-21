@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "calibration_curve",
+  "required_roles": ["x", "series", "count"],
+  "allowed_modes": ["precomputed_bins"],
+  "automatic_binning": false,
+  "automatic_calibration_statistics": false,
+  "min_columns": 3,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

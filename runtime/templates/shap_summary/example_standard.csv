@@ -1,0 +1,101 @@
+Feature,SHAP value,Feature value,Sample ID
+Tumor volume,0.41,38.2,S001
+Tumor volume,0.29,31.5,S002
+Tumor volume,-0.18,12.7,S003
+Tumor volume,0.52,45.1,S004
+Tumor volume,-0.31,8.9,S005
+Tumor volume,0.16,25.4,S006
+Tumor volume,-0.08,18.6,S007
+Tumor volume,0.35,34.8,S008
+Tumor volume,-0.27,10.4,S009
+Tumor volume,0.08,22.1,S010
+Tumor volume,0.46,41.7,S011
+Tumor volume,-0.14,15.2,S012
+Tumor volume,0.21,28.8,S013
+Tumor volume,0.04,20.3,S014
+Tumor volume,0.39,36.9,S015
+Tumor volume,-0.22,11.8,S016
+Tumor volume,0.12,24.6,S017
+Tumor volume,0.49,43.5,S018
+Tumor volume,-0.05,17.4,S019
+Tumor volume,0.26,30.7,S020
+ADC mean,-0.34,1.18,S001
+ADC mean,-0.22,1.26,S002
+ADC mean,0.27,0.82,S003
+ADC mean,-0.41,1.35,S004
+ADC mean,0.33,0.76,S005
+ADC mean,-0.12,1.11,S006
+ADC mean,0.18,0.91,S007
+ADC mean,-0.29,1.29,S008
+ADC mean,0.29,0.79,S009
+ADC mean,-0.37,1.32,S010
+ADC mean,0.08,0.98,S011
+ADC mean,-0.18,1.21,S012
+ADC mean,0.36,0.73,S013
+ADC mean,-0.08,1.07,S014
+ADC mean,0.22,0.86,S015
+ADC mean,-0.32,1.30,S016
+ADC mean,0.13,0.94,S017
+ADC mean,-0.26,1.24,S018
+ADC mean,0.31,0.77,S019
+ADC mean,-0.15,1.16,S020
+Texture entropy,0.24,5.72,S001
+Texture entropy,-0.17,4.31,S002
+Texture entropy,0.31,6.08,S003
+Texture entropy,-0.11,4.76,S004
+Texture entropy,0.19,5.41,S005
+Texture entropy,-0.26,4.02,S006
+Texture entropy,0.08,5.12,S007
+Texture entropy,0.28,5.88,S008
+Texture entropy,-0.22,4.14,S009
+Texture entropy,0.15,5.28,S010
+Texture entropy,0.35,6.21,S011
+Texture entropy,-0.08,4.91,S012
+Texture entropy,0.21,5.54,S013
+Texture entropy,-0.29,3.88,S014
+Texture entropy,0.11,5.19,S015
+Texture entropy,0.32,6.02,S016
+Texture entropy,-0.14,4.48,S017
+Texture entropy,0.25,5.76,S018
+Texture entropy,-0.04,5.01,S019
+Texture entropy,0.18,5.43,S020
+Enhancement ratio,0.18,1.62,S001
+Enhancement ratio,-0.21,0.84,S002
+Enhancement ratio,0.12,1.47,S003
+Enhancement ratio,-0.15,0.93,S004
+Enhancement ratio,0.23,1.76,S005
+Enhancement ratio,-0.09,1.08,S006
+Enhancement ratio,0.06,1.35,S007
+Enhancement ratio,-0.19,0.88,S008
+Enhancement ratio,0.16,1.55,S009
+Enhancement ratio,-0.12,0.98,S010
+Enhancement ratio,0.27,1.84,S011
+Enhancement ratio,-0.06,1.17,S012
+Enhancement ratio,0.09,1.42,S013
+Enhancement ratio,-0.23,0.79,S014
+Enhancement ratio,0.20,1.68,S015
+Enhancement ratio,-0.16,0.91,S016
+Enhancement ratio,0.13,1.51,S017
+Enhancement ratio,0.24,1.79,S018
+Enhancement ratio,-0.03,1.23,S019
+Enhancement ratio,0.05,1.34,S020
+Age,0.09,67,S001
+Age,-0.07,43,S002
+Age,0.14,72,S003
+Age,-0.11,38,S004
+Age,0.05,59,S005
+Age,-0.03,51,S006
+Age,0.12,69,S007
+Age,-0.08,46,S008
+Age,0.10,65,S009
+Age,-0.12,36,S010
+Age,0.07,61,S011
+Age,-0.05,49,S012
+Age,0.15,74,S013
+Age,-0.02,54,S014
+Age,0.04,58,S015
+Age,-0.09,42,S016
+Age,0.11,68,S017
+Age,-0.06,45,S018
+Age,0.08,63,S019
+Age,0.01,56,S020

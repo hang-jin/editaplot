@@ -1,0 +1,32 @@
+id: shap_summary
+name: 预计算 SHAP 汇总图
+category: medical-ai/interpretability
+version: 0.1.0
+description: 可编辑展示外部预计算的 SHAP 贡献值与特征值颜色映射
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 145
+family: medical_ai_evidence
+examples:
+  - id: imaging-features
+    name_zh: 医学影像模型特征贡献
+    file: example_standard.csv
+    description_zh: 长表输入外部已计算的 SHAP 值；特征顺序按首次出现保持不变。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 展示模型外部预计算的逐样本 SHAP 值，不在 Origin 中运行解释算法。
+  required_columns: [Feature, SHAP value, Feature value]
+  optional_columns: [Sample ID]
+  accepted_layouts: [长表，每行是一个样本-特征观测]
+  aliases: [特征, SHAP值, 特征值, 特征贡献]
+  notes_zh:
+    - 每个特征至少 3 个完整观测，至少 2 个不同特征。
+    - Feature value 仅在每个特征内部归一化为颜色；原 SHAP 横坐标保持不变。
+    - 不训练模型、不运行 SHAP、不推断特征重要性、不静默重排特征。

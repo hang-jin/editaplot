@@ -1,0 +1,229 @@
+{
+  "schema_version": "1.0",
+  "asset_policy": "reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
+  "case_count": 37,
+  "cases": [
+    {
+      "id": "bar-error-groups",
+      "title_zh": "分组柱状图与 SD 误差棒",
+      "sha256": "2b8e80b3865f46c8c2a76714555cfb4c189aff5a3b3bc4edb2feaf50be450ee8",
+      "size_bytes": 40793
+    },
+    {
+      "id": "bubble-indexed-size",
+      "title_zh": "大小编码气泡关系图",
+      "sha256": "e3c27979e9dbae196dc700a1a7da40178d55aa2ec339f64754f86d4dc6ff7e49",
+      "size_bytes": 46132
+    },
+    {
+      "id": "cv-cycles",
+      "title_zh": "CV 循环伏安曲线",
+      "sha256": "aa833fcc1c84bcd1228c0503a349121e5e62eb5faaf3644872faff6fb2c15fb4",
+      "size_bytes": 45041
+    },
+    {
+      "id": "diverging-effects",
+      "title_zh": "正负效应发散条形图",
+      "sha256": "e9b0d7d948f7d5cb5a47f44e8cd2e67e8923612b40e41b5a633e3cea3868ac60",
+      "size_bytes": 28641
+    },
+    {
+      "id": "eis-nyquist",
+      "title_zh": "EIS Nyquist 阻抗图",
+      "sha256": "81c3d11fbd416e9ed06b38750b8914e2afee04b359cbbf0048e5098b0fdcb8ef",
+      "size_bytes": 38248
+    },
+    {
+      "id": "forest-intervals",
+      "title_zh": "效应量森林图",
+      "sha256": "df26aadc469869023ee99f5cca5efa0b6eb46830b44212baf0fc784543014374",
+      "size_bytes": 28210
+    },
+    {
+      "id": "heatmap-results",
+      "title_zh": "带数值标注的结果热力图",
+      "sha256": "3b7227364fc46af85f2326225eead9019d7ab1e016ecf6f8fde4823ac9898e6e",
+      "size_bytes": 78432
+    },
+    {
+      "id": "histogram-frozen-bins",
+      "title_zh": "固定分箱直方图",
+      "sha256": "734c8da4e37428ab4fc47deb5d391824a46fa898bf32901c0814e426f271d06e",
+      "size_bytes": 28878
+    },
+    {
+      "id": "horizontal-long-labels",
+      "title_zh": "长标签横向条形图",
+      "sha256": "c28e195ee11ba9b3fe21f7ecd95b4324314760b11e0b5e769af9f86478c0f186",
+      "size_bytes": 36741
+    },
+    {
+      "id": "line-error",
+      "title_zh": "带 SD / SEM 的趋势图",
+      "sha256": "947abc2b43816da39fb121ba715615624f2d946c352d198dadee279105e98bcc",
+      "size_bytes": 42193
+    },
+    {
+      "id": "lsv-multi",
+      "title_zh": "LSV 线性扫描曲线",
+      "sha256": "ba2d4621f2d6eb87ba5c5ec63a8a1fcbe5adb298998e0737615a7df1a1aa09b5",
+      "size_bytes": 47321
+    },
+    {
+      "id": "medical-agreement",
+      "title_zh": "Bland–Altman 一致性图",
+      "sha256": "3b970d5c57347bef3f35d684ef8ee30aff9b2253f80e31a72570e6e903d13e68",
+      "size_bytes": 39699
+    },
+    {
+      "id": "medical-calibration",
+      "title_zh": "医学模型校准曲线",
+      "sha256": "b50c80bcefc60e12d22df43c98c161e7ea39defd4c10231ada7b1bee99e2d535",
+      "size_bytes": 48240
+    },
+    {
+      "id": "medical-confusion",
+      "title_zh": "医学分类混淆矩阵",
+      "sha256": "3ce9a7e505771dd70104674c37f0d8296726755c9cd84e0fd08b7d858b18671b",
+      "size_bytes": 42745
+    },
+    {
+      "id": "medical-decision",
+      "title_zh": "医学决策曲线 DCA",
+      "sha256": "6d2f48233c0b8db1640ae2d70d365f151abbeadd9b25b3bf90c77dfdb81af17c",
+      "size_bytes": 48762
+    },
+    {
+      "id": "medical-grouped-box",
+      "title_zh": "医学分组箱线图与原始点",
+      "sha256": "95c690aeddeb7e24c63d6154f84826cae8c01d733fef800cc167fa433c740255",
+      "size_bytes": 44179
+    },
+    {
+      "id": "medical-longitudinal",
+      "title_zh": "配对纵向医学轨迹",
+      "sha256": "6667d13ec28c7e6fd24493ac13e1d347fa6a5c15f986c0ba57303461651a8eb7",
+      "size_bytes": 49506
+    },
+    {
+      "id": "medical-pr",
+      "title_zh": "医学模型 PR 曲线",
+      "sha256": "e5b312190236477f15f2c3e9527897e3f851e90c5621dfceab0e841698b34664",
+      "size_bytes": 51957
+    },
+    {
+      "id": "medical-raincloud",
+      "title_zh": "医学 Raincloud 原始分布图",
+      "sha256": "a4ef2162967535d37f18768f590d5570e19c99d4f0adc8cee92270dd3cebe38e",
+      "size_bytes": 63152
+    },
+    {
+      "id": "medical-roc",
+      "title_zh": "医学模型 ROC 曲线",
+      "sha256": "48f6d231725c67dc1bc417050304756a961cf65f3b9d21f470613d7c5a78fc5b",
+      "size_bytes": 60062
+    },
+    {
+      "id": "medical-shap",
+      "title_zh": "预计算 SHAP 特征贡献图",
+      "sha256": "5a76ff47a1db9d46c881a89f16919e5d53e84f1abd6270dd5880889640850c4e",
+      "size_bytes": 40511
+    },
+    {
+      "id": "percent-composition",
+      "title_zh": "百分比堆叠组成图",
+      "sha256": "f9b288608c88b0068d944dbe2c6b84b1ee667a3f4c7a5bdb23fe7bfea3d268cc",
+      "size_bytes": 58827
+    },
+    {
+      "id": "pie-five-parts",
+      "title_zh": "少类别饼图",
+      "sha256": "5a25a449965b6ebc571b00ff085f5ea18d66ffacb7ef55e293b5a116da4e69e0",
+      "size_bytes": 69833
+    },
+    {
+      "id": "pl-steady-state",
+      "title_zh": "稳态 PL 发射光谱",
+      "sha256": "2c2d7352ee2e287a441504d67530be67e52f782a05ec8f4a2dd9e74c3da43b57",
+      "size_bytes": 60539
+    },
+    {
+      "id": "pl-trpl",
+      "title_zh": "PL / TRPL 光致发光",
+      "sha256": "e7dab14f4016fa19b4b1403232212649cd24215869b6f68af3ecc992024b2ad4",
+      "size_bytes": 61157
+    },
+    {
+      "id": "radar-multimetric",
+      "title_zh": "多指标雷达图",
+      "sha256": "2b36550711fffb9ef5ea66f139fd0e19b1076d08eb97e6b9902b88feb29bbfc7",
+      "size_bytes": 170728
+    },
+    {
+      "id": "raw-observations",
+      "title_zh": "原始观测点与中位数",
+      "sha256": "426b9755635edb5b4536bc72ce7e150b10f2b5669a54e32f6236807f8ab3adf2",
+      "size_bytes": 29606
+    },
+    {
+      "id": "sankey-flow",
+      "title_zh": "多阶段桑基流向图",
+      "sha256": "1459c96520a7a4237a78d5e383eb3d0e3cac7a3bc295964503532a3eb6651d15",
+      "size_bytes": 108224
+    },
+    {
+      "id": "scatter-dense",
+      "title_zh": "多组密集散点图",
+      "sha256": "8f2c4ffc428c4e70f5a6a717455bdcc58c6477dd9dcf95626b79ef364344e3f6",
+      "size_bytes": 92294
+    },
+    {
+      "id": "stacked-composition",
+      "title_zh": "绝对值堆叠组成图",
+      "sha256": "16ce1362ca424227581b2fe106dc625fffb560cf0f4fa7855ac56c7acbacd413",
+      "size_bytes": 37375
+    },
+    {
+      "id": "trajectory3d",
+      "title_zh": "三维多条件 Nyquist 轨迹",
+      "sha256": "4fc2daa9f7c8c4555e268e62036a490463775fd11e1b7e8c7eef017817d90238",
+      "size_bytes": 365492
+    },
+    {
+      "id": "trend-progression",
+      "title_zh": "多系列进展折线图",
+      "sha256": "7908b309b86e2628e9980e9367ff717c47015e5ab1d3031592cfd4fdd7d4f575",
+      "size_bytes": 39934
+    },
+    {
+      "id": "uv-vis-tauc",
+      "title_zh": "UV–Vis 与可选 Tauc 插图",
+      "sha256": "37ea2f036996d36c3e0b1b5917e37b8c7fa3ab93438d24c591edfe6ca8a98c58",
+      "size_bytes": 43065
+    },
+    {
+      "id": "violin-distributions",
+      "title_zh": "小提琴分布对比",
+      "sha256": "fd7bd3394e38426d37ffefc0057af149ea9af11ec9c0753043746d2696f83229",
+      "size_bytes": 88788
+    },
+    {
+      "id": "xas-profiles",
+      "title_zh": "XAS 吸收谱对比",
+      "sha256": "c0a93898ffb6fbc148c0c6368db1776c90e8aa075bab16d15935a82215fc4e47",
+      "size_bytes": 47719
+    },
+    {
+      "id": "xps-fit",
+      "title_zh": "XPS 峰拟合",
+      "sha256": "d89eeec96d0bd909c2056eb4dfcab49e72ebb5f35defcbe9cc83b068a6de3e62",
+      "size_bytes": 92191
+    },
+    {
+      "id": "xrd-multi",
+      "title_zh": "XRD 多谱线对比",
+      "sha256": "3616581a3a367edda8df5cf47413259b5e084285dfc1bb3e8c0fb40d239293b3",
+      "size_bytes": 43597
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+id: uv_vis
+name: UV–Vis 吸收/透射与 Tauc 插图
+category: spectroscopy/uv-vis
+version: 0.1.0
+description: 绘制 UV–Vis 光谱，并在输入完整时增加用户预计算的可编辑 Tauc 插图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 55
+family: spectroscopy
+examples:
+  - id: absorbance_tauc
+    name_zh: UV–Vis 吸光度与预计算 Tauc 插图
+    file: example_standard.csv
+    description_zh: 光子能量、Tauc 值、拟合和 Eg 均来自输入。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 绘制 UV–Vis 吸收/透射曲线和可选 Tauc 插图。
+  required_columns: [Wavelength, 一个或多个 Absorbance/Transmittance 系列]
+  optional_columns: [Photon energy, Tauc value, Tauc fit, Band gap]
+  accepted_layouts: [宽表；可选插图列允许列尾空白]
+  aliases: [Wavelength/波长, Absorbance/吸光度, Transmittance/透过率, Photon energy/光子能量, Band gap/带隙]
+  notes_zh:
+    - 不从波长静默计算光子能量，不选择 Tauc 指数，不拟合，不求 Eg。
+    - 只有 Photon energy 与 Tauc value 同时存在时才创建插图。
+    - Band gap 若存在必须为一个重复常数或单个非空显式值。

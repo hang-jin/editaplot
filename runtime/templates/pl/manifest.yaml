@@ -1,0 +1,32 @@
+id: pl
+name: PL 与 TRPL 光致发光谱
+category: spectroscopy/photoluminescence
+version: 0.1.0
+description: 绘制稳态 PL 或用户预处理的 TRPL 衰减与拟合曲线
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 54
+family: spectroscopy
+examples:
+  - id: trpl_decay
+    name_zh: 三样品 TRPL 衰减与用户拟合
+    file: example_standard.csv
+    description_zh: 测量点与拟合列均来自输入；Y 轴为对数。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 绘制稳态发射谱或时间分辨 PL 衰减。
+  required_columns: [Wavelength 或 Time, 一个或多个 PL 数值系列]
+  optional_columns: [与测量列同名并以 Fit/拟合结尾的用户拟合列]
+  accepted_layouts: [宽表]
+  aliases: [Wavelength/波长, Time/时间, PL intensity/发光强度, Fit/拟合]
+  notes_zh:
+    - 不自动归一化、平滑、拟合或计算寿命。
+    - TRPL 对数轴要求所有显示值为正。
+    - 拟合列按去掉 Fit/拟合后的名称与测量列配对。

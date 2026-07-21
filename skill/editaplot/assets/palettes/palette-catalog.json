@@ -1,0 +1,343 @@
+{
+  "schema_version": "1.0",
+  "palettes": [
+    {
+      "palette_id": "blue_coral",
+      "name_zh": "远海蓝珊瑚",
+      "name_en": "Blue Coral",
+      "colors": [
+        "#1E3A66",
+        "#4F8FD6",
+        "#8FA6E3",
+        "#F2D6A6",
+        "#C5B5E8",
+        "#E76B6B",
+        "#F7F8FB"
+      ],
+      "background": "#F7F8FB",
+      "neutral_text": "#1E3A66",
+      "allowed_modes": [
+        "qualitative",
+        "diverging",
+        "accent"
+      ],
+      "recommended_charts": [
+        "grouped_bar",
+        "line",
+        "scatter",
+        "box",
+        "medical_comparison"
+      ],
+      "max_qualitative_categories": 5,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "medium",
+      "grayscale_risk": "medium",
+      "public_default": true,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    },
+    {
+      "palette_id": "ocean_coral",
+      "name_zh": "深海珊瑚",
+      "name_en": "Ocean Coral",
+      "colors": [
+        "#17304C",
+        "#1F6F78",
+        "#79B8C9",
+        "#8A7DB3",
+        "#E07A5F",
+        "#D5A44C",
+        "#D9E1E8"
+      ],
+      "background": "#D9E1E8",
+      "neutral_text": "#17304C",
+      "allowed_modes": [
+        "qualitative",
+        "diverging",
+        "accent"
+      ],
+      "recommended_charts": [
+        "line",
+        "grouped_bar",
+        "scatter",
+        "decision_curve",
+        "bland_altman"
+      ],
+      "max_qualitative_categories": 5,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "medium",
+      "grayscale_risk": "medium",
+      "public_default": true,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    },
+    {
+      "palette_id": "plum_rose",
+      "name_zh": "梅紫玫瑰",
+      "name_en": "Plum Rose",
+      "colors": [
+        "#5B1061",
+        "#9B2D6F",
+        "#F06A99",
+        "#FFC2D6",
+        "#9A88C9",
+        "#D9CDEA",
+        "#2A1A4A",
+        "#FAFAFC"
+      ],
+      "background": "#FAFAFC",
+      "neutral_text": "#2A1A4A",
+      "allowed_modes": [
+        "sequential",
+        "qualitative",
+        "accent"
+      ],
+      "recommended_charts": [
+        "heatmap",
+        "density",
+        "violin",
+        "box",
+        "single_family_bar"
+      ],
+      "max_qualitative_categories": 4,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "medium",
+      "grayscale_risk": "high",
+      "public_default": true,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    },
+    {
+      "palette_id": "navy_cyan_gold",
+      "name_zh": "海军蓝青金",
+      "name_en": "Navy Cyan Gold",
+      "colors": [
+        "#0B1533",
+        "#1E4FBE",
+        "#00E5FF",
+        "#6B2FA6",
+        "#B88CF2",
+        "#D4A247",
+        "#F6F7FA"
+      ],
+      "background": "#F6F7FA",
+      "neutral_text": "#0B1533",
+      "allowed_modes": [
+        "qualitative",
+        "accent"
+      ],
+      "recommended_charts": [
+        "spectra",
+        "xrd",
+        "line",
+        "scatter",
+        "grouped_bar"
+      ],
+      "max_qualitative_categories": 5,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "medium",
+      "grayscale_risk": "medium",
+      "public_default": true,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    },
+    {
+      "palette_id": "navy_ember",
+      "name_zh": "藏蓝余烬",
+      "name_en": "Navy Ember",
+      "colors": [
+        "#0E1A2B",
+        "#4A6FA5",
+        "#7B6BB2",
+        "#E24C3B",
+        "#F08A1A",
+        "#F6D48A",
+        "#DFE8F6"
+      ],
+      "background": "#DFE8F6",
+      "neutral_text": "#0E1A2B",
+      "allowed_modes": [
+        "qualitative",
+        "diverging",
+        "accent"
+      ],
+      "recommended_charts": [
+        "bar",
+        "line",
+        "forest",
+        "volcano",
+        "model_comparison"
+      ],
+      "max_qualitative_categories": 5,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "medium",
+      "grayscale_risk": "medium",
+      "public_default": true,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    },
+    {
+      "palette_id": "forest_amber",
+      "name_zh": "森林琥珀",
+      "name_en": "Forest Amber",
+      "colors": [
+        "#1F5A3A",
+        "#6BAF45",
+        "#A8D23B",
+        "#EACB22",
+        "#F28C18",
+        "#D35400",
+        "#1E2A39"
+      ],
+      "background": "#FFFFFF",
+      "neutral_text": "#1E2A39",
+      "allowed_modes": [
+        "sequential",
+        "accent"
+      ],
+      "recommended_charts": [
+        "spectra",
+        "line",
+        "heatmap",
+        "composition",
+        "trend"
+      ],
+      "max_qualitative_categories": 1,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "high",
+      "grayscale_risk": "medium",
+      "public_default": false,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    },
+    {
+      "palette_id": "violet_lime",
+      "name_zh": "紫罗兰青柠",
+      "name_en": "Violet Lime",
+      "colors": [
+        "#0D1020",
+        "#3B1E5A",
+        "#7A2E83",
+        "#E23D8A",
+        "#FF688E",
+        "#A6CC55",
+        "#6E8A6A",
+        "#F6F4F1"
+      ],
+      "background": "#F6F4F1",
+      "neutral_text": "#0D1020",
+      "allowed_modes": [
+        "qualitative",
+        "accent"
+      ],
+      "recommended_charts": [
+        "network",
+        "sankey",
+        "scatter",
+        "feature_importance"
+      ],
+      "max_qualitative_categories": 5,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "high",
+      "grayscale_risk": "high",
+      "public_default": false,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    },
+    {
+      "palette_id": "deep_sea_gold",
+      "name_zh": "深海鎏金",
+      "name_en": "Deep Sea Gold",
+      "colors": [
+        "#0B1D2A",
+        "#1F6F7A",
+        "#5BA9A6",
+        "#A7D5C9",
+        "#F2B848",
+        "#F7E9C6"
+      ],
+      "background": "#F7E9C6",
+      "neutral_text": "#0B1D2A",
+      "allowed_modes": [
+        "sequential",
+        "qualitative",
+        "accent"
+      ],
+      "recommended_charts": [
+        "spectra",
+        "xps",
+        "line",
+        "area",
+        "heatmap"
+      ],
+      "max_qualitative_categories": 4,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "medium",
+      "grayscale_risk": "medium",
+      "public_default": true,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    },
+    {
+      "palette_id": "sky_terra",
+      "name_zh": "天青陶土",
+      "name_en": "Sky Terra",
+      "colors": [
+        "#4FA3D9",
+        "#2FA3A3",
+        "#D96A4A",
+        "#6A8F3F",
+        "#1B2333",
+        "#B6BCC4",
+        "#F3E9D5"
+      ],
+      "background": "#F3E9D5",
+      "neutral_text": "#1B2333",
+      "allowed_modes": [
+        "qualitative",
+        "diverging",
+        "accent"
+      ],
+      "recommended_charts": [
+        "grouped_bar",
+        "scatter",
+        "line",
+        "box",
+        "multi_panel"
+      ],
+      "max_qualitative_categories": 5,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "medium",
+      "grayscale_risk": "medium",
+      "public_default": true,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    },
+    {
+      "palette_id": "amber_lavender",
+      "name_zh": "琥珀薰衣草",
+      "name_en": "Amber Lavender",
+      "colors": [
+        "#F1B84B",
+        "#F28C3A",
+        "#E45A2A",
+        "#7A2D1E",
+        "#F6D7C2",
+        "#B7BDE3",
+        "#FAFAFA"
+      ],
+      "background": "#FAFAFA",
+      "neutral_text": "#7A2D1E",
+      "allowed_modes": [
+        "sequential",
+        "diverging",
+        "qualitative",
+        "accent"
+      ],
+      "recommended_charts": [
+        "bar",
+        "trend",
+        "distribution",
+        "heatmap",
+        "annotation"
+      ],
+      "max_qualitative_categories": 4,
+      "requires_redundant_encoding": true,
+      "cvd_risk": "high",
+      "grayscale_risk": "high",
+      "public_default": true,
+      "source_note": "Independently normalized from user-provided scientific colour references; validate contrast and redundant encoding against the final figure."
+    }
+  ]
+}

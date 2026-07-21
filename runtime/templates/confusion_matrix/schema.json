@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "confusion_matrix",
+  "required_roles": ["category", "series"],
+  "automatic_normalization": false,
+  "min_columns": 3,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "shap_summary",
+  "required_roles": ["feature", "shap", "feature_value"],
+  "layout": "precomputed_long",
+  "min_columns": 3,
+  "min_rows": 6,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

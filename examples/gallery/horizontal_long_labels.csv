@@ -1,0 +1,7 @@
+Category,Performance,Performance_SEM
+Full model,0.91,0.012
+Without feature alignment,0.84,0.016
+Without consistency loss,0.81,0.018
+Without adaptive weighting,0.78,0.02
+Single-scale encoder,0.74,0.019
+Baseline backbone,0.69,0.022

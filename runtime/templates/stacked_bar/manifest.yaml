@@ -1,0 +1,32 @@
+id: stacked_bar
+name: 堆叠柱状图
+category: general/composition
+version: 0.1.0
+description: 比较各类别的绝对总量及其多个非负组成部分
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 72
+family: general_composition
+examples:
+  - id: composition
+    name_zh: 五类别四组成与总量误差
+    file: example_standard.csv
+    description_zh: 展示绝对量组成、总量差异和源文件显式提供的总量 SD。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较每个类别的绝对总量及其多个非负组成部分。
+  required_columns: [一列类别, 至少两个非负数值组成列]
+  optional_columns: [一个显式总量 SD/SE/SEM/误差列]
+  accepted_layouts: [宽表]
+  aliases: [Category/Group/Sample, 类别/组别/样品]
+  notes_zh:
+    - 每行的柱高是原始组成值之和。
+    - 不接受负值，也不把绝对量自动换算为百分比。
+    - 误差棒仅在源文件明确提供总量误差时显示，不合成分量误差。

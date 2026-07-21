@@ -1,0 +1,40 @@
+id: xps
+name: XPS
+category: spectroscopy/xps
+version: 0.2.0
+description: 通用 XPS 扫描与拟合数据自动识别、预览和 Origin 可编辑绘图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: ../xps_adaptive/example_standard.csv
+outputs:
+  - opju
+  - png
+  - pdf
+  - tif
+status: implemented
+visibility: public
+workflow: xps
+service: service.py
+ui_order: 10
+renderer_adapters:
+  fixed_c1s_publication: xps_c1s_fit
+  adaptive_counts: xps_adaptive
+family: spectroscopy
+examples:
+  - id: adaptive_fit
+    name_zh: 通用 XPS 拟合表
+    file: ../xps_adaptive/example_standard.csv
+    description_zh: 原始谱、背景、包络、可变数量分峰和残差的自动识别。
+  - id: fixed_c1s
+    name_zh: 固定 C 1s 视觉合同
+    file: ../xps_c1s_fit/example_standard.csv
+    description_zh: 使用固定 C 1s publication profile 的完整拟合表示例。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 自动识别扫描谱、拟合谱、可变分峰和残差，并选择相应 XPS profile。
+  required_columns: [结合能或动能列, 至少一个强度/计数列]
+  optional_columns: [背景, 拟合包络, 任意数量 component peaks, 残差]
+  accepted_layouts: [宽表]
+  aliases: [Binding Energy/结合能, Kinetic Energy/动能, Intensity/Counts/强度/计数, Background/背景, Envelope/拟合包络, Residual/残差]
+  notes_zh: [不会修改原始文件或补造峰列, 能量轴方向和 Y 轴规则由识别到的 profile 决定]

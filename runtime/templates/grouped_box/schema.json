@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "grouped_box",
+  "required_roles": ["series"],
+  "column_header_contract": "Category | Group",
+  "axis_title_contract": "Optional user-confirmed x_title/y_title overrides are frozen in RenderPlan; source headers stay unchanged",
+  "automatic_significance_testing": false,
+  "min_columns": 2,
+  "min_rows": 5,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

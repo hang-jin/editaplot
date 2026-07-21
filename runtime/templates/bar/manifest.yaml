@@ -1,0 +1,31 @@
+id: bar
+name: 柱状图（可选误差）
+category: general/statistics
+version: 0.1.0
+description: 通用分组柱状图，支持 SD、SE、SEM 或自定义误差列
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 70
+family: general_statistical
+examples:
+  - id: basic_error
+    name_zh: 双系列与误差
+    file: example_standard.csv
+    description_zh: 五个类别、两个汇总系列，并分别使用 SD 与 SEM 误差。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较离散类别中的一个或多个已汇总数值系列。
+  required_columns: [类别列, 一个或多个数值系列]
+  optional_columns: [与系列同名的 SD/SE/SEM/误差列]
+  accepted_layouts: [宽表]
+  aliases: [Category/Group/Sample, 类别/组别/样品, _SD/_SE/_SEM/_err]
+  notes_zh:
+    - 不从重复观测自动计算均值或误差。
+    - 误差必须非负，且其统计含义会显示在识别摘要中。

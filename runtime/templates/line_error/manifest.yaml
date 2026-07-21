@@ -1,0 +1,35 @@
+id: line_error
+name: 带误差折线图
+category: general/statistics
+version: 0.1.0
+description: 自动配对 SD、SE、SEM 或自定义误差列的折线图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 90
+family: general_statistical
+examples:
+  - id: basic
+    name_zh: 双系列误差折线
+    file: example_standard.csv
+    description_zh: 两个中心值系列及其 SD/SEM 误差。
+  - id: chinese
+    name_zh: 中文列名多组示例
+    file: example_chinese.csv
+    description_zh: 中文 X、均值、标准差和标准误列名的自动识别样例。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 展示有序 X 上的中心值变化及其已计算不确定性。
+  required_columns: [一个数值 X 列, 一个或多个中心值列, 每个中心值的配对误差列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Time/X/时间, _SD/标准差, _SE/_SEM/标准误, _err/误差]
+  notes_zh:
+    - 不从重复观测计算均值或误差。
+    - 自定义误差必须由用户确认统计含义。

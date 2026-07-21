@@ -1,0 +1,19 @@
+Source,Target,Value
+Input A,Curated A,32
+Input A,Curated B,16
+Input B,Curated A,14
+Input B,Curated C,32
+Input C,Curated B,28
+Input C,Curated C,14
+Curated A,Model X,28
+Curated A,Model Y,18
+Curated B,Model X,12
+Curated B,Model Z,32
+Curated C,Model Y,24
+Curated C,Model Z,22
+Model X,Outcome P,28
+Model X,Outcome Q,12
+Model Y,Outcome P,10
+Model Y,Outcome R,32
+Model Z,Outcome Q,26
+Model Z,Outcome R,28

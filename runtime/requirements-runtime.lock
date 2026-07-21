@@ -1,0 +1,29 @@
+# EditaPlot verified dependency constraints
+# Windows 10/11, CPython 3.10, verified 2026-07-21.
+# This file pins resolution; it does not redistribute packages.
+attrs==26.1.0
+contourpy==1.3.2
+cycler==0.12.1
+et_xmlfile==2.0.0
+fonttools==4.63.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+kiwisolver==1.5.0
+matplotlib==3.10.9
+numpy==1.26.4
+openpyxl==3.1.5
+OriginExt==1.2.5
+originpro==1.1.15
+packaging==26.2
+pandas==2.3.3
+pillow==12.3.0
+pyparsing==3.3.2
+python-dateutil==2.9.0.post0
+pytz==2026.2
+PyYAML==6.0.3
+referencing==0.37.0
+rpds-py==0.30.0
+six==1.17.0
+typing_extensions==4.16.0
+tzdata==2026.3
+xlrd==2.0.2

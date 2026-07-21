@@ -1,0 +1,31 @@
+id: bland_altman
+name: Bland–Altman 一致性图
+category: medical-ai/agreement
+version: 0.1.0
+description: 使用显式配对均值、差值、偏倚和一致性限绘制医学测量一致性图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 142
+family: medical_ai_evidence
+examples:
+  - id: measurement_agreement
+    name_zh: 两种测量方法一致性
+    file: example_standard.csv
+    description_zh: 偏倚和一致性上下限全部来自输入。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 判断两个连续测量方法之间的偏倚与一致性范围。
+  required_columns: [Mean, Difference, Bias, Lower LoA, Upper LoA]
+  optional_columns: []
+  accepted_layouts: [每行一个明确配对病例，三条参考值列重复同一个输入值]
+  aliases: [均值/差值/偏倚/一致性下限/一致性上限]
+  notes_zh:
+    - V1 不从 Method A/Method B 静默计算统计量。
+    - 不根据行号猜配对，不计算比例偏倚或 LoA 的置信区间。

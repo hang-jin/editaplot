@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "violin",
+  "required_roles": ["series"],
+  "layout": "wide_raw",
+  "min_columns": 1,
+  "min_rows": 5,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

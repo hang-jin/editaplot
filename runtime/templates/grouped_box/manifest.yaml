@@ -1,0 +1,32 @@
+id: grouped_box
+name: 分组箱线与原始点图
+category: statistics/grouped-distribution
+version: 0.1.0
+description: 从 Category | Group 宽表原始观测生成分组箱体、原始点和样本量标签
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 116
+family: statistical_evidence
+examples:
+  - id: grouped_raw_box
+    name_zh: 四条件双组原始观测
+    file: example_standard.csv
+    description_zh: 每列是一组逐个原始观测；箱体、散点和 n 均从同一列生成。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较多个条件下两组或多组原始观测分布。
+  required_columns: [至少四个数值列，列名写成 Category | Group]
+  optional_columns: []
+  accepted_layouts: [宽表；每列是一组原始观测，允许列尾缺失]
+  aliases: [Condition | Control, 条件 | 对照组]
+  notes_zh:
+    - 每列至少五个有限观测。
+    - Origin 从原始值计算箱体统计并叠加全部原始点；不会修改源表。
+    - n 由非空观测数计数；不静默计算显著性或添加星号。

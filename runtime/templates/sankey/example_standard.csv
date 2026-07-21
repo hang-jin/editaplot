@@ -1,0 +1,19 @@
+来源,目标,流量
+Feed A,Preprocess 1,42
+Feed A,Preprocess 2,18
+Feed B,Preprocess 1,21
+Feed B,Preprocess 3,31
+Feed C,Preprocess 2,27
+Feed C,Preprocess 3,16
+Preprocess 1,Representation A,38
+Preprocess 1,Representation B,25
+Preprocess 2,Representation A,17
+Preprocess 2,Representation C,28
+Preprocess 3,Representation B,26
+Preprocess 3,Representation C,21
+Representation A,Product X,43
+Representation A,Recycle,12
+Representation B,Product X,18
+Representation B,Product Y,33
+Representation C,Product Y,35
+Representation C,Recycle,14

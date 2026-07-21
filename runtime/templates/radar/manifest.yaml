@@ -1,0 +1,31 @@
+id: radar
+name: 多指标雷达图
+category: general/multivariate
+version: 0.1.0
+description: 比较两个或多个对象在至少三个非负指标上的轮廓
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 77
+family: general_multivariate
+examples:
+  - id: method_comparison
+    name_zh: 三方法五指标
+    file: example_standard.csv
+    description_zh: 五个同量纲指标、三个方法系列，使用统一 0–1 径向尺度。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较多个对象在同一组指标上的相对轮廓。
+  required_columns: [指标列, 至少两个非负数值系列]
+  optional_columns: []
+  accepted_layouts: [宽表；每行一个指标，每个数值列一个对象]
+  aliases: [Metric/Indicator/Dimension, 指标/维度, 其余数值列作为对象]
+  notes_zh:
+    - 至少需要三个指标和两个对象；不接受负值。
+    - 建议先把不同单位的指标规范化到可比较尺度，程序不会擅自归一化原数据。

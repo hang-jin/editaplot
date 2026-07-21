@@ -1,0 +1,18 @@
+id: xps_c1s_fit
+name: XPS C 1s 拟合图
+category: chemistry/xps
+version: 0.1.0
+description: 用于 C 1s 高分辨 XPS 拟合结果的 Origin 可编辑绘图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+preview: preview.png
+outputs:
+  - opju
+  - png
+  - pdf
+  - tif
+status: implemented
+visibility: internal
+workflow: xps_renderer

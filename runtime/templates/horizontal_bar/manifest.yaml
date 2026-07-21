@@ -1,0 +1,31 @@
+id: horizontal_bar
+name: 横向分组条形图
+category: general/comparison
+version: 0.1.0
+description: 适合类别名称较长的一个或多个数值系列比较
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 71
+family: general_comparison
+examples:
+  - id: ablation_error
+    name_zh: 消融对比与误差
+    file: example_standard.csv
+    description_zh: 六个较长方案名称、一个性能系列和显式 SEM 误差。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 当类别名称较长时，横向比较一个或多个已汇总数值系列。
+  required_columns: [一列类别, 一个或多个数值系列]
+  optional_columns: [与系列同名的 SD/SE/SEM/误差列]
+  accepted_layouts: [宽表]
+  aliases: [Category/Group/Sample, 类别/组别/样品]
+  notes_zh:
+    - 系列数会自动影响组内宽度、同族颜色与图例。
+    - 不从重复观测自动计算均值或误差。

@@ -1,0 +1,31 @@
+id: sankey
+name: 桑基流向图
+category: general/flow
+version: 0.1.0
+description: 用来源、目标和正权重展示节点之间的定量流向
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 75
+family: general_flow
+examples:
+  - id: four_stage
+    name_zh: 四阶段多路径流向
+    file: example_standard.csv
+    description_zh: 展示四阶段、十二节点和多条分支/汇合路径的标准长表结构。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 用带宽表示来源节点到目标节点之间的正权重流量。
+  required_columns: [来源 Source, 目标 Target, 正数权重 Value]
+  optional_columns: []
+  accepted_layouts: [三列长表]
+  aliases: [Source/From/来源/起点, Target/To/目标/终点, Value/Weight/Flow/数值/权重/流量]
+  notes_zh:
+    - 每行是一条有向连接，权重必须大于零。
+    - 当前不接受自连接；高密度网络会提示人工检查标签可读性。

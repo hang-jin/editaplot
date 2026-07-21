@@ -1,0 +1,4 @@
+Label,Estimate,CI Low,CI High,Reference
+Cohort A,-0.12,-0.30,0.04,0
+Cohort B,0.22,0.08,0.36,0
+Cohort C,0.41,0.18,0.64,0

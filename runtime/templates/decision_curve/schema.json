@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "decision_curve",
+  "required_roles": ["x", "series", "treat_all", "treat_none"],
+  "allowed_modes": ["precomputed_net_benefit"],
+  "automatic_net_benefit_calculation": false,
+  "min_columns": 4,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

@@ -1,0 +1,31 @@
+id: percent_stacked_bar
+name: 百分比堆叠柱状图
+category: general/composition
+version: 0.1.0
+description: 将每个类别的非负组成值仅在显示层归一化为 100%
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 73
+family: general_composition
+examples:
+  - id: percent_composition
+    name_zh: 六类别三组成
+    file: example_standard.csv
+    description_zh: 源数据可以是任意正比例，绘图时每行显示为 100%。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较各类别内部多个组成部分的相对比例。
+  required_columns: [一列类别, 至少两个非负数值组成列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Category/Group/Sample, 类别/组别/样品]
+  notes_zh:
+    - 每行总和必须大于零。
+    - 百分比换算只发生在预览和 Origin helper columns，源文件保持不变。
