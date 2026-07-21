@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "raw_summary",
+  "required_roles": ["series"],
+  "layout": "wide_raw",
+  "min_columns": 1,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

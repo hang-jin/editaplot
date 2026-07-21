@@ -1,0 +1,31 @@
+id: heatmap
+name: 带数值标注热力图
+category: general/matrix
+version: 0.1.0
+description: 将类别 × 系列宽表转换为可编辑 Origin 矩阵热力图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 78
+family: general_matrix
+examples:
+  - id: results_matrix
+    name_zh: 四数据集四方法
+    file: example_standard.csv
+    description_zh: 小矩阵显示单元格数值，使用感知均匀 Viridis 色阶。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 用颜色编码类别与系列交叉位置上的数值。
+  required_columns: [一列行类别, 至少两个数值系列]
+  optional_columns: []
+  accepted_layouts: [宽表；行是类别，数值列是热力图列]
+  aliases: [Dataset/Category/Sample, 数据集/类别/样品, 其余数值列作为热力图列]
+  notes_zh:
+    - 小矩阵自动显示单元格数值；高密度矩阵关闭单元格文字以避免重叠。
+    - 同时包含正负值时自动使用以零为中心的发散色阶；源表不被改写。

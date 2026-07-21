@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "line_error",
+  "required_roles": ["x", "series", "error"],
+  "error_kinds": ["sd", "se", "sem", "custom"],
+  "min_columns": 3,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}
+

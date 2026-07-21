@@ -1,0 +1,32 @@
+id: raincloud
+name: Raincloud 原始分布图
+category: medical-ai/distribution
+version: 0.1.0
+description: 使用半小提琴、全部原始点与均值 ± 1 SD 展示医学 AI 分布
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 144
+family: medical_ai_evidence
+examples:
+  - id: model-comparison
+    name_zh: 三模型 Dice 分布
+    file: example_standard.csv
+    description_zh: 宽表原始观测；每列一个模型，不接受预先汇总均值代替原始点。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较多个模型、组别或扫描条件的原始观测分布。
+  required_columns: [一个或多个原始数值列，每列至少 5 个观测]
+  optional_columns: []
+  accepted_layouts: [宽表，每个数值列代表一组]
+  aliases: [Baseline/Proposed, 对照/处理组, 模型A/模型B]
+  notes_zh:
+    - Origin 使用已隔离验证的 Box_HalfViolin 官方主题。
+    - 密度、原始点和均值 ± 1 SD 都是显示对象；源 CSV/XLSX 保持不变。
+    - 不静默删除异常值，也不把小样本伪装成稳定密度。

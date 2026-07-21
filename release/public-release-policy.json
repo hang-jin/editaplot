@@ -1,0 +1,376 @@
+{
+  "schema_version": 1,
+  "policy_name": "EditaPlot public source release",
+  "required_tracked": [
+    ".github/workflows/tests.yml",
+    ".github/CODEOWNERS",
+    "ASSET_PROVENANCE.md",
+    "AUTHORS.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "README.en.md",
+    "assets/gallery/gallery-manifest.json",
+    "assets/palettes/palette-catalog.json",
+    "assets/provenance-manifest.json",
+    "release/public-release-policy.json",
+    "requirements-runtime.lock",
+    "requirements-runtime.txt",
+    "runtime/LICENSE",
+    "runtime/NOTICE",
+    "runtime/pyproject.toml",
+    "runtime/requirements-runtime.lock",
+    "runtime/requirements-runtime.txt",
+    "runtime/runtime-manifest.json",
+    "skill/editaplot/LICENSE",
+    "skill/editaplot/NOTICE",
+    "skill/editaplot/SKILL.md",
+    "skill/editaplot/agents/openai.yaml",
+    "skill/editaplot/scripts/editaplot.py",
+    "skill/editaplot/scripts/editaplot_core.py",
+    "skill/editaplot/scripts/requirements-runtime.lock",
+    "tests/test_editaplot.py",
+    "tests/test_public_release_gate.py",
+    "tools/build_asset_provenance.py",
+    "tools/build_runtime_manifest.py",
+    "tools/build_showcase.py",
+    "tools/generate_showcase_data.py",
+    "tools/sync_public_gallery.py",
+    "tools/verify_public_release.py"
+  ],
+  "allow_exact": [
+    ".gitattributes",
+    ".gitignore",
+    ".github/CODEOWNERS",
+    ".github/dependabot.yml",
+    ".github/workflows/public-release.yml",
+    ".github/workflows/tests.yml",
+    "ASSET_PROVENANCE.md",
+    "AUTHORS.md",
+    "CHANGELOG.md",
+    "CITATION.cff",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "NOTICE",
+    "PRIVACY.md",
+    "README.en.md",
+    "README.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+    "THIRD_PARTY_NOTICES.md",
+    "assets/provenance-manifest.json",
+    "docs/asset-provenance.md",
+    "docs/dependency-inventory.md",
+    "docs/gallery.md",
+    "docs/installation.md",
+    "docs/palette-guide.md",
+    "docs/quickstart.en.md",
+    "docs/quickstart.zh-CN.md",
+    "docs/release-boundaries.md",
+    "pyproject.toml",
+    "release/public-release-policy.json",
+    "requirements-runtime.lock",
+    "requirements-runtime.txt",
+    "runtime/LICENSE",
+    "runtime/NOTICE",
+    "skill/editaplot/LICENSE",
+    "skill/editaplot/NOTICE",
+    "tools/build_palette_assets.py",
+    "tools/build_asset_provenance.py",
+    "tools/build_runtime_manifest.py",
+    "tools/build_showcase.py",
+    "tools/generate_showcase_data.py",
+    "tools/sync_public_gallery.py",
+    "tools/verify_public_release.py"
+  ],
+  "allow_trees": [
+    {
+      "prefix": "assets/gallery/",
+      "extensions": [
+        ".json",
+        ".png"
+      ]
+    },
+    {
+      "prefix": "assets/palettes/",
+      "extensions": [
+        ".json",
+        ".png"
+      ]
+    },
+    {
+      "prefix": "examples/",
+      "extensions": [
+        ".csv"
+      ]
+    },
+    {
+      "prefix": "runtime/",
+      "extensions": [
+        ".csv",
+        ".json",
+        ".lock",
+        ".md",
+        ".png",
+        ".py",
+        ".qss",
+        ".toml",
+        ".txt",
+        ".yaml",
+        ".yml"
+      ]
+    },
+    {
+      "prefix": "skill/editaplot/",
+      "extensions": [
+        ".json",
+        ".lock",
+        ".md",
+        ".png",
+        ".py",
+        ".yaml",
+        ".yml"
+      ]
+    },
+    {
+      "prefix": "tests/",
+      "extensions": [
+        ".py"
+      ]
+    }
+  ],
+  "forbidden_segments": [
+    ".build-venv",
+    ".editaplot-venv",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "OriginOutputs",
+    "__pycache__",
+    "artifacts",
+    "build",
+    "dist",
+    "showcase",
+    "test_outputs",
+    "venv"
+  ],
+  "forbidden_suffixes": [
+    ".7z",
+    ".dcm",
+    ".dicom",
+    ".dll",
+    ".emf",
+    ".exe",
+    ".jpg",
+    ".jpeg",
+    ".key",
+    ".log",
+    ".mha",
+    ".mhd",
+    ".nii",
+    ".nrrd",
+    ".ogg",
+    ".ogwu",
+    ".opj",
+    ".opju",
+    ".opx",
+    ".otp",
+    ".otpu",
+    ".p12",
+    ".pdb",
+    ".pdf",
+    ".pem",
+    ".pfx",
+    ".pyc",
+    ".pyd",
+    ".pyo",
+    ".tif",
+    ".tiff",
+    ".whl",
+    ".zip"
+  ],
+  "forbidden_names": [
+    ".env",
+    "desktop.ini",
+    "thumbs.db"
+  ],
+  "max_file_bytes": 1048576,
+  "max_total_bytes": 10485760,
+  "binary_extensions": [
+    ".png"
+  ],
+  "sensitive_path_patterns": [
+    {
+      "id": "windows_user_profile",
+      "pattern": "\\b[A-Z]:[\\\\/](?:Users|Documents and Settings)[\\\\/]"
+    },
+    {
+      "id": "local_file_url",
+      "pattern": "file:///[A-Z]:/"
+    },
+    {
+      "id": "posix_user_home",
+      "pattern": "/(?:home|Users)/[^/\\s]+/"
+    },
+    {
+      "id": "developer_workspace",
+      "pattern": "\\b[A-Z]:[\\\\/](?:My-coding|Projects|Repos|workspace)[\\\\/]"
+    },
+    {
+      "id": "generic_windows_absolute_path",
+      "pattern": "\\b[A-Z]:[\\\\/](?!Windows[\\\\/]Fonts[\\\\/])"
+    },
+    {
+      "id": "windows_unc_path",
+      "pattern": "\\\\\\\\[A-Z0-9._-]+[\\\\/]"
+    },
+    {
+      "id": "root_home_path",
+      "pattern": "/root/"
+    },
+    {
+      "id": "expanded_user_profile",
+      "pattern": "%USERPROFILE%"
+    }
+  ],
+  "secret_patterns": [
+    {
+      "id": "private_key",
+      "pattern": "-----BEGIN (?:(?:RSA|OPENSSH|EC|DSA) )?PRIVATE KEY-----"
+    },
+    {
+      "id": "github_classic_token",
+      "pattern": "ghp_[A-Za-z0-9]{20,}"
+    },
+    {
+      "id": "github_fine_grained_token",
+      "pattern": "github_pat_[A-Za-z0-9_]{20,}"
+    },
+    {
+      "id": "openai_style_key",
+      "pattern": "sk-[A-Za-z0-9_-]{20,}"
+    },
+    {
+      "id": "aws_access_key",
+      "pattern": "AKIA[0-9A-Z]{16}"
+    },
+    {
+      "id": "assigned_secret",
+      "pattern": "[\\\"']?(?:api[_-]?key|access[_-]?token|client[_-]?secret|password|passwd|aws_secret_access_key)[\\\"']?\\s*[:=]\\s*[\\\"']?[A-Z0-9_+./=-]{8,}"
+    },
+    {
+      "id": "authorization_bearer",
+      "pattern": "authorization\\s*[:=]\\s*[\\\"']?bearer\\s+[A-Z0-9._~+/-]{12,}"
+    },
+    {
+      "id": "slack_token",
+      "pattern": "xox[abprs]-[A-Z0-9-]{10,}"
+    }
+  ],
+  "forbidden_text_patterns": [
+    {
+      "id": "legacy_figurepilot_brand",
+      "pattern": "FigurePilot|origin-figure-pilot|\\.figurepilot-venv|FIGUREPILOT_"
+    },
+    {
+      "id": "legacy_sciplot_brand",
+      "pattern": "Origin SciPlot(?: Studio| Skill)?|origin-sciplot-skill"
+    },
+    {
+      "id": "personal_mailbox",
+      "pattern": "[A-Z0-9._%+-]+@(?:gmail|outlook|hotmail|qq|163)\\.[A-Z]{2,}"
+    }
+  ],
+  "license": {
+    "path": "LICENSE",
+    "normalized_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "required_phrases": [
+      "Apache License",
+      "Version 2.0, January 2004",
+      "END OF TERMS AND CONDITIONS"
+    ]
+  },
+  "notice": {
+    "path": "NOTICE",
+    "required_phrases": [
+      "EditaPlot",
+      "Copyright 2026 EditaPlot contributors",
+      "Apache License, Version 2.0",
+      "OriginLab Corporation",
+      "not affiliated",
+      "trademarks"
+    ]
+  },
+  "dependency_lock": {
+    "direct_requirements": "requirements-runtime.txt",
+    "runtime_requirements_copy": "runtime/requirements-runtime.txt",
+    "constraint_copies": [
+      "requirements-runtime.lock",
+      "runtime/requirements-runtime.lock",
+      "skill/editaplot/scripts/requirements-runtime.lock"
+    ],
+    "runtime_pyproject": "runtime/pyproject.toml",
+    "expected_locked_packages": [
+      "attrs",
+      "contourpy",
+      "cycler",
+      "et-xmlfile",
+      "fonttools",
+      "jsonschema",
+      "jsonschema-specifications",
+      "kiwisolver",
+      "matplotlib",
+      "numpy",
+      "openpyxl",
+      "originext",
+      "originpro",
+      "packaging",
+      "pandas",
+      "pillow",
+      "pyparsing",
+      "python-dateutil",
+      "pytz",
+      "pyyaml",
+      "referencing",
+      "rpds-py",
+      "six",
+      "typing-extensions",
+      "tzdata",
+      "xlrd"
+    ],
+    "minimum_locked_packages": 20,
+    "require_exact_pins": true
+  },
+  "gallery": {
+    "directory": "assets/gallery",
+    "manifest": "assets/gallery/gallery-manifest.json",
+    "expected_case_count": 37,
+    "reject_nonempty_png_text": true
+  },
+  "palettes": {
+    "source": "assets/palettes",
+    "skill_copy": "skill/editaplot/assets/palettes",
+    "expected_file_count": 13,
+    "catalog": "assets/palettes/palette-catalog.json",
+    "expected_palette_count": 10,
+    "expected_public_palette_count": 8
+  },
+  "runtime_manifest": {
+    "directory": "runtime",
+    "manifest": "runtime/runtime-manifest.json"
+  },
+  "asset_provenance": {
+    "manifest": "assets/provenance-manifest.json",
+    "documentation": "ASSET_PROVENANCE.md",
+    "inventory_generator": "tools/build_asset_provenance.py",
+    "gallery_fixture_generator": "tools/generate_showcase_data.py",
+    "required_review_decision": "approved_for_public_source_release",
+    "expected_asset_count": 191,
+    "require_synthetic_or_generated": true,
+    "require_contains_phi_false": true
+  }
+}

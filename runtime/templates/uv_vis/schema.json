@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "uv_vis",
+  "required_roles": ["x", "series"],
+  "optional_roles": ["photon_energy", "tauc", "tauc_fit", "bandgap"],
+  "automatic_photon_energy_calculation": false,
+  "automatic_tauc_transform": false,
+  "automatic_fitting": false,
+  "automatic_bandgap_calculation": false,
+  "min_columns": 2,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

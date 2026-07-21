@@ -1,0 +1,141 @@
+Feature,SHAP value,Feature value,Sample ID
+Tumor volume,0.1359,32.6149,S001
+Tumor volume,0.4539,43.0898,S002
+Tumor volume,0.4730,45.7889,S003
+Tumor volume,0.2411,39.4078,S004
+Tumor volume,-0.0340,27.0303,S005
+Tumor volume,-0.2497,14.6381,S006
+Tumor volume,-0.4061,8.2202,S007
+Tumor volume,-0.4262,10.8781,S008
+Tumor volume,-0.1960,21.3273,S009
+Tumor volume,0.2014,34.5180,S010
+Tumor volume,0.4775,44.0755,S011
+Tumor volume,0.4436,45.3807,S012
+Tumor volume,0.1970,37.8030,S013
+Tumor volume,-0.0650,25.0045,S014
+Tumor volume,-0.2750,13.1703,S015
+Tumor volume,-0.4260,8.0197,S016
+Tumor volume,-0.4126,12.0419,S017
+Tumor volume,-0.1374,23.2929,S018
+Tumor volume,0.2631,36.3355,S019
+Tumor volume,0.4906,44.8665,S020
+Tumor volume,0.4093,44.7630,S021
+Tumor volume,0.1558,36.0751,S022
+Tumor volume,-0.0939,23.0014,S023
+Tumor volume,-0.3018,11.8602,S024
+Tumor volume,-0.4438,8.0356,S025
+Tumor volume,-0.3902,13.3761,S026
+Tumor volume,-0.0734,25.3007,S027
+Tumor volume,0.3188,38.0465,S028
+ADC mean,-0.3068,1.3277,S001
+ADC mean,-0.3623,1.3750,S002
+ADC mean,-0.2869,1.2501,S003
+ADC mean,-0.0212,1.0192,S004
+ADC mean,0.3276,0.8046,S005
+ADC mean,0.4847,0.7200,S006
+ADC mean,0.3080,0.8103,S007
+ADC mean,-0.0353,1.0275,S008
+ADC mean,-0.2839,1.2567,S009
+ADC mean,-0.3573,1.3763,S010
+ADC mean,-0.3105,1.3231,S011
+ADC mean,-0.1433,1.1252,S012
+ADC mean,0.1565,0.8874,S013
+ADC mean,0.4334,0.7358,S014
+ADC mean,0.4409,0.7507,S015
+ADC mean,0.1436,0.9241,S016
+ADC mean,-0.2100,1.1643,S017
+ADC mean,-0.3755,1.3439,S018
+ADC mean,-0.3403,1.3678,S019
+ADC mean,-0.2011,1.2233,S020
+ADC mean,0.0215,0.9870,S021
+ADC mean,0.3025,0.7841,S022
+ADC mean,0.4660,0.7220,S023
+ADC mean,0.3248,0.8338,S024
+ADC mean,-0.0474,1.0600,S025
+ADC mean,-0.3533,1.2810,S026
+ADC mean,-0.4014,1.3796,S027
+ADC mean,-0.2583,1.3035,S028
+Texture entropy,0.3922,6.2896,S001
+Texture entropy,0.2100,5.8180,S002
+Texture entropy,-0.1019,4.9023,S003
+Texture entropy,-0.2831,4.0721,S004
+Texture entropy,-0.2721,3.8072,S005
+Texture entropy,-0.1677,4.2609,S006
+Texture entropy,-0.0127,5.1708,S007
+Texture entropy,0.2006,6.0109,S008
+Texture entropy,0.3584,6.2954,S009
+Texture entropy,0.2752,5.8598,S010
+Texture entropy,-0.0372,4.9561,S011
+Texture entropy,-0.3140,4.1066,S012
+Texture entropy,-0.3351,3.8026,S013
+Texture entropy,-0.1559,4.2198,S014
+Texture entropy,0.0413,5.1170,S015
+Texture entropy,0.1877,5.9755,S016
+Texture entropy,0.2902,6.2989,S017
+Texture entropy,0.2700,5.9002,S018
+Texture entropy,0.0417,5.0100,S019
+Texture entropy,-0.2704,4.1429,S020
+Texture entropy,-0.3909,3.8003,S021
+Texture entropy,-0.2158,4.1802,S022
+Texture entropy,0.0683,5.0631,S023
+Texture entropy,0.2389,5.9383,S024
+Texture entropy,0.2664,6.3000,S025
+Texture entropy,0.2124,5.9390,S026
+Texture entropy,0.0610,5.0639,S027
+Texture entropy,-0.1911,4.1809,S028
+Enhancement ratio,0.2378,1.7576,S001
+Enhancement ratio,-0.0344,1.3549,S002
+Enhancement ratio,-0.2399,0.9428,S003
+Enhancement ratio,-0.2341,0.7803,S004
+Enhancement ratio,-0.1093,0.9694,S005
+Enhancement ratio,0.0157,1.3913,S006
+Enhancement ratio,0.1398,1.7810,S007
+Enhancement ratio,0.2469,1.8936,S008
+Enhancement ratio,0.2100,1.6584,S009
+Enhancement ratio,-0.0267,1.2231,S010
+Enhancement ratio,-0.2767,0.8613,S011
+Enhancement ratio,-0.2935,0.8002,S012
+Enhancement ratio,-0.0791,1.0782,S013
+Enhancement ratio,0.1386,1.5207,S014
+Enhancement ratio,0.2096,1.8497,S015
+Enhancement ratio,0.1784,1.8584,S016
+Enhancement ratio,0.1031,1.5414,S017
+Enhancement ratio,-0.0474,1.0979,S018
+Enhancement ratio,-0.2390,0.8065,S019
+Enhancement ratio,-0.2899,0.8502,S020
+Enhancement ratio,-0.0905,1.2017,S021
+Enhancement ratio,0.1945,1.6400,S022
+Enhancement ratio,0.2971,1.8899,S023
+Enhancement ratio,0.1674,1.7943,S024
+Enhancement ratio,-0.0199,1.4132,S025
+Enhancement ratio,-0.1359,0.9862,S026
+Enhancement ratio,-0.1974,0.7814,S027
+Enhancement ratio,-0.2024,0.9276,S028
+Age,0.0321,60.4046,S001
+Age,-0.1505,43.7830,S002
+Age,-0.1634,35.1293,S003
+Age,-0.0503,40.3284,S004
+Age,0.0340,55.8447,S005
+Age,0.0624,71.1266,S006
+Age,0.1024,75.7818,S007
+Age,0.1206,66.6448,S008
+Age,0.0162,49.9289,S009
+Age,-0.1584,37.0016,S010
+Age,-0.2013,36.6538,S011
+Age,-0.0414,49.1221,S012
+Age,0.1412,65.9276,S013
+Age,0.1604,75.6420,S014
+Age,0.0570,71.6592,S015
+Age,-0.0215,56.6876,S016
+Age,-0.0540,40.9084,S017
+Age,-0.1046,35.0520,S018
+Age,-0.1309,43.1009,S019
+Age,-0.0264,59.5816,S020
+Age,0.1545,73.2867,S021
+Age,0.2050,74.8962,S022
+Age,0.0505,63.3156,S023
+Age,-0.1314,46.4202,S024
+Age,-0.1565,35.6993,S025
+Age,-0.0631,38.4436,S026
+Age,0.0090,52.7868,S027
+Age,0.0450,68.9751,S028

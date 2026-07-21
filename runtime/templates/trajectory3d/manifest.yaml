@@ -1,0 +1,32 @@
+id: trajectory3d
+name: 三维多条件 Nyquist 轨迹
+category: electrochemistry/eis-3d
+version: 0.1.0
+description: 从具有科学含义的 X/Y/Z/Series 长表生成可编辑的 Origin 三维多条件阻抗轨迹
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 24
+family: electrochemistry
+examples:
+  - id: three_conditions
+    name_zh: 三条件 Nyquist 轨迹
+    file: example_standard.csv
+    description_zh: 三个带单位的 Condition Position 分别位于 20、50、80 mm。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 仅接受 X/Y/Z/Series 长表；Y 必须是真实实验变量并在列名中写明单位。
+  required_columns: [Zreal（数值）, 真实第三变量与单位（数值）, -Zimag（数值）, Series（组名）]
+  optional_columns: []
+  accepted_layouts: [长表；每行一个 XYZ 点；Series 标识 1–6 条轨迹]
+  aliases: [Zreal/Z'/阻抗实部, Condition Position (mm)/Temperature (K)/真实条件变量, -Zimag/-Z''/负阻抗虚部, Series/样品/组别]
+  notes_zh:
+    - 第三轴不能是装饰性序号；列名必须同时给出科学含义和单位。
+    - 不拟合、不计算等效电路、不添加电阻标注，也不修改源文件。
+    - 角色证据不完整时必须人工确认；缺少第三轴单位时拒绝绘图。

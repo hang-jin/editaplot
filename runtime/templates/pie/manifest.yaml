@@ -1,0 +1,31 @@
+id: pie
+name: 二维饼图
+category: general/composition
+version: 0.1.0
+description: 用于少量类别构成比例的平面二维饼图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 74
+family: general_composition
+examples:
+  - id: five_parts
+    name_zh: 五部分构成
+    file: example_standard.csv
+    description_zh: 展示适合饼图的少量、互斥、非负组成类别。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 展示一个整体中少量互斥类别的组成比例。
+  required_columns: [一列类别, 恰好一个非负数值列]
+  optional_columns: []
+  accepted_layouts: [两列长表]
+  aliases: [Category/Label, 类别/标签, Value/Amount, 数值/数量]
+  notes_zh:
+    - 推荐不超过 8 个扇区；过多类别应优先选择条形图。
+    - 只使用二维饼图，不生成 3D 爆炸效果。

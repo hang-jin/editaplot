@@ -1,0 +1,29 @@
+id: eis
+name: EIS 阻抗谱
+category: electrochemistry/eis
+version: 0.1.0
+description: 自动识别 Nyquist 或 Bode 列角色并生成可编辑 Origin 图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 20
+family: electrochemistry
+examples:
+  - id: nyquist
+    name_zh: Nyquist 教学样例
+    file: example_standard.csv
+    description_zh: 阻抗实部与负虚部的标准列结构。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 自动识别 Nyquist 或 Bode 阻抗谱列角色。
+  required_columns: [Nyquist：Z 实部 + Z 虚部, 或 Bode：频率 + 阻抗模/相位]
+  optional_columns: [多个样品系列]
+  accepted_layouts: [宽表]
+  aliases: [Zreal/Z'/阻抗实部, Zimag/Z''/阻抗虚部, Frequency/频率, Phase/相位角]
+  notes_zh: [不会自动进行等效电路拟合, 频率对数轴要求全部频率为正]

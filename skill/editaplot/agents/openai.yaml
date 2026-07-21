@@ -1,0 +1,4 @@
+interface:
+  display_name: "EditaPlot"
+  short_description: "Analyze data and render editable scientific figures"
+  default_prompt: "Use $editaplot to check my local environment, inspect my data, recommend a publication-informed chart and Chinese palette, freeze the plan, then render and verify an editable scientific figure through my licensed local plotting application."

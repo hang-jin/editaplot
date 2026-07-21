@@ -1,0 +1,36 @@
+id: diagnostic_curve
+name: 医学诊断 ROC / PR 曲线
+category: medical-ai/performance
+version: 0.1.0
+description: 使用用户提供的经验坐标绘制 ROC 或 Precision-Recall 曲线
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 140
+family: medical_ai_evidence
+examples:
+  - id: roc_external_validation
+    name_zh: 三模型 ROC 教学样例
+    file: example_standard.csv
+    description_zh: 只包含用户提供的经验 FPR/TPR 坐标，不计算或平滑 ROC。
+  - id: pr_external_validation
+    name_zh: 两模型 PR 教学样例
+    file: example_pr.csv
+    description_zh: 使用用户提供的 Recall/Precision 坐标和恒定患病率基线。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较医学分类模型的区分能力；ROC 与 PR 使用不同的明确输入合同。
+  required_columns: [ROC：FPR + 一个或多个 TPR；PR：Recall + 一个或多个 Precision]
+  optional_columns: [PR 模式需要一列恒定 Prevalence；AUC/AUPRC/CI 只作为用户提供的说明]
+  accepted_layouts: [宽表，每个模型一列]
+  aliases: [FPR/假阳性率, TPR/敏感度, Recall/召回率, Precision/精确率, Prevalence/患病率]
+  notes_zh:
+    - 不从标签和预测分数静默计算曲线、AUC、CI 或 DeLong 检验。
+    - ROC 使用 0–1 方形数据区和机会参考线；PR 使用显式患病率基线。
+    - 示例库同时提供 ROC 与 PR 两种规范文件。

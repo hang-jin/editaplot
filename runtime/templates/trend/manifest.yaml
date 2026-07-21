@@ -1,0 +1,31 @@
+id: trend
+name: 多系列趋势折线图
+category: general/trend
+version: 0.1.0
+description: 按连续自变量比较一个或多个趋势系列，自动适配画幅和系列密度
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 76
+family: general_trend
+examples:
+  - id: method_progression
+    name_zh: 多方法阶段趋势
+    file: example_standard.csv
+    description_zh: 十二个连续阶段、三个方法系列，展示克制的同族配色与输入趋势。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 用连续 X 列展示时间、步骤、剂量或迭代过程中的一个或多个趋势。
+  required_columns: [连续 X 列, 一个或多个数值系列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Time/Step/Epoch/Dose, 时间/步数/剂量, 其余数值列作为系列]
+  notes_zh:
+    - 行顺序保持源文件顺序，不擅自平滑、补点或计算统计量。
+    - 系列过多时会提示人工确认，画幅会随系列数自动扩展。

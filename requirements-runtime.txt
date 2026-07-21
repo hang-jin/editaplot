@@ -1,0 +1,11 @@
+# Audited direct requirements used by `doctor --repair`.
+# Transitive versions are frozen in requirements-runtime.lock.
+numpy==1.26.4
+pandas==2.3.3
+PyYAML==6.0.3
+jsonschema==4.26.0
+matplotlib==3.10.9
+originpro==1.1.15
+openpyxl==3.1.5
+xlrd==2.0.2
+pillow==12.3.0

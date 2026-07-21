@@ -1,0 +1,31 @@
+id: raw_summary
+name: 原始点汇总图
+category: general/distribution
+version: 0.1.0
+description: 多组原始观测点与中心线的通用证据图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 120
+family: general_distribution
+examples:
+  - id: basic
+    name_zh: 三组原始观测
+    file: example_standard.csv
+    description_zh: 每列是一组原始观测，不隐藏样本离散程度。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 用全部原始观测比较多个组，避免只展示汇总柱。
+  required_columns: [一个或多个原始数值列]
+  optional_columns: []
+  accepted_layouts: [宽表，每个数值列代表一组]
+  aliases: [Control/Treatment, 对照/处理组]
+  notes_zh:
+    - 不自动删除异常值，不修改原始观测。
+    - 中心线由 Origin 官方统计图对象计算并保持可编辑。

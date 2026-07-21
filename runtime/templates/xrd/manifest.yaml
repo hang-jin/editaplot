@@ -1,0 +1,29 @@
+id: xrd
+name: XRD 衍射图谱
+category: spectroscopy/xrd
+version: 0.1.0
+description: 自动识别 2θ 与单条或多条强度曲线，不自动添加材料峰位
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 60
+family: spectroscopy
+examples:
+  - id: standard
+    name_zh: XRD 多图谱样例
+    file: example_standard.csv
+    description_zh: 2θ 与一个或多个强度系列。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 绘制衍射角与单条或多条强度图谱。
+  required_columns: [2θ 衍射角列, 一个或多个强度列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [2Theta/TwoTheta/2θ/衍射角, Intensity/Counts/强度/计数]
+  notes_zh: [不自动添加材料峰位或物相结论, 多图谱显示变换会明确写入报告]

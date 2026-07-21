@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "pl",
+  "required_roles": ["x", "series"],
+  "optional_roles": ["fit"],
+  "allowed_modes": ["steady_state", "trpl"],
+  "automatic_fitting": false,
+  "automatic_normalization": false,
+  "min_columns": 2,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

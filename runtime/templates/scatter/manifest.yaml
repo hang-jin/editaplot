@@ -1,0 +1,35 @@
+id: scatter
+name: 通用散点图
+category: general/relationship
+version: 0.1.0
+description: 一个数值 X 与一个或多个观测系列的通用散点图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 80
+family: general_relationship
+examples:
+  - id: basic
+    name_zh: 基础双系列
+    file: example_standard.csv
+    description_zh: 少量观测点，用于快速理解 X + 多个 Y 的宽表格式。
+  - id: dense
+    name_zh: 密集散点自动适配
+    file: example_dense.csv
+    description_zh: 60 个观测点和三个系列，用于检查符号尺寸与多系列颜色。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 展示一个连续 X 与一个或多个连续观测系列之间的关系。
+  required_columns: [一个数值 X 列, 一个或多个数值 Y 列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [X/Time/Concentration, 时间/浓度/自变量, Response/Signal/响应/信号]
+  notes_zh:
+    - 不自动拟合回归线、删除离群点或计算相关系数。
+    - 点数增加时只调整显示密度，正式 Origin 仍使用全部数据。

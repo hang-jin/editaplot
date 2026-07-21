@@ -1,0 +1,29 @@
+id: xas
+name: XAS 吸收谱
+category: spectroscopy/xas
+version: 0.1.0
+description: 不自动归一化或拟合的通用 XAS 能量—吸收信号绘图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 50
+family: spectroscopy
+examples:
+  - id: standard
+    name_zh: XAS 教学样例
+    file: example_standard.csv
+    description_zh: 能量与一个或多个吸收信号系列。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 绘制能量与吸收信号关系，保留用户提供的数值。
+  required_columns: [能量列, 一个或多个吸收信号列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Energy/Photon Energy/能量, mu/μ(E)/Absorption/吸收]
+  notes_zh: [不自动归一化、扣背景、求导或拟合]

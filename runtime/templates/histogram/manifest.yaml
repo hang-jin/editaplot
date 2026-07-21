@@ -1,0 +1,31 @@
+id: histogram
+name: 直方分布图
+category: general/distribution
+version: 0.1.0
+description: 基于原始连续数值的可编辑 Origin 直方分布图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 122
+family: general_distribution
+examples:
+  - id: basic
+    name_zh: 单变量分布
+    file: example_standard.csv
+    description_zh: 展示 60 个中性教学观测的频数分布。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 检查连续观测的中心、范围、偏斜和多峰结构。
+  required_columns: [一个或多个原始数值列，每列至少 5 个观测]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Value/Measurement, 数值/测量值]
+  notes_zh:
+    - bin 规则冻结到计划和 Origin 反读报告，不静默拟合分布曲线。
+    - 多列叠加容易遮挡，缺少明确意图时需要人工确认。

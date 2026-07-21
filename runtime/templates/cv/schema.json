@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "cv",
+  "required_roles": ["x", "series"],
+  "preserve_row_order": true,
+  "min_columns": 2,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}
+

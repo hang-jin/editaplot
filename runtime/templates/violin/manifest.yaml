@@ -1,0 +1,31 @@
+id: violin
+name: 小提琴分布图
+category: general/distribution
+version: 0.1.0
+description: 使用原始观测展示多个组的分布形状和四分位结构
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 121
+family: general_distribution
+examples:
+  - id: basic
+    name_zh: 三组分布比较
+    file: example_standard.csv
+    description_zh: 适合样本量足以表达分布形状的宽表原始数据。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较多个组的分布形状、中位数和四分位范围。
+  required_columns: [一个或多个原始数值列，每列至少 5 个观测]
+  optional_columns: []
+  accepted_layouts: [宽表，每个数值列代表一组]
+  aliases: [Control/Treatment, 对照/处理组]
+  notes_zh:
+    - 密度由 Origin 官方 Violin/Box 统计图对象生成。
+    - 不把小样本伪装成稳定分布；样本太少时改用原始点图。

@@ -1,0 +1,4 @@
+Actual class,Benign,Indeterminate,Malignant
+Benign,68,9,3
+Indeterminate,8,41,11
+Malignant,2,7,71

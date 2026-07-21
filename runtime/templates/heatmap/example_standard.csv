@@ -1,0 +1,5 @@
+Dataset,Baseline,Augmented,Fine-tuned,Proposed
+Dataset A,0.18,0.34,0.55,0.82
+Dataset B,0.22,0.47,0.69,0.91
+Dataset C,0.12,0.38,0.74,0.86
+Dataset D,0.28,0.52,0.71,0.93

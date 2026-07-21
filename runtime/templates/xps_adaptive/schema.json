@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "xps_adaptive",
+  "required": [],
+  "numeric_columns": "*",
+  "min_columns": 2,
+  "min_rows": 20
+}

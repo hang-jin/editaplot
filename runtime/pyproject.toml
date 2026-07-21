@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "editaplot-runtime"
+version = "0.1.0"
+description = "Windows compatibility runtime for editable scientific plotting."
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "EditaPlot contributors" }]
+dependencies = [
+  "numpy==1.26.4",
+  "pandas==2.3.3",
+  "PyYAML==6.0.3",
+  "jsonschema==4.26.0",
+  "matplotlib==3.10.9",
+  "originpro==1.1.15",
+  "openpyxl==3.1.5",
+  "xlrd==2.0.2",
+  "pillow==12.3.0",
+]
+
+[project.optional-dependencies]
+desktop = ["PySide6==6.6.3.1"]
+dev = ["pytest==9.1.1", "ruff==0.14.11", "pyinstaller==6.21.0", "xlwt==1.3.0"]
+
+[project.scripts]
+editaplot-desktop = "origin_sciplot.app:main"
+editaplot-worker = "origin_sciplot.workers.run_template_worker:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "origin: tests that require a real local Origin/OriginPro installation",
+]

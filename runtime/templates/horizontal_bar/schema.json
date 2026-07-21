@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "horizontal_bar",
+  "required_roles": ["category", "series"],
+  "optional_roles": ["error"],
+  "min_columns": 2,
+  "min_rows": 1,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

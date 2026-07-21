@@ -1,0 +1,31 @@
+id: forest
+name: 森林效应图
+category: general/effect
+version: 0.1.0
+description: 使用显式点估计和区间上下限绘制可编辑森林图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 123
+family: general_effect
+examples:
+  - id: basic
+    name_zh: 六组效应区间
+    file: example_standard.csv
+    description_zh: 区间和参考值全部来自输入，不由绘图软件推断。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 比较多个对象的点估计和显式置信区间或不确定性区间。
+  required_columns: [Label, Estimate, CI Low, CI High]
+  optional_columns: [Reference，非空值必须相同]
+  accepted_layouts: [每行一个对象]
+  aliases: [标签/估计值/置信区间下限/置信区间上限/参考值]
+  notes_zh:
+    - 软件不计算 CI；上下限必须由输入明确提供。
+    - Reference 缺失时不自动假设零或一。

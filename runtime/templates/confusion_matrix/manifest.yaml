@@ -1,0 +1,31 @@
+id: confusion_matrix
+name: 医学分类混淆矩阵
+category: medical-ai/performance
+version: 0.1.0
+description: 绘制保留实际类与预测类语义的可编辑 Origin 混淆矩阵
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 141
+family: medical_ai_evidence
+examples:
+  - id: three_class_counts
+    name_zh: 三分类外部验证计数
+    file: example_standard.csv
+    description_zh: 输入为原始计数，软件不会静默归一化。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 展示医学分类器在各真实类别与预测类别之间的错误结构。
+  required_columns: [第一列 Actual class, 后续每列一个 Predicted class 的计数或已给比例]
+  optional_columns: []
+  accepted_layouts: [宽矩阵]
+  aliases: [Actual/真实类别/实际类别, 预测类别列]
+  notes_zh:
+    - 不静默进行行归一化、列归一化或百分比转换。
+    - Actual class 保持为行，Predicted class 保持为列。

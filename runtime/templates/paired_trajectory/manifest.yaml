@@ -1,0 +1,31 @@
+id: paired_trajectory
+name: 配对与纵向轨迹图
+category: medical-ai/paired
+version: 0.1.0
+description: 用宽表中的稳定受试者列绘制配对或纵向轨迹
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 143
+family: medical_ai_evidence
+examples:
+  - id: longitudinal_metric
+    name_zh: 十四名受试者四次访视
+    file: example_standard.csv
+    description_zh: 每个受试者一列，不按行号猜配对。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 显示同一病例或受试者在不同访视/条件下的变化方向。
+  required_columns: [一个数值 Time/Visit/Condition index, 每个 Subject 一列数值]
+  optional_columns: []
+  accepted_layouts: [宽表；列名是稳定 Subject ID]
+  aliases: [Time/Visit/时间/访视/条件序号, Subject/病例/受试者]
+  notes_zh:
+    - 不根据行号猜 Subject，不插值，不补不存在的时间点。
+    - V1 使用数值或有序索引作为 X；文本长表将在后续 profile 支持。

@@ -1,0 +1,29 @@
+id: lsv
+name: LSV 线性扫描伏安曲线
+category: electrochemistry/lsv
+version: 0.1.0
+description: 通用电位—电流或电流密度 LSV 绘图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 40
+family: electrochemistry
+examples:
+  - id: standard
+    name_zh: LSV 多系列样例
+    file: example_standard.csv
+    description_zh: 电位与多个电流密度系列。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 绘制线性扫描电位下的一个或多个电流响应。
+  required_columns: [电位或电压列, 一个或多个电流系列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Potential/Voltage/E, 电位/电压, Current/Current density, 电流/电流密度]
+  notes_zh: [不自动计算 onset、Tafel slope 或极限电流]

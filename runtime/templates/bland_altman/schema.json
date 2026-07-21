@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "bland_altman",
+  "required_roles": ["mean", "difference", "bias", "loa_lower", "loa_upper"],
+  "automatic_statistics": false,
+  "min_columns": 5,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

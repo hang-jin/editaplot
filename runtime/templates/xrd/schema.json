@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "xrd",
+  "required_roles": ["x", "series"],
+  "automatic_peak_labels": false,
+  "min_columns": 2,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}
+
