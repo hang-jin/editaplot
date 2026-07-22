@@ -207,6 +207,7 @@ def _run_render(args: argparse.Namespace) -> int:
     plan = load_json(args.plan_file)
     command, env, engine_root = build_worker_command(
         plan,
+        plan_file=args.plan_file,
         engine_home=args.engine_home,
         python_executable=args.python_executable,
         output_dir=args.output_dir,

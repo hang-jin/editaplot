@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import shutil
 import traceback
 from collections.abc import Mapping
 from dataclasses import asdict
@@ -21,8 +22,7 @@ from origin_sciplot.origin_backend.safe_errors import (
     safe_error_message,
 )
 from origin_sciplot.origin_backend.verify_utils import require_nonempty
-from origin_sciplot.output_manager import create_run_output, write_json
-from origin_sciplot.output_manager import RunOutput
+from origin_sciplot.output_manager import RunOutput, create_run_output, write_json
 from origin_sciplot.scientific_workflow import (
     ScientificColumnMapping,
     ScientificWorkflowError,
@@ -62,6 +62,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--template-id", default="auto")
     parser.add_argument("--input-csv", "--input-file", dest="input_csv", required=True)
     parser.add_argument("--output-dir")
+    parser.add_argument("--render-plan-file")
     parser.add_argument("--expected-plan-digest")
     parser.add_argument("--column-mapping-json")
     parser.add_argument("--text-overrides-json")
@@ -116,6 +117,14 @@ def main(argv: list[str] | None = None) -> int:
     xps_analysis = None
     scientific_analysis = None
     try:
+        render_plan_source = None
+        if args.render_plan_file:
+            render_plan_source = Path(args.render_plan_file).resolve()
+            if not render_plan_source.is_file():
+                raise ScientificWorkflowError(
+                    "render_plan_missing",
+                    "The approved render plan file is unavailable.",
+                )
         selected_template_id = args.template_id
         selected_renderer_template_id = None
         column_mapping = None
@@ -242,6 +251,8 @@ def main(argv: list[str] | None = None) -> int:
 
         proto.progress("create_output_dir", "running", "正在创建输出文件夹")
         output = create_run_output(args.input_csv, manifest, args.output_dir)
+        if render_plan_source is not None:
+            shutil.copy2(render_plan_source, output.render_plan_copy)
         logger = RunLogger(output.run_log, output.output_dir)
         logger.write(f"template={manifest.id} version={manifest.version}")
         if xps_analysis is not None:

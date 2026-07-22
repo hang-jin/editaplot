@@ -110,8 +110,8 @@
     },
     {
       "path": "src/origin_sciplot/output_manager.py",
-      "size_bytes": 3160,
-      "sha256": "93d67b11cd2a8e571bd22634bd295e662ac090fee9f2d3cb4509d63e0dec128e"
+      "size_bytes": 3411,
+      "sha256": "b17eb8c98af08a9a7dc9bbc7ff035c3f1e10f319b7c099a836ee0e2b7aa7da14"
     },
     {
       "path": "src/origin_sciplot/palette_catalog.py",
@@ -190,8 +190,8 @@
     },
     {
       "path": "src/origin_sciplot/workers/run_template_worker.py",
-      "size_bytes": 17937,
-      "sha256": "62112cb50a8ff1c37071bced9fb1b2b40e02d441507d3c4393a572cf79962497"
+      "size_bytes": 18434,
+      "sha256": "a16a1032134acaf1911252716bcc589c1246b087168a36e039ae20426c9da3de"
     },
     {
       "path": "src/origin_sciplot/xps_adaptive.py",

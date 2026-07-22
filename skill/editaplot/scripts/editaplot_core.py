@@ -1426,6 +1426,9 @@ def build_plan(
             "engine_home": str(root),
             "keep_origin_open": True,
             "origin_callability_check": "performed_by_render_worker",
+            "output_directory_policy": "source_sibling_unique_folder",
+            "output_folder_pattern": "<source_stem>_EditaPlot_YYYYMMDD_HHMMSS",
+            "render_plan_copy": "render-plan.json",
             "required_outputs": ["opju", "png", "pdf", "tif", "origin_verify_report"],
         },
         "can_render": bool(template_id in VERIFIED_TEMPLATE_IDS and not prepared.requires_confirmation),
@@ -1461,6 +1464,7 @@ def validate_plan(plan: dict[str, Any]) -> None:
 def build_worker_command(
     plan: dict[str, Any],
     *,
+    plan_file: str | Path | None = None,
     engine_home: str | Path | None = None,
     python_executable: str | Path | None = None,
     output_dir: str | Path | None = None,
@@ -1483,6 +1487,8 @@ def build_worker_command(
     ]
     if output_dir:
         command.extend(("--output-dir", str(Path(output_dir).resolve())))
+    if plan_file:
+        command.extend(("--render-plan-file", str(Path(plan_file).resolve())))
     mapping = plan["template"].get("worker_mapping")
     if mapping:
         command.extend(("--column-mapping-json", json.dumps(mapping, ensure_ascii=False)))

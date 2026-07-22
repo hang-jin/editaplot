@@ -43,6 +43,7 @@ jobs:
           tools/build_palette_assets.py
           tools/build_runtime_manifest.py
           tools/build_showcase.py
+          tools/build_star_trend.py
           tools/generate_showcase_data.py
           tools/sync_public_gallery.py
           tools/verify_public_release.py
