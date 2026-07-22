@@ -226,6 +226,9 @@ def test_beginner_start_high_confidence_is_read_only_and_still_asks_scientific_p
         "render_started": False,
         "origin_called": False,
     }
+    origin_default = result["safe_defaults"]["origin"]
+    assert "Automation" in origin_default
+    assert not any(token in origin_default for token in ("官方", "合法", "授权", "激活", "手动启动"))
     assert source.read_bytes() == before
 
 
@@ -542,6 +545,8 @@ def test_plan_is_hash_bound_and_builds_safe_worker_command() -> None:
     command, env, root = build_worker_command(plan, engine_home=ENGINE)
 
     assert plan["can_render"] is True
+    assert plan["execution"]["origin_callability_check"] == "performed_by_render_worker"
+    assert "requires_manual_origin_start_confirmation" not in plan["execution"]
     assert command[:3] == [sys.executable, "-m", "origin_sciplot.workers.run_template_worker"]
     assert "--expected-plan-digest" in command
     assert "--keep-origin-open" in command
@@ -567,7 +572,23 @@ def test_changed_source_blocks_plan(tmp_path: Path) -> None:
     assert error.value.code == "source_changed"
 
 
-def test_render_requires_manual_origin_confirmation(tmp_path: Path) -> None:
+def test_previous_render_plan_schema_is_rejected() -> None:
+    plan = build_plan(
+        ENGINE / "templates" / "xrd" / "example_standard.csv",
+        template_id="xrd",
+        claim="The teaching patterns differ across the measured angle range.",
+        evidence_role="comparison",
+        engine_home=ENGINE,
+    )
+    plan["plan_version"] = "1.0"
+
+    with pytest.raises(EditaPlotError) as raised:
+        validate_plan(plan)
+
+    assert raised.value.code == "plan_version_unsupported"
+
+
+def test_render_reaches_plan_validation_without_origin_confirmation_flag(tmp_path: Path) -> None:
     plan_path = tmp_path / "plan.json"
     plan_path.write_text("{}", encoding="utf-8")
     completed = subprocess.run(
@@ -580,7 +601,20 @@ def test_render_requires_manual_origin_confirmation(tmp_path: Path) -> None:
 
     payload = json.loads(completed.stderr)
     assert completed.returncode == 2
-    assert payload["error"]["code"] == "manual_origin_confirmation_required"
+    assert payload["error"]["code"] == "plan_version_unsupported"
+
+
+def test_render_help_has_no_legacy_origin_confirmation_option() -> None:
+    completed = subprocess.run(
+        [sys.executable, str(SCRIPTS / "editaplot.py"), "render", "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+
+    assert completed.returncode == 0
+    assert "--confirm-origin-started" not in completed.stdout
 
 
 def test_verify_refuses_incomplete_output(tmp_path: Path) -> None:
@@ -774,9 +808,96 @@ def test_doctor_reports_supported_runtime() -> None:
     result = doctor(engine_home=ENGINE)
 
     assert result["ready_for_analysis"] is True
-    assert result["manual_origin_launch_confirmation"] == "required_before_render"
+    assert result["origin_callability_check"] == "performed_during_render"
+    assert "manual_origin_launch_confirmation" not in result
     assert result["automatic_repair"]["scope"] == "project_local_python_dependencies_only"
     assert result["automatic_repair"]["origin_installation_modified"] is False
+
+
+def test_origin_connection_failure_is_reported_as_neutral_technical_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_src = RUNTIME / "src"
+    monkeypatch.syspath_prepend(str(runtime_src))
+    from origin_sciplot.origin_backend.safe_errors import OriginEnvironmentError
+    from origin_sciplot.origin_backend.session import OriginSession
+
+    def fail_connection(_show: bool) -> None:
+        raise RuntimeError("private local Origin environment details must not escape")
+
+    fake_originpro = types.SimpleNamespace(
+        oext=True,
+        set_show=fail_connection,
+        new=lambda **_kwargs: None,
+        lt_float=lambda _name: 10.15,
+    )
+    monkeypatch.setitem(sys.modules, "originpro", fake_originpro)
+
+    with pytest.raises(OriginEnvironmentError) as raised:
+        OriginSession().__enter__()
+
+    assert str(raised.value) == "Origin Automation connection failed"
+    assert "private local" not in str(raised.value)
+
+
+def test_origin_connection_failure_restores_application_visibility(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_src = RUNTIME / "src"
+    monkeypatch.syspath_prepend(str(runtime_src))
+    from origin_sciplot.origin_backend.safe_errors import OriginEnvironmentError
+    from origin_sciplot.origin_backend.session import OriginSession
+
+    visibility: list[bool] = []
+
+    def record_visibility(show: bool) -> None:
+        visibility.append(show)
+
+    def fail_new(**_kwargs: object) -> None:
+        raise RuntimeError("private local details")
+
+    fake_originpro = types.SimpleNamespace(
+        oext=True,
+        set_show=record_visibility,
+        new=fail_new,
+        lt_float=lambda _name: 10.15,
+    )
+    monkeypatch.setitem(sys.modules, "originpro", fake_originpro)
+
+    with pytest.raises(OriginEnvironmentError, match="Origin Automation connection failed"):
+        OriginSession().__enter__()
+
+    assert visibility == [False, True]
+
+
+def test_origin_session_ignores_broken_optional_package_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_src = RUNTIME / "src"
+    monkeypatch.syspath_prepend(str(runtime_src))
+    from origin_sciplot.origin_backend import session as session_module
+    from origin_sciplot.origin_backend.session import OriginSession
+
+    closed: list[bool] = []
+    fake_originpro = types.SimpleNamespace(
+        oext=True,
+        set_show=lambda _show: None,
+        new=lambda **_kwargs: None,
+        lt_float=lambda _name: 10.15,
+        exit=lambda: closed.append(True),
+    )
+
+    def fail_metadata(_name: str) -> str:
+        raise RuntimeError("broken local package metadata")
+
+    monkeypatch.setitem(sys.modules, "originpro", fake_originpro)
+    monkeypatch.setattr(session_module.metadata, "version", fail_metadata)
+
+    with OriginSession(keep_open=False) as origin_session:
+        assert origin_session.environment is not None
+        assert origin_session.environment.originpro_version == "unknown"
+
+    assert closed == [True]
 
 
 @pytest.mark.parametrize("minor", [10, 11, 12])
@@ -1061,8 +1182,9 @@ def test_origin_discovery_uses_registered_clsid_and_existing_origin64(
 
     assert result["application_present"] is True
     assert Path(result["path"]) == executable.resolve()
-    assert result["license_confirmed"] is False
-    assert result["manual_startup_confirmation"] == "required_before_render"
+    assert result["callability_status"] == "ready_to_attempt"
+    assert "license_confirmed" not in result
+    assert "manual_startup_confirmation" not in result
 
 
 def test_doctor_render_gate_requires_registered_origin_application(
@@ -1081,8 +1203,7 @@ def test_doctor_render_gate_requires_registered_origin_application(
         lambda: {
             "application_present": False,
             "path": None,
-            "license_confirmed": False,
-            "manual_startup_confirmation": "required_before_render",
+            "callability_status": "not_detected",
         },
     )
 
@@ -1090,7 +1211,7 @@ def test_doctor_render_gate_requires_registered_origin_application(
 
     assert result["ready_for_analysis"] is True
     assert result["ready_for_render"] is False
-    assert "install_or_repair_official_origin_application_registration" in result["manual_blockers"]
+    assert "origin_automation_application_not_detected" in result["manual_blockers"]
 
 
 def test_doctor_hard_rejects_arm64_windows_host(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1109,7 +1230,11 @@ def test_doctor_hard_rejects_arm64_windows_host(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(
         core,
         "discover_origin_application",
-        lambda: {"application_present": True, "path": "Origin64.exe"},
+        lambda: {
+            "application_present": True,
+            "path": "Origin64.exe",
+            "callability_status": "ready_to_attempt",
+        },
     )
 
     result = doctor(engine_home=ENGINE)
@@ -1247,7 +1372,7 @@ def test_doctor_repair_reports_origin_only_blocker_without_dependency_repair(
             "available": False,
             "supported_python": "64-bit CPython >=3.10,<3.13",
         },
-        "manual_blockers": ["install_or_repair_official_origin_application_registration"],
+        "manual_blockers": ["origin_automation_application_not_detected"],
     }
     monkeypatch.setattr(editaplot_cli, "doctor", lambda **_kwargs: report)
     monkeypatch.setattr(
@@ -1577,7 +1702,7 @@ def test_setup_updates_recognized_skill_then_repairs_and_rechecks(
             "ok": True,
             "ready_for_analysis": True,
             "ready_for_render": False,
-            "manual_blockers": ["manual_origin_startup_confirmation_required"],
+            "manual_blockers": ["origin_automation_application_not_detected"],
         }
 
     monkeypatch.setattr(bootstrap, "_run_json_command", fake_run)
@@ -1926,6 +2051,12 @@ def test_public_skill_metadata_and_legal_copies_are_self_contained() -> None:
     assert "Origin/OriginPro" in metadata["description"]
     assert "# EditaPlot" in body
     assert agent["interface"]["display_name"] == "EditaPlot"
+    default_prompt = agent["interface"]["default_prompt"]
+    assert "Origin Automation" in default_prompt
+    assert not any(
+        token in default_prompt
+        for token in ("合法", "授权", "激活", "手动启动", "licensed", "activation")
+    )
     assert (SKILL_ROOT / "LICENSE").read_bytes() == (PRODUCT_ROOT / "LICENSE").read_bytes()
     assert (SKILL_ROOT / "NOTICE").read_bytes() == (PRODUCT_ROOT / "NOTICE").read_bytes()
 

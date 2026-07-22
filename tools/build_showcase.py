@@ -1,4 +1,4 @@
-"""Build the verified EditaPlot gallery with the public CLI and a local licensed Origin."""
+"""Build the verified EditaPlot gallery with the public CLI and a callable local Origin."""
 
 # ruff: noqa: E501, S603
 
@@ -403,7 +403,6 @@ def build_case(
             str(CLI),
             "render",
             str(plan_path),
-            "--confirm-origin-started",
             "--engine-home",
             str(engine),
             "--python",
@@ -436,12 +435,9 @@ def main() -> int:
     parser.add_argument("--engine-home", required=True)
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--render", action="store_true")
-    parser.add_argument("--confirm-origin-started", action="store_true")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--only", action="append", default=[])
     args = parser.parse_args()
-    if args.render and not args.confirm_origin_started:
-        parser.error("--render requires --confirm-origin-started after a successful manual launch")
     engine = Path(args.engine_home).resolve()
     python = Path(args.python).resolve()
     selected = [case for case in CASES if not args.only or case.id in set(args.only)]

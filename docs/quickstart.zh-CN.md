@@ -2,8 +2,8 @@
 
 ## 30 秒版本
 
-前提：Windows 10/11 x64 实体电脑、64 位 CPython 3.10–3.12，以及能由你手动正常启动的
-合法 Origin/OriginPro。CLI/依赖覆盖三个 Python 版本，真实 Origin 端到端基线为 CPython 3.10
+前提：Windows 10/11 x64 实体电脑、64 位 CPython 3.10–3.12，以及本机可由 Automation 调用的
+Origin/OriginPro。CLI/依赖覆盖三个 Python 版本，真实 Origin 端到端基线为 CPython 3.10
 和 Origin 2024b。macOS、Linux、WSL、Wine/CrossOver、Parallels 与其他虚拟机不支持。
 
 安装时必须下载**完整仓库**，在仓库根目录运行：
@@ -37,7 +37,7 @@
 2. 只读识别列名、列数、单位、数据类型、缺失值和可能的科研语义。
 3. 根据问题与数据结构推荐最多三种图，并展示合适的中文配色选择。
 4. 总会请你确认一句科学目的；只在列角色、误差、归一化、排序、双轴等含义不明确时追加问题。
-5. 冻结不改源数据的绘图计划；等你确认 Origin 已手动启动后再绘制。
+5. 冻结不改源数据的绘图计划；render 直接测试本机 Origin Automation 连接并绘制。
 6. 导出 OPJU、PNG、PDF、TIF，并检查源 hash、轴、字体、图层、对象反读和人工视觉效果。
 
 你不需要看到一串 `inspect → recommend → plan` 的工程术语。Codex 应把它们放在后台，
@@ -46,9 +46,9 @@
 ## 需要正式绘图时
 
 ```text
-我已手动正常启动官方且合法授权的 Origin。请使用已确认的方案绘制，保留可编辑 Origin 窗口，
-导出 OPJU、PNG、PDF、TIF，并完成轴、字体、图层、数据映射反读和人工视觉检查。
-不要只看 PNG 就汇报成功。
+请使用已确认的方案直接调用本机 Origin 绘制，保留可编辑 Origin 窗口，导出 OPJU、PNG、PDF、
+TIF，并完成轴、字体、图层、数据映射反读和人工视觉检查。若连接失败，只报告技术错误；不要只看
+PNG 就汇报成功。
 ```
 
 原始文件始终只读。缺少的数据列不会被补造；helper columns 只能存在于内存或可编辑 Origin 工作簿。

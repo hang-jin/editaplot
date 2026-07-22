@@ -1,16 +1,19 @@
-# Origin safety gate
+# Origin Automation safety gate
 
 ## Environment
 
 - Support Windows only.
-- Require a locally installed, licensed, official Origin/OriginPro environment.
-- Require the user to confirm that Origin starts manually before the first automated render.
-- Treat Origin 2024b / 10.15 as the V1 supported version. Mark other versions unverified.
-- Never troubleshoot cracks, patches, license bypasses, or redistributed Origin binaries.
+- Require a locally installed Origin/OriginPro application with a detectable Automation entry.
+- Treat Origin readiness as technical state only. Doctor performs read-only discovery; render owns
+  the live Automation connection attempt.
+- Treat Origin 2024b / 10.15 as the V1 end-to-end QA baseline, not a hard version gate. Mark other
+  versions unverified until their complete artifacts pass.
+- Never install, replace, or modify the Origin application. Report connection failures as technical
+  failures and do not speculate about their cause.
 
 ## Execution
 
-- Use the official external `originpro`/Origin Automation Server route.
+- Use the external `originpro`/Origin Automation Server route.
 - Never use mouse or screen-coordinate automation.
 - Keep unverified LabTalk and X-Function experiments outside public renderers.
 - Never use `-pfm 4` or unverified More Colors parameters.
@@ -23,7 +26,7 @@
 - Hash the source before inspection and check it again before render.
 - Never overwrite the source or add fabricated source columns.
 - Store helper columns only in memory or the Origin workbook copy and report their purpose.
-- Redact private absolute paths and Origin license details from public logs and examples.
+- Redact private absolute paths and local Origin environment details from public logs and examples.
 
 ## Experimental API rule
 

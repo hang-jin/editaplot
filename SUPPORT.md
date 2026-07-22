@@ -11,11 +11,11 @@ parameters, and new 3D routes require separate verification.
 The launcher reuses an existing compatible Python and keeps packages in EditaPlot's project-local
 environment. If no compatible Python exists, an agent may offer an official CPython 3.12 user-scope
 installation only after the user explicitly approves that system change. This exception never
-extends to Origin: EditaPlot does not install, activate, repair, patch, or silently start Origin.
+extends to Origin: environment repair does not install or modify Origin. The render worker connects
+to the existing local Automation application only when a render is requested.
 
-Support does not include Origin installation, activation, license recovery, cracks, patches, or
-authorization bypass. The user remains responsible for scientific meaning, statistics, units,
-privacy, and final publication review.
+Support does not include installing, replacing, or modifying the Origin application. The user
+remains responsible for scientific meaning, statistics, units, privacy, and final publication review.
 
 Community issues and contributions are welcome under the repository's open-source terms. Optional
 paid consulting, customization, installation guidance, and support may be offered separately; they

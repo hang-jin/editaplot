@@ -6,9 +6,8 @@ declares PySide6. Each dependency remains governed by its own license and notice
 2026-07-21 Windows/Python 3.10 environment and declared-only UI boundary are recorded in
 [the version-specific dependency inventory](docs/dependency-inventory.md).
 
-`originpro` and `OriginExt` are supplied by OriginLab for automating a separately installed,
-user-licensed Origin application. This repository does not redistribute Origin, an Origin license,
-or any activation component.
+`originpro` and `OriginExt` are supplied by OriginLab for automating a separately installed Origin
+application. This repository does not redistribute Origin.
 
 The repository does not vendor third-party Python wheels or source archives. If a future binary,
 offline dependency bundle, EXE, or installer redistributes those packages, the release process must

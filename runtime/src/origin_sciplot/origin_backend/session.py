@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from importlib import metadata
 
@@ -29,13 +30,20 @@ class OriginSession:
             raise OriginEnvironmentError("originpro is not importable") from exc
         if not getattr(op, "oext", False):
             raise OriginEnvironmentError("external Python COM automation is required")
+        try:
+            op.set_show(False)
+            op.new(asksave=False)
+            origin_version = f"{float(op.lt_float('@V')):.2f}"
+        except Exception as exc:  # noqa: BLE001 - redact local Automation failure details
+            # A failed connection probe must not leave a user-visible application hidden.
+            with suppress(Exception):
+                op.set_show(True)
+            self.op = None
+            raise OriginEnvironmentError("Origin Automation connection failed") from exc
         self.op = op
-        op.set_show(False)
-        op.new(asksave=False)
-        origin_version = f"{float(op.lt_float('@V')):.2f}"
         try:
             originpro_version = metadata.version("originpro")
-        except metadata.PackageNotFoundError:
+        except Exception:  # noqa: BLE001 - optional package metadata must not break a live session
             originpro_version = "unknown"
         self.environment = OriginEnvironment(origin_version, originpro_version)
         return self

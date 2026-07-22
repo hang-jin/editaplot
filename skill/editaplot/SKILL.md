@@ -1,6 +1,6 @@
 ---
 name: editaplot
-description: Analyze local scientific CSV, TXT, XLS, or XLSX data; recommend publication-informed charts and Chinese scientific palettes; freeze a reproducible plan; and automate editable figures through a legally licensed local Origin/OriginPro installation on physical Windows 10/11 x64. Use for beginner “drop in a file and draw it” requests; XPS, XRD, XAS, PL/TRPL, UV-Vis, electrochemistry, medical/AI evidence, distribution, relationship, error-bar, bar, stacked, pie, Sankey, radar, heatmap, or verified 3D workflows; project-local Python setup; palette selection; and OPJU/PNG/PDF/TIF verification. Do not use on macOS, Linux, WSL, Wine/CrossOver, Parallels, or other VMs; to install or bypass Origin licensing; to redistribute reference images; or to claim an unverified Origin route.
+description: Analyze local scientific CSV, TXT, XLS, or XLSX data; recommend publication-informed charts and Chinese scientific palettes; freeze a reproducible plan; and automate editable figures through a callable local Origin/OriginPro installation on physical Windows 10/11 x64. Use for beginner “drop in a file and draw it” requests; XPS, XRD, XAS, PL/TRPL, UV-Vis, electrochemistry, medical/AI evidence, distribution, relationship, error-bar, bar, stacked, pie, Sankey, radar, heatmap, or verified 3D workflows; project-local Python setup; palette selection; and OPJU/PNG/PDF/TIF verification. Do not use on macOS, Linux, WSL, Wine/CrossOver, Parallels, or other VMs; to install or modify Origin; to redistribute reference images; or to claim an unverified Origin route.
 ---
 
 # EditaPlot
@@ -30,8 +30,8 @@ rendering, exporting, and readback.
    official python.org Windows installation instructions and wait for the user; never use an
    untrusted mirror or silently install Python.
 5. Run `editaplot.cmd doctor` for each new workflow. Allow `doctor --repair` only for the reported
-   project-local Python dependency repair. Keep all Python packages in `.editaplot-venv`. Never
-   install, modify, activate, patch, or license Origin.
+   project-local Python dependency repair. Keep all Python packages in `.editaplot-venv`. Treat
+   Origin as an existing user-managed application; never install or modify it during repair.
 6. Run `editaplot.cmd start <data-file>` for a new table. Add `--intent "<user intent>"` when the
    user states a goal. Treat its inspection and recommendation payload as internal working state.
 7. Tell a beginner only: what was recognized, the best one to three chart choices, why they fit,
@@ -45,11 +45,14 @@ rendering, exporting, and readback.
    `palette_id` values. Read `references/palettes.md` before freezing one.
 10. Internally freeze the confirmed choice with `editaplot.cmd plan`; never hand-edit a plan or write
    a decision back to the source file.
-11. Ask the user to confirm that their official, legally licensed Origin installation starts
-    manually. Never use mouse automation, silently launch Origin, or handle installation, activation,
-    cracks, patches, or license bypasses.
-12. Render only through a verified route with `editaplot.cmd render <plan> --confirm-origin-started`.
-    Keep Origin open unless the user requests otherwise.
+11. Treat Origin readiness as a technical check only. If `doctor` detects the local Automation
+    application and reports `ready_for_render`, proceed after the scientific plan is confirmed
+    without adding another Origin question. Doctor discovery is not a live connection: the render
+    worker owns the real Automation attempt. If Origin is absent, report only the missing Automation
+    entry. Report a connection failure as a technical error without speculating about its cause.
+    Never use mouse automation or provide application patches or bypass instructions.
+12. Render only through a verified route with `editaplot.cmd render <plan>`. Keep Origin open unless
+    the user requests otherwise.
 13. Run `editaplot.cmd verify <output-directory>` and perform human visual QA. Do not report success
     from a PNG alone.
 
@@ -110,7 +113,7 @@ after the concise outcome.
 - `references/chart-selection.md`: chart families, ranking rules, and support levels.
 - `references/data-contracts.md`: accepted layouts, column semantics, and repair guidance.
 - `references/figure-contract.md`: evidence logic, visual hierarchy, typography, and color rules.
-- `references/origin-safety.md`: licensed-environment and verified-API guardrails.
+- `references/origin-safety.md`: local Automation and verified-API guardrails.
 - `references/verification.md`: mandatory artifacts, readback, and visual QA.
 - `references/showcase.md`: neutral demonstration data and gallery policy.
 - `references/palettes.md`: Chinese palette selector, compatibility, and accessibility limits.

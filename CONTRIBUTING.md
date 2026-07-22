@@ -7,8 +7,7 @@ Thank you for helping improve this local, editable scientific-figure workflow.
 Unless you explicitly state otherwise, a contribution intentionally submitted for inclusion in this
 project is provided under the Apache License 2.0, without additional terms. Submit only material you
 have the right to contribute. Do not add journal artwork, proprietary templates, patient data,
-Origin/OriginPro binaries, license files, activation material, or other third-party assets without a
-documented redistribution right.
+Origin/OriginPro binaries, or other third-party assets without a documented redistribution right.
 
 ## Before a pull request
 
@@ -29,5 +28,5 @@ documented redistribution right.
 ## Scope and conduct
 
 Keep changes focused and reviewable. Be respectful, evidence-led, and explicit about uncertainty.
-This project does not support license bypasses, cracked software, fabricated measurements, hidden
-normalization, or claims of journal endorsement.
+This project does not support modifying third-party application binaries, fabricated measurements,
+hidden normalization, or claims of journal endorsement.

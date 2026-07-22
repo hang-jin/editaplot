@@ -84,3 +84,80 @@ def test_asset_kind_mapping_is_independent_and_fail_closed() -> None:
 
 def test_git_blob_audit_distinguishes_lf_from_crlf() -> None:
     assert _git_blob_id(b"header,value\nA,1\n") != _git_blob_id(b"header,value\r\nA,1\r\n")
+
+
+def test_public_readmes_use_aggregate_star_badge_without_identity_links() -> None:
+    badge = "https://img.shields.io/github/stars/hang-jin/editaplot?style=social"
+    repository_link = '<a href="https://github.com/hang-jin/editaplot">'
+    forbidden = ("/stargazers", "metrics/stars.svg", "api.star-history.com")
+
+    for name in ("README.md", "README.en.md"):
+        content = (PRODUCT_ROOT / name).read_text(encoding="utf-8")
+        assert badge in content
+        assert repository_link in content
+        assert all(token not in content for token in forbidden)
+
+
+def test_public_source_has_no_stargazer_identity_collection_path() -> None:
+    assert not (PRODUCT_ROOT / ".github" / "workflows" / "star-history.yml").exists()
+    assert not (PRODUCT_ROOT / "tools" / "build_star_history.py").exists()
+    assert not (PRODUCT_ROOT / "tests" / "test_star_history.py").exists()
+
+    forbidden = ("/stargazers", "application/vnd.github.star+json", "include-current-star")
+    audited_files = list((PRODUCT_ROOT / ".github").rglob("*.yml")) + list(
+        (PRODUCT_ROOT / "tools").glob("*.py")
+    )
+    for path in audited_files:
+        content = path.read_text(encoding="utf-8")
+        assert all(token not in content for token in forbidden), path
+
+
+def test_public_guidance_has_no_legacy_origin_status_gate() -> None:
+    fixed_paths = [
+        PRODUCT_ROOT / name
+        for name in (
+            "README.md",
+            "README.en.md",
+            "CHANGELOG.md",
+            "SUPPORT.md",
+            "NOTICE",
+            "THIRD_PARTY_NOTICES.md",
+            "docs/installation.md",
+            "docs/quickstart.zh-CN.md",
+            "docs/quickstart.en.md",
+            "docs/release-boundaries.md",
+            "docs/gallery.md",
+            "skill/editaplot/SKILL.md",
+            "skill/editaplot/agents/openai.yaml",
+            "skill/editaplot/references/runtime.md",
+            "skill/editaplot/references/origin-safety.md",
+            "tools/build_showcase.py",
+            "tools/sync_public_gallery.py",
+        )
+    ]
+    fixed_paths.extend((PRODUCT_ROOT / "skill" / "editaplot" / "scripts").glob("*.py"))
+    forbidden = (
+        "--confirm-origin-started",
+        "requires_manual_origin_start_confirmation",
+        "manual_origin_launch_confirmation",
+        "manual_startup_confirmation",
+        "license_confirmed",
+        "licensed origin",
+        "legally licensed",
+        "origin license",
+        "originlab eula",
+        "manual origin",
+        "manual startup",
+        "manual launch",
+        "origin starts manually",
+        "官方合法",
+        "合法安装 origin",
+        "手动启动 origin",
+        "origin 已手动启动",
+        "已获许可",
+        "已激活",
+    )
+
+    for path in fixed_paths:
+        content = path.read_text(encoding="utf-8").casefold()
+        assert all(token.casefold() not in content for token in forbidden), path
