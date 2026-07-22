@@ -10,8 +10,8 @@
     },
     {
       "path": "NOTICE",
-      "size_bytes": 1017,
-      "sha256": "bbf8831aa8b649bed9b10e5a10f9f028a5217519e80f7374cf49bc9b4d69e16d"
+      "size_bytes": 861,
+      "sha256": "dc8008407c4bc5d224911d637451ee812bcf758277ca3c77ed273f0af434d0f2"
     },
     {
       "path": "pyproject.toml",
@@ -95,8 +95,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/session.py",
-      "size_bytes": 1548,
-      "sha256": "5d37836e6bd58504283b987cb165daa098f9931c64636c454320ca5029460a15"
+      "size_bytes": 1974,
+      "sha256": "3b2e9355856b833dc36502859dc12b74906f1ebce5a235b39b37cbc361f24703"
     },
     {
       "path": "src/origin_sciplot/origin_backend/trajectory3d_renderer.py",

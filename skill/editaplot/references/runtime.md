@@ -15,8 +15,8 @@ Support the CLI and locked dependency layer on physical Windows 10/11 x64 comput
 CPython 3.10, 3.11, or 3.12. The live Origin end-to-end baseline is CPython 3.10 with Origin 2024b;
 Python 3.11/3.12 rendering needs the same full-artifact verification before it is claimed.
 Do not attempt setup on macOS (Intel or Apple Silicon), Linux, WSL, Wine/CrossOver, Parallels,
-or other virtual machines. Origin/OriginPro must be separately obtained, legally licensed, and
-manually startable by the user.
+or other virtual machines. A local Origin/OriginPro application must expose a working Automation
+entry when rendering is requested.
 `doctor` cannot reliably detect every virtual machine, so ask the user to confirm a physical
 Windows host whenever that fact is unknown. VMs remain unsupported in V1.
 
@@ -65,12 +65,13 @@ Run setup from a **complete repository**, never from a copied `skill/editaplot` 
 `setup` installs or updates the Skill, writes an untracked local runtime pointer, selects a compatible
 Python, creates the project-local managed environment when required, installs only the locked audited
 dependencies, and runs doctor again. The launcher itself does not install Python; the agent follows
-the explicit-consent process above if Python is absent. It never installs, starts, modifies, patches,
-activates, or licenses Origin.
+the explicit-consent process above if Python is absent. Environment setup never installs or modifies
+Origin; the render worker may connect to the existing application when a figure is requested.
 
 `--diagnose` reports launcher/Python discovery. Doctor separately reports Windows, engine, dependency,
-Origin application, and manual blockers. Do not equate an installed `originpro` package with a working,
-licensed Origin application. The user must still confirm successful manual startup before rendering.
+and local Origin Automation discovery. If `ready_for_render` is true, continue without asking for
+another Origin confirmation. Actual callability is tested by the render worker. If the connection
+fails, report the technical failure without guessing its cause.
 
 ## Beginner entry point
 
@@ -92,7 +93,7 @@ do not expose the internal pipeline to a beginner.
 .\editaplot.cmd inspect <file> --output inspection.json
 .\editaplot.cmd recommend <file> --intent "compare groups" --output recommendations.json
 .\editaplot.cmd plan <file> --template-id bar --claim "Groups differ in response" --evidence-role comparison --palette-id ocean_coral --output render-plan.json
-.\editaplot.cmd render render-plan.json --confirm-origin-started
+.\editaplot.cmd render render-plan.json
 .\editaplot.cmd verify <output-directory>
 .\editaplot.cmd panel-plan medical-panels.json --claim "The model is accurate, calibrated, and anatomically plausible" --output medical-panel-plan.json
 ```

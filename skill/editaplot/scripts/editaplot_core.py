@@ -29,7 +29,7 @@ except ImportError:  # pragma: no cover - supported runtime is CPython 3.10-3.12
         importlib_metadata = None  # type: ignore[assignment]
 
 
-PLAN_VERSION = "1.0"
+PLAN_VERSION = "1.1"
 MEDICAL_PANEL_PLAN_VERSION = "1.0"
 AUTO_SCORE_THRESHOLD = 0.84
 AUTO_MARGIN_THRESHOLD = 0.13
@@ -1260,7 +1260,10 @@ def start_session(
             "source_data": "只读检查；不修改、不补列、不覆盖原始文件。",
             "helper_columns": "如绘图确有需要，只能在 Origin 工作簿内部创建 helper columns。",
             "palette": "配色暂不锁定；模板和科学目的确认后再选择或接受色盲友好默认值。",
-            "origin": "仅支持官方合法 Origin；真正渲染前必须由用户确认 Origin 可手动正常启动。",
+            "origin": (
+                "数据识别阶段不调用 Origin；render 时直接测试本机 Automation 连接，"
+                "失败只报告技术错误。"
+            ),
             "analysis_boundary": "不推断统计检验、误差语义、拟合参数或模型输出。",
         },
         "execution": {
@@ -1422,7 +1425,7 @@ def build_plan(
         "execution": {
             "engine_home": str(root),
             "keep_origin_open": True,
-            "requires_manual_origin_start_confirmation": True,
+            "origin_callability_check": "performed_by_render_worker",
             "required_outputs": ["opju", "png", "pdf", "tif", "origin_verify_report"],
         },
         "can_render": bool(template_id in VERIFIED_TEMPLATE_IDS and not prepared.requires_confirmation),
@@ -2050,8 +2053,8 @@ def _verify_managed_dependencies(python: Path) -> dict[str, Any]:
 def repair_environment(*, engine_home: str | Path | None = None) -> dict[str, Any]:
     """Create a project-local runtime and install only the audited Python dependencies.
 
-    This routine never installs, patches, licenses, or launches Origin.  A valid
-    licensed Origin installation remains a manual prerequisite for rendering.
+    This routine never installs, modifies, or launches Origin. Rendering tests
+    the existing local Origin Automation connection when the user requests a figure.
     """
 
     host = windows_host_compatibility()
@@ -2106,10 +2109,7 @@ def _repair_environment_transaction(
                 "dependency_lock_sha256": _sha256(constraints),
                 "python_compatibility": compatibility,
                 "origin_installation_modified": False,
-                "next_step": (
-                    "Run doctor again with the returned python_executable, then manually confirm "
-                    "licensed Origin starts before render."
-                ),
+                "next_step": "Run doctor again, then submit a data file.",
             }
 
     current_executable = os.path.normcase(str(Path(sys.executable).resolve()))
@@ -2267,10 +2267,7 @@ def _repair_environment_transaction(
         "dependency_lock_sha256": _sha256(constraints),
         "python_compatibility": compatibility,
         "origin_installation_modified": False,
-        "next_step": (
-            "Run doctor again with the returned python_executable, then manually confirm "
-            "licensed Origin starts before render."
-        ),
+        "next_step": "Run doctor again, then submit a data file.",
     }
 
 
@@ -2292,7 +2289,7 @@ def _origin_executable_from_command(command: str) -> Path | None:
 
 
 def discover_origin_application() -> dict[str, Any]:
-    """Locate Origin64.exe through its COM registration without asserting license state."""
+    """Locate a local Origin64.exe Automation registration without launching it."""
 
     result: dict[str, Any] = {
         "application_present": False,
@@ -2300,8 +2297,7 @@ def discover_origin_application() -> dict[str, Any]:
         "progid": "Origin.ApplicationSI",
         "clsid": None,
         "registry_view": None,
-        "license_confirmed": False,
-        "manual_startup_confirmation": "required_before_render",
+        "callability_status": "not_detected",
     }
     if platform.system() != "Windows":
         return {**result, "reason": "windows_required"}
@@ -2352,6 +2348,7 @@ def discover_origin_application() -> dict[str, Any]:
                 "path": str(executable),
                 "registry_view": label,
                 "reason": "registered_origin64_executable_found",
+                "callability_status": "ready_to_attempt",
             }
     return {**result, "reason": "registered_origin64_executable_missing"}
 
@@ -2396,8 +2393,8 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
             "name": "origin_application",
             "ok": origin_application["application_present"],
             "value": origin_application["path"],
-            "required": "registered official Origin64.exe",
-            "license_confirmed": False,
+            "required": "local Origin64.exe registered for Automation",
+            "callability_status": origin_application["callability_status"],
         }
     )
     try:
@@ -2457,20 +2454,18 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
     if not engine_ok:
         manual_blockers.append("provide_editaplot_engine_home")
     if windows and not origin_application["application_present"]:
-        manual_blockers.append("install_or_repair_official_origin_application_registration")
+        manual_blockers.append("origin_automation_application_not_detected")
     if missing_dependencies and not python_ok:
         manual_blockers.append("automatic_repair_requires_verified_python")
     if not dependency_state.get("originpro", False):
-        manual_blockers.append(
-            "python_originpro_package_can_be_repaired_but_licensed_origin_must_be_installed_manually"
-        )
+        manual_blockers.append("python_originpro_package_missing")
     return {
         "schema_version": "1.0",
         "ok": ready_analysis,
         "ready_for_analysis": ready_analysis,
         "ready_for_render": ready_render,
         "origin_application": origin_application,
-        "manual_origin_launch_confirmation": "required_before_render",
+        "origin_callability_check": "performed_during_render",
         "missing_python_dependencies": missing_dependencies,
         "automatic_repair": {
             "available": repairable,

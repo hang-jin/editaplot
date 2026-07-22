@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-07-22 — Beginner onboarding and public repository metrics
+## 2026-07-22 — Beginner onboarding and simplified public release
 
 - Added a Windows launcher that discovers a compatible 64-bit CPython 3.10–3.12 even when the
   user's default `python` command is missing, stale, or points to an unsupported version.
@@ -8,15 +8,15 @@
   bundled runtime, prepares an audited project-local environment, and runs a post-setup doctor.
 - Added guarded migration for complete pre-bootstrap EditaPlot installations; unrelated or
   incomplete non-empty directories remain protected from overwrite.
-- Strengthened doctor with a single Python compatibility policy and read-only Origin COM
-  registration discovery; Origin licensing and manual startup remain explicit user confirmations.
+- Strengthened doctor with a single Python compatibility policy and read-only Origin Automation
+  discovery. Origin readiness is technical only: render performs the actual connection attempt,
+  without an additional Origin confirmation gate.
 - Added a beginner `start` workflow for read-only data recognition, ranked chart suggestions, and
   plain-language scientific confirmation before any plan or render is created.
 - Made the V1 boundary explicit: physical Windows 10/11 x64 only; macOS, Linux, WSL,
   Wine/CrossOver, Parallels, and other VMs are unsupported.
-- Added a privacy-preserving GitHub Star history generator and scheduled workflow that publishes
-  only aggregate metrics to a separate `metrics` branch and does not request the access-restricted
-  stargazer listing during automated runs.
+- Added a compact GitHub Star badge that displays only the aggregate repository count. Removed the
+  trend generator, scheduled metrics branch, stargazer-list code path, and identity/timestamp storage.
 - Extended public CI coverage to CPython 3.10, 3.11, and 3.12 while preserving the existing
   `windows-python-310` protected-branch check.
 

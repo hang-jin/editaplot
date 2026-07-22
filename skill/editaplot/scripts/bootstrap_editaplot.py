@@ -1072,9 +1072,8 @@ def install_skill(argv: list[str], *, _lock_held: bool = False) -> int:
         "ready_for_analysis": bool(doctor_payload.get("ready_for_analysis")),
         "ready_for_render": bool(doctor_payload.get("ready_for_render")),
         "origin_installation_modified": False,
-        "manual_origin_launch_confirmation": "required_before_render",
         "next_step": (
-            "Confirm licensed Origin starts manually, then submit a data file."
+            "Submit a data file; Origin callability will be tested when rendering starts."
             if doctor_payload.get("ready_for_render")
             else "Follow post_repair_doctor.manual_blockers, then run editaplot.cmd doctor."
         ),

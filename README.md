@@ -8,6 +8,7 @@
     <img alt="Python 3.10–3.12" src="https://img.shields.io/badge/Python-3.10%E2%80%933.12-3776ab">
     <img alt="Codex Skill" src="https://img.shields.io/badge/Codex-Skill-7c3aed">
     <img alt="Tested with Origin 2024b" src="https://img.shields.io/badge/tested%20with-Origin%202024b-0f766e">
+    <a href="https://github.com/hang-jin/editaplot"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/hang-jin/editaplot?style=social"></a>
   </p>
   <p><a href="README.en.md">English</a> · 中文为主要说明语言</p>
 </div>
@@ -20,7 +21,7 @@ EditaPlot 是面向 Codex 的 Windows 本地科研绘图 Skill。它把“理解
 > **V1 只支持 Windows 10/11 x64 实体电脑。** macOS（Intel 与 Apple Silicon）、Linux、WSL、Wine/CrossOver、Parallels 及其他虚拟机均不受支持。Mac 用户请不要照着 Windows 步骤硬装；当前版本无法在 macOS 上调用 Origin。
 
 > [!IMPORTANT]
-> EditaPlot 按 [Apache License 2.0](LICENSE) 开源。运行绘图需要用户自行合法安装、激活并能手动启动 Origin/OriginPro；仓库不包含 Origin、许可证、破解补丁或授权绕过。
+> EditaPlot 按 [Apache License 2.0](LICENSE) 开源。运行绘图需要本机存在可由 Automation 调用的 Origin/OriginPro；EditaPlot 不负责安装或修改 Origin。
 
 ## 一眼看懂
 
@@ -81,12 +82,12 @@ flowchart LR
 | 项目 | 要求 |
 |---|---|
 | 系统 | Windows 10/11 x64 实体电脑；不支持 macOS、Linux、WSL 或虚拟机 |
-| Origin | 用户自行合法安装、激活，并已确认可以手动正常启动 |
+| Origin | 本机已安装，并能由 Origin Automation 调用 |
 | Origin 验证范围 | 已验证 Origin/OriginPro 2024b（10.15）；其他版本必须逐版本重新验证 |
 | Python | CLI/依赖在 64 位 CPython 3.10–3.12 上覆盖；真实 Origin 端到端基线为 CPython 3.10 + Origin 2024b |
 | 数据 | CSV、TXT、XLS 或 XLSX；支持中文列名与中文路径 |
 
-根目录的 `editaplot.cmd` 会优先发现用户已有的兼容 Python，再创建项目级 `.editaplot-venv` 并安装经过锁定的依赖。若完全没有兼容 Python，Skill 会先用中文说明这是系统级变更并取得明确确认，再优先通过官方 winget 以用户范围安装 Python 3.12；没有 winget 时只提供 python.org 官方安装指引。它不会静默改变系统，且永远不会安装、修改、激活或启动 Origin。
+根目录的 `editaplot.cmd` 会优先发现用户已有的兼容 Python，再创建项目级 `.editaplot-venv` 并安装经过锁定的依赖。若完全没有兼容 Python，Skill 会先用中文说明这是系统级变更并取得明确确认，再优先通过官方 winget 以用户范围安装 Python 3.12；没有 winget 时只提供 python.org 官方安装指引。环境修复不会安装或修改 Origin；正式绘图时由 render worker 直接测试本地 Automation 连接。
 
 ### 2. 安装 Codex Skill
 
@@ -112,7 +113,7 @@ Set-Location editaplot
 .\editaplot.cmd recommend <data.csv> --intent "比较模型并展示误差"
 .\editaplot.cmd palettes
 .\editaplot.cmd plan <data.csv> --template-id bar --claim "模型 A 指标更高" --evidence-role comparison --palette-id ocean_coral --output render-plan.json
-.\editaplot.cmd render render-plan.json --confirm-origin-started
+.\editaplot.cmd render render-plan.json
 .\editaplot.cmd verify <Origin-output-directory>
 ```
 
@@ -125,14 +126,14 @@ Set-Location editaplot
 安装官方 Python 3.12 是系统级变更并等我明确同意。Python 包只装进项目环境，不要安装或修改 Origin。
 然后只读分析我提供的数据，说明列角色、单位与歧义，最多推荐 3 种合适图形并展示中文配色选择。
 先让我确认一句科学目的；低置信度时再追问必要细节。确认后冻结 RenderPlan，不修改原始数据；
-我会在手动启动 Origin 后再授权绘制与验证。
+若 doctor 已发现本机 Origin Automation 入口，请直接在 render 阶段测试连接，不再追加额外的 Origin 确认问题。
 ```
 
 需要正式绘图时：
 
 ```text
-我已手动正常启动官方 Origin。请按已确认的 RenderPlan 绘制，保留可编辑 Origin 窗口，
-导出 OPJU、PNG、PDF、TIF，并完成轴、字体、图层、数据映射反读和人工视觉检查。不要只看 PNG 报成功。
+请按已确认的 RenderPlan 直接调用本机 Origin 绘制，保留可编辑 Origin 窗口；若连接失败，
+只报告技术错误，不猜测原因。导出 OPJU、PNG、PDF、TIF，并完成轴、字体、图层、数据映射反读和人工视觉检查。不要只看 PNG 报成功。
 ```
 
 ## 公开仓库与本地私有证据
@@ -158,17 +159,11 @@ Set-Location editaplot
 
 ## 独立项目声明
 
-EditaPlot 需要用户另行获得、在本机安装并合法许可的 Origin 或 OriginPro。项目不捆绑、不安装、不激活、不破解该软件，也不通过网络或云端开放其 Automation Server。EditaPlot 与 OriginLab Corporation 无隶属、赞助或背书关系；相关名称仅用于说明兼容性。
+EditaPlot 调用用户电脑上已经存在的 Origin 或 OriginPro，不捆绑、安装或修改该应用，也不通过网络或云端开放其 Automation Server。EditaPlot 与 OriginLab Corporation 无隶属、赞助或背书关系；相关名称仅用于说明兼容性。
 
 ## 开源、贡献与支持
 
-### Star 趋势
-
-<a href="https://github.com/hang-jin/editaplot/stargazers">
-  <img src="https://raw.githubusercontent.com/hang-jin/editaplot/metrics/stars.svg" alt="EditaPlot GitHub Star 趋势图">
-</a>
-
-趋势图由 GitHub Actions 每 6 小时读取一次仓库的聚合 Star 总数，并在数值变化时保留观测点，随后发布到独立 `metrics` 分支。自动任务不读取 stargazer 名单、用户名或加星时间；实线从首次采集开始且可升可降。GitHub 不提供取消 Star 的时间，也无法还原首次采集前的历史峰值。仓库首次运行该工作流后图片才会出现。点击图片可查看当前 stargazers。
+顶部 Star 徽章只显示 GitHub 提供的仓库聚合数量。EditaPlot 不请求、不保存、不展示，也不直接链接 Stargazer 名单、用户名、账号 ID 或加星时间。
 
 - 许可证：[Apache License 2.0](LICENSE)
 - 安装与故障处理：[安装指南](docs/installation.md)

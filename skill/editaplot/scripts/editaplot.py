@@ -100,13 +100,11 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser.add_argument("--output", required=True)
     _engine_option(plan_parser)
 
-    render_parser = subparsers.add_parser("render", help="Execute an approved render plan in Origin")
-    render_parser.add_argument("plan_file")
-    render_parser.add_argument(
-        "--confirm-origin-started",
-        action="store_true",
-        help="Confirm that official Origin was manually launched successfully.",
+    render_parser = subparsers.add_parser(
+        "render",
+        help="Execute an approved render plan through the local Origin application",
     )
+    render_parser.add_argument("plan_file")
     render_parser.add_argument("--python", dest="python_executable")
     render_parser.add_argument("--output-dir")
     render_parser.add_argument("--close-origin", action="store_true")
@@ -206,11 +204,6 @@ def _ensure_verify_output_does_not_replace_artifact(
 
 
 def _run_render(args: argparse.Namespace) -> int:
-    if not args.confirm_origin_started:
-        raise EditaPlotError(
-            "manual_origin_confirmation_required",
-            "Confirm that the licensed Origin installation starts manually before rendering.",
-        )
     plan = load_json(args.plan_file)
     command, env, engine_root = build_worker_command(
         plan,
@@ -224,6 +217,7 @@ def _run_render(args: argparse.Namespace) -> int:
         "engine_home": str(engine_root),
         "template_id": plan["template"]["id"],
         "source_sha256": plan["source"]["sha256"],
+        "origin_callability_check": "worker_connection",
     }
     print(json.dumps(start_event, ensure_ascii=False), flush=True)
     process = subprocess.Popen(  # noqa: S603 - fixed module invocation, never shell=True

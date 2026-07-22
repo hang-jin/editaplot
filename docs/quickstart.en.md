@@ -2,8 +2,8 @@
 
 ## The 30-second version
 
-Requirements: a physical Windows 10/11 x64 computer, 64-bit CPython 3.10–3.12, and a legally
-licensed Origin/OriginPro installation that you can start manually. CLI/dependency coverage spans
+Requirements: a physical Windows 10/11 x64 computer, 64-bit CPython 3.10–3.12, and a local
+Origin/OriginPro application reachable through Automation. CLI/dependency coverage spans
 all three Python minors; the current live Origin end-to-end baseline is CPython 3.10 + Origin 2024b.
 macOS, Linux, WSL, Wine/CrossOver, Parallels, and other VMs are unsupported.
 
@@ -44,7 +44,8 @@ The equivalent command-line entry point is:
 3. Recommend at most three charts from the question and data, with suitable palette choices.
 4. Always confirm a one-sentence scientific purpose; ask additional questions only for real ambiguity
    such as error meaning, normalization, order, or dual axes.
-5. Freeze an immutable-source plotting plan and wait for manual Origin startup confirmation.
+5. Freeze an immutable-source plotting plan; render tests the local Origin Automation connection
+   directly and then draws the figure.
 6. Export OPJU, PNG, PDF, and TIF, then verify source hash, axes, fonts, layers, readback, and visual QA.
 
 Do not make beginners operate an `inspect → recommend → plan` pipeline themselves. Keep those
@@ -54,9 +55,10 @@ still belongs to the user.
 ## When you are ready to render
 
 ```text
-I have manually started my official, legally licensed Origin installation. Use the confirmed plan,
-keep the editable Origin window open, export OPJU/PNG/PDF/TIF, and complete axis, font, layer, data
-mapping readback, and human visual QA. Do not report success from a PNG alone.
+Use the confirmed plan and call the local Origin application directly. Keep the editable Origin
+window open, export OPJU/PNG/PDF/TIF, and complete axis, font, layer, data mapping readback, and
+human visual QA. If the connection fails, report only the technical error. Do not report success
+from a PNG alone.
 ```
 
 The source file stays read-only. Missing measurements are never invented; helper columns may exist

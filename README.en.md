@@ -8,6 +8,7 @@
     <img alt="Python 3.10–3.12" src="https://img.shields.io/badge/Python-3.10%E2%80%933.12-3776ab">
     <img alt="Codex Skill" src="https://img.shields.io/badge/Codex-Skill-7c3aed">
     <img alt="Tested with Origin 2024b" src="https://img.shields.io/badge/tested%20with-Origin%202024b-0f766e">
+    <a href="https://github.com/hang-jin/editaplot"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/hang-jin/editaplot?style=social"></a>
   </p>
   <p><a href="README.md">中文说明</a> · Chinese is the primary documentation language</p>
 </div>
@@ -20,7 +21,7 @@ It is not a collection of bitmaps or rigid “replace the numbers” templates, 
 > **V1 supports only physical Windows 10/11 x64 computers.** macOS (Intel and Apple Silicon), Linux, WSL, Wine/CrossOver, Parallels, and other virtual machines are unsupported. Do not follow the Windows setup on a Mac: this release cannot automate Origin from macOS.
 
 > [!IMPORTANT]
-> EditaPlot is open source under the [Apache License 2.0](LICENSE). Rendering requires a separately obtained, legally licensed Origin/OriginPro installation that the user can start manually. Origin, licenses, patches, and activation bypasses are not included.
+> EditaPlot is open source under the [Apache License 2.0](LICENSE). Rendering requires a local Origin/OriginPro application that can be reached through Automation; EditaPlot does not install or modify Origin.
 
 ## Workflow at a glance
 
@@ -81,12 +82,12 @@ The palettes are original abstractions and redraws. Reference covers, watermarks
 | Item | Requirement |
 |---|---|
 | OS | Physical Windows 10/11 x64 computer; no macOS, Linux, WSL, or VM support |
-| Origin | Legally installed and activated by the user, with manual startup confirmed |
+| Origin | Installed locally and reachable through Origin Automation |
 | Origin verification | Verified on Origin/OriginPro 2024b (10.15); every other version requires separate verification |
 | Python | CLI/dependencies are covered on 64-bit CPython 3.10–3.12; the live Origin end-to-end baseline is CPython 3.10 + Origin 2024b |
 | Input | CSV, TXT, XLS, or XLSX; Chinese headers and paths are supported |
 
-The root `editaplot.cmd` prefers a compatible Python already on the computer, then creates a project-local `.editaplot-venv` with locked dependencies. If no compatible Python exists, the Skill must explain the system-level change and obtain explicit consent before using official winget to install Python 3.12 in user scope; without winget it provides the official python.org instructions. It never changes the system silently and never installs, modifies, activates, or launches Origin.
+The root `editaplot.cmd` prefers a compatible Python already on the computer, then creates a project-local `.editaplot-venv` with locked dependencies. If no compatible Python exists, the Skill must explain the system-level change and obtain explicit consent before using official winget to install Python 3.12 in user scope; without winget it provides the official python.org instructions. Environment repair never installs or modifies Origin; the render worker tests the local Automation connection when drawing begins.
 
 ### Install the Codex Skill
 
@@ -112,7 +113,7 @@ Or simply attach the file in Codex and say, “Use `$editaplot` to make the righ
 .\editaplot.cmd recommend <data.csv> --intent "compare models with uncertainty"
 .\editaplot.cmd palettes
 .\editaplot.cmd plan <data.csv> --template-id bar --claim "Model A performs better" --evidence-role comparison --palette-id ocean_coral --output render-plan.json
-.\editaplot.cmd render render-plan.json --confirm-origin-started
+.\editaplot.cmd render render-plan.json
 .\editaplot.cmd verify <Origin-output-directory>
 ```
 
@@ -127,7 +128,7 @@ Keep Python packages project-local; do not install or modify Origin. Inspect my 
 ambiguity, then recommend at most three charts and show the Chinese palette selector. Ask me to
 confirm a one-sentence scientific purpose; when confidence is low, ask the additional focused questions
 needed. After confirmation, freeze the RenderPlan without changing my data.
-I will authorize rendering only after I have manually started Origin.
+If doctor finds the local Origin Automation entry, test the connection during render without adding another Origin confirmation question.
 ```
 
 ## Public repository vs local private evidence
@@ -153,17 +154,11 @@ A default-deny allowlist, extension/size rules, path and secret scanning, PNG st
 
 ## Independent project notice
 
-EditaPlot requires a separately obtained, locally installed, validly licensed copy of Origin or OriginPro. It does not bundle, install, activate, patch, or bypass that software, and it does not expose the Automation Server over a network or cloud. EditaPlot is not affiliated with, sponsored by, or endorsed by OriginLab Corporation; names are used only to describe compatibility.
+EditaPlot calls an Origin or OriginPro application that already exists on the user's computer. It does not bundle, install, or modify that application, and it does not expose the Automation Server over a network or cloud. EditaPlot is not affiliated with, sponsored by, or endorsed by OriginLab Corporation; names are used only to describe compatibility.
 
 ## Open source, contributing, and support
 
-### Star history
-
-<a href="https://github.com/hang-jin/editaplot/stargazers">
-  <img src="https://raw.githubusercontent.com/hang-jin/editaplot/metrics/stars.svg" alt="EditaPlot GitHub Star history">
-</a>
-
-Every six hours, GitHub Actions reads only the repository's aggregate Star total, retains an observation when that value changes, and publishes it to a separate `metrics` branch. The automated job does not request the stargazer list, usernames, or join timestamps. The solid line starts with the first observation and can rise or fall; GitHub exposes neither unstar timestamps nor historical peaks from before collection began. The image appears after the repository's first successful Star History workflow run. Click it to view the current stargazers.
+The Star badge at the top displays only GitHub's aggregate repository count. EditaPlot does not request, store, display, or directly link any Stargazer list, username, account ID, or star timestamp.
 
 - License: [Apache License 2.0](LICENSE)
 - Installation and troubleshooting: [docs/installation.md](docs/installation.md)
