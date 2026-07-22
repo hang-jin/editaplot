@@ -95,8 +95,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/session.py",
-      "size_bytes": 1974,
-      "sha256": "3b2e9355856b833dc36502859dc12b74906f1ebce5a235b39b37cbc361f24703"
+      "size_bytes": 2028,
+      "sha256": "cbad11ee9d4d05408c10b96816221e2af307b92d003b036e952042563124346f"
     },
     {
       "path": "src/origin_sciplot/origin_backend/trajectory3d_renderer.py",

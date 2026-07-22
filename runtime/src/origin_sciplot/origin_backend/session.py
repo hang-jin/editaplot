@@ -43,7 +43,7 @@ class OriginSession:
         self.op = op
         try:
             originpro_version = metadata.version("originpro")
-        except metadata.PackageNotFoundError:
+        except Exception:  # noqa: BLE001 - optional package metadata must not break a live session
             originpro_version = "unknown"
         self.environment = OriginEnvironment(origin_version, originpro_version)
         return self

@@ -870,6 +870,36 @@ def test_origin_connection_failure_restores_application_visibility(
     assert visibility == [False, True]
 
 
+def test_origin_session_ignores_broken_optional_package_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_src = RUNTIME / "src"
+    monkeypatch.syspath_prepend(str(runtime_src))
+    from origin_sciplot.origin_backend import session as session_module
+    from origin_sciplot.origin_backend.session import OriginSession
+
+    closed: list[bool] = []
+    fake_originpro = types.SimpleNamespace(
+        oext=True,
+        set_show=lambda _show: None,
+        new=lambda **_kwargs: None,
+        lt_float=lambda _name: 10.15,
+        exit=lambda: closed.append(True),
+    )
+
+    def fail_metadata(_name: str) -> str:
+        raise RuntimeError("broken local package metadata")
+
+    monkeypatch.setitem(sys.modules, "originpro", fake_originpro)
+    monkeypatch.setattr(session_module.metadata, "version", fail_metadata)
+
+    with OriginSession(keep_open=False) as origin_session:
+        assert origin_session.environment is not None
+        assert origin_session.environment.originpro_version == "unknown"
+
+    assert closed == [True]
+
+
 @pytest.mark.parametrize("minor", [10, 11, 12])
 def test_python_compatibility_accepts_only_verified_cpython_minors(minor: int) -> None:
     result = python_compatibility(
