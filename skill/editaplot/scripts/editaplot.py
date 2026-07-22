@@ -92,6 +92,20 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser.add_argument("--x-title")
     plan_parser.add_argument("--y-title")
     plan_parser.add_argument("--palette-id", help="Freeze a compatible palette from `palettes`")
+    marker_group = plan_parser.add_mutually_exclusive_group()
+    marker_group.add_argument(
+        "--show-markers",
+        dest="show_markers",
+        action="store_true",
+        help="Freeze line plus symbols for a generic trend plot",
+    )
+    marker_group.add_argument(
+        "--hide-markers",
+        dest="show_markers",
+        action="store_false",
+        help="Freeze a line-only generic trend plot",
+    )
+    plan_parser.set_defaults(show_markers=None)
     plan_parser.add_argument(
         "--target-output",
         default="editable Origin figure and publication exports",
@@ -318,6 +332,7 @@ def main(argv: list[str] | None = None) -> int:
                 x_title=args.x_title,
                 y_title=args.y_title,
                 palette_id=args.palette_id,
+                show_markers=args.show_markers,
                 mapping=mapping,
                 engine_home=args.engine_home,
             )

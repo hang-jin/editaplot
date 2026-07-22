@@ -26,6 +26,7 @@ from origin_sciplot.output_manager import RunOutput
 from origin_sciplot.scientific_workflow import (
     ScientificColumnMapping,
     ScientificWorkflowError,
+    apply_scientific_marker_override,
     apply_scientific_palette_override,
     apply_scientific_text_overrides,
     load_scientific_frame,
@@ -66,6 +67,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--column-mapping-json")
     parser.add_argument("--text-overrides-json")
     parser.add_argument("--palette-id")
+    marker_group = parser.add_mutually_exclusive_group()
+    marker_group.add_argument("--show-markers", dest="show_markers", action="store_true")
+    marker_group.add_argument("--hide-markers", dest="show_markers", action="store_false")
+    parser.set_defaults(show_markers=None)
     parser.set_defaults(keep_origin_open=True)
     parser.add_argument("--keep-origin-open", dest="keep_origin_open", action="store_true")
     parser.add_argument("--close-origin", dest="keep_origin_open", action="store_false")
@@ -228,6 +233,11 @@ def main(argv: list[str] | None = None) -> int:
                 scientific_analysis = apply_scientific_palette_override(
                     scientific_analysis,
                     palette_id=args.palette_id,
+                )
+            if args.show_markers is not None:
+                scientific_analysis = apply_scientific_marker_override(
+                    scientific_analysis,
+                    show_markers=args.show_markers,
                 )
             selected_renderer_template_id = manifest.id
             if scientific_analysis.requires_confirmation:

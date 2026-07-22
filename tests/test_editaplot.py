@@ -2156,6 +2156,124 @@ def test_plan_freezes_palette_and_passes_it_to_worker() -> None:
     assert command[index + 1] == "ocean_coral"
 
 
+def test_explicit_trend_markers_are_frozen_and_verified_as_origin_symbols() -> None:
+    source = ENGINE / "templates" / "trend" / "example_standard.csv"
+    marked_plan = build_plan(
+        source,
+        template_id="trend",
+        claim="The teaching series show progression across the measured steps.",
+        evidence_role="trend",
+        show_markers=True,
+        engine_home=ENGINE,
+    )
+    line_only_plan = build_plan(
+        source,
+        template_id="trend",
+        claim="The teaching series show progression across the measured steps.",
+        evidence_role="trend",
+        show_markers=False,
+        engine_home=ENGINE,
+    )
+
+    assert marked_plan["figure_contract"]["line_markers"] == {
+        "mode": "line_and_symbol",
+        "show_markers": True,
+    }
+    assert line_only_plan["figure_contract"]["line_markers"] == {
+        "mode": "line_only",
+        "show_markers": False,
+    }
+    marked_command, _env, _root = build_worker_command(marked_plan, engine_home=ENGINE)
+    line_only_command, _env, _root = build_worker_command(line_only_plan, engine_home=ENGINE)
+    assert "--show-markers" in marked_command
+    assert "--hide-markers" in line_only_command
+
+    from origin_sciplot.origin_backend.scientific_renderer import (
+        _figure_style,
+        _prepare_origin_table,
+        _verify_plots,
+    )
+    from origin_sciplot.scientific_workflow import (
+        apply_scientific_marker_override,
+        load_scientific_frame,
+        prepare_scientific,
+    )
+
+    preparation = prepare_scientific(source, "trend")
+    marked = apply_scientific_marker_override(preparation, show_markers=True)
+    line_only = apply_scientific_marker_override(preparation, show_markers=False)
+    frame = load_scientific_frame(source, marked)
+    marked_table = _prepare_origin_table(frame, marked)
+    line_only_table = _prepare_origin_table(frame, line_only)
+
+    assert {series.plot_type for series in marked_table.series} == {"y"}
+    assert all(series.marker_size_pt > 0 for series in marked_table.series)
+    assert {series.plot_type for series in line_only_table.series} == {"l"}
+
+    style = _figure_style(marked)
+
+    class FakeOrigin:
+        def __init__(self) -> None:
+            self.values: dict[str, float] = {}
+
+        def lt_float(self, name: str) -> float:
+            return self.values[name]
+
+    fake_origin = FakeOrigin()
+
+    class FakeLayer:
+        def LT_execute(self, command: str) -> bool:
+            variable = command.split()[-1].rstrip(";}")
+            if " -d " in command:
+                value = 0.0
+            elif " -w " in command:
+                value = style.plot_line_width_pt * 500.0
+            elif " -z " in command:
+                value = marked.plot_spec.display_plan.marker_size_pt
+            elif " -kh " in command:
+                value = 50.0
+            else:  # pragma: no cover - documents the exact readback surface used here
+                raise AssertionError(command)
+            fake_origin.values[variable] = value
+            return True
+
+    class FakePlot:
+        def __init__(self, name: str) -> None:
+            self.name = name
+            self.layer = FakeLayer()
+            self.transparency = 0.0
+            self.symbol_kind = 2
+
+        def lt_range(self) -> str:
+            return self.name
+
+    marked_plots = {item.label: FakePlot(item.label) for item in marked_table.series}
+    marked_state = _verify_plots(
+        fake_origin,
+        marked_table,
+        marked_plots,
+        {},
+        {},
+        style,
+    )
+    assert set(marked_state["symbols"]) == {item.label for item in marked_table.series}
+    assert all(
+        value["symbol_size_pt"] > 0 for value in marked_state["symbols"].values()
+    )
+    assert all(value["symbol_kind"] == 2 for value in marked_state["symbols"].values())
+
+    line_only_plots = {item.label: FakePlot(item.label) for item in line_only_table.series}
+    line_only_state = _verify_plots(
+        fake_origin,
+        line_only_table,
+        line_only_plots,
+        {},
+        {},
+        style,
+    )
+    assert line_only_state["symbols"] == {}
+
+
 def test_palette_override_does_not_weaken_xps_contract() -> None:
     with pytest.raises(EditaPlotError, match="XPS keeps"):
         build_plan(

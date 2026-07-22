@@ -130,11 +130,17 @@ def verify_symbol_style(
     *,
     expected_size_pt: float,
     expected_edge_percent: float,
+    expected_kind: int = 2,
     tolerance: float = 0.05,
-) -> dict[str, float]:
+) -> dict[str, float | int]:
     """Read back a scatter symbol's point size and radius-relative edge thickness."""
+    kind = int(plot.symbol_kind)
     size = _read_plot_option(op, plot, "-z", "__osc_symbol_size")
     edge = _read_plot_option(op, plot, "-kh", "__osc_symbol_edge")
+    if kind != expected_kind:
+        raise RuntimeError(
+            f"Origin symbol kind verification failed: {kind}, expected {expected_kind}"
+        )
     if abs(size - expected_size_pt) > tolerance:
         raise RuntimeError(
             f"Origin symbol size verification failed: {size:g} pt, expected {expected_size_pt:g} pt"
@@ -144,7 +150,11 @@ def verify_symbol_style(
             "Origin symbol edge verification failed: "
             f"{edge:g}% of radius, expected {expected_edge_percent:g}%"
         )
-    return {"symbol_size_pt": size, "symbol_edge_percent_of_radius": edge}
+    return {
+        "symbol_kind": kind,
+        "symbol_size_pt": size,
+        "symbol_edge_percent_of_radius": edge,
+    }
 
 
 def verify_page_and_layer(

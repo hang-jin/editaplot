@@ -186,6 +186,7 @@ class ScientificDisplayPlan:
     bar_inner_width: float
     category_label_rotation_deg: float = 0.0
     figure_style: AdaptiveOriginStyle | None = None
+    show_markers: bool = False
 
 
 @dataclass(frozen=True)
@@ -323,6 +324,35 @@ def apply_scientific_text_overrides(
         preparation,
         plot_spec=overridden,
         plan_digest=_scientific_plan_digest(preparation, overridden),
+    )
+
+
+def apply_scientific_marker_override(
+    preparation: ScientificPreparation,
+    *,
+    show_markers: bool,
+) -> ScientificPreparation:
+    """Freeze an explicit marker choice for a generic trend line.
+
+    This intentionally excludes spectra, diffraction patterns, fits, reference
+    lines, and every non-trend route.  Those routes keep their own verified
+    symbol contracts.
+    """
+
+    spec = preparation.plot_spec
+    if preparation.template_id != "trend" or spec.plot_kind != "line":
+        raise ScientificWorkflowError(
+            "marker_override_unsupported",
+            "Explicit line markers are currently available only for the trend template.",
+        )
+    overridden_display = replace(spec.display_plan, show_markers=bool(show_markers))
+    overridden_spec = replace(spec, display_plan=overridden_display)
+    if overridden_spec == spec:
+        return preparation
+    return replace(
+        preparation,
+        plot_spec=overridden_spec,
+        plan_digest=_scientific_plan_digest(preparation, overridden_spec),
     )
 
 

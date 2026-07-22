@@ -393,12 +393,21 @@ def _draw_line_profiles(axis: Any, frame: Any, preparation: ScientificPreparatio
                 zorder=3,
             )
         else:
+            show_markers = (
+                spec.plot_kind == "line"
+                and spec.display_plan.show_markers
+                and series.series_role == "data"
+            )
             target.plot(
                 x,
                 y,
                 color=color,
                 linewidth=style.plot_line_pt,
                 linestyle=line_style,
+                marker="o" if show_markers else None,
+                markersize=marker_size if show_markers else None,
+                markerfacecolor=color if show_markers else None,
+                markeredgecolor=color if show_markers else None,
                 label=label,
                 zorder=3,
             )

@@ -206,6 +206,12 @@ def _prepare_origin_table(
                 color = "#A7ABAE"
                 line_style = 2
         plot_type = _origin_plot_type(spec.plot_kind)
+        if (
+            spec.plot_kind == "line"
+            and spec.display_plan.show_markers
+            and series.series_role == "data"
+        ):
+            plot_type = "y"
         if spec.plot_kind == "pl_decay":
             plot_type = "l" if series.series_role == "fit" else "s"
         series_plans.append(

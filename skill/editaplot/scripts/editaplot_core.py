@@ -1301,6 +1301,7 @@ def build_plan(
     x_title: str | None = None,
     y_title: str | None = None,
     palette_id: str | None = None,
+    show_markers: bool | None = None,
     mapping: dict[str, Any] | None = None,
     engine_home: str | Path | None = None,
 ) -> dict[str, Any]:
@@ -1311,6 +1312,7 @@ def build_plan(
     try:
         from origin_sciplot.palette_catalog import get_palette, palette_to_dict
         from origin_sciplot.scientific_workflow import (
+            apply_scientific_marker_override,
             apply_scientific_palette_override,
             apply_scientific_text_overrides,
         )
@@ -1371,6 +1373,25 @@ def build_plan(
         except Exception as exc:  # noqa: BLE001 - normalize engine validation errors
             code = getattr(exc, "code", "palette_invalid")
             raise EditaPlotError(code, str(exc)) from exc
+    marker_contract: dict[str, Any] = {}
+    if show_markers is not None:
+        if template_id == "xps":
+            raise EditaPlotError(
+                "marker_override_unsupported",
+                "Explicit line markers are currently available only for the trend template.",
+            )
+        try:
+            frozen_payload = apply_scientific_marker_override(
+                frozen_payload,
+                show_markers=show_markers,
+            )
+            marker_contract = {
+                "mode": "line_and_symbol" if show_markers else "line_only",
+                "show_markers": bool(show_markers),
+            }
+        except Exception as exc:  # noqa: BLE001 - normalize engine validation errors
+            code = getattr(exc, "code", "marker_override_invalid")
+            raise EditaPlotError(code, str(exc)) from exc
     plot_spec = getattr(frozen_payload, "plot_spec", None)
     display_transform = getattr(plot_spec, "display_transform", "identity") if plot_spec else "identity"
     if hasattr(plot_spec, "visual_profile"):
@@ -1404,6 +1425,7 @@ def build_plan(
             "target_output": target_output.strip(),
             "axis_title_overrides": axis_title_overrides,
             "palette": palette_contract,
+            **({"line_markers": marker_contract} if marker_contract else {}),
         },
         "template": {
             "id": template_id,
@@ -1492,6 +1514,9 @@ def build_worker_command(
     palette = plan.get("figure_contract", {}).get("palette")
     if isinstance(palette, dict) and palette.get("palette_id"):
         command.extend(("--palette-id", str(palette["palette_id"])))
+    line_markers = plan.get("figure_contract", {}).get("line_markers")
+    if isinstance(line_markers, dict) and isinstance(line_markers.get("show_markers"), bool):
+        command.append("--show-markers" if line_markers["show_markers"] else "--hide-markers")
     env = dict(os.environ)
     source_path = str(root / "src")
     env["PYTHONPATH"] = source_path + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
