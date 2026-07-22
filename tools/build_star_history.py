@@ -342,7 +342,64 @@ def build_payload(
         "sync_status": _sync_status(
             current_stars,
             len(normalized_timestamps),
-        ïmí¢G§²ÚîÆ­yÙng[str, object]) -> str:
+            current_star_listing_status,
+        ),
+        "current_star_join_history_resolution": {
+            "recent_window_days": 7,
+            "recent_buckets": "hourly",
+            "older_buckets": "daily",
+        },
+        "current_star_join_history": current_star_join_history,
+        "observations": observations,
+        "semantics": {
+            "primary_series": "observations",
+            "primary_series_meaning": (
+                "Point-in-time stargazers_count readings retained whenever the observed total changes; "
+                "this series may rise or fall and begins when metrics collection starts."
+            ),
+            "context_series": "current_star_join_history",
+            "context_series_meaning": context_series_meaning,
+            "github_limitation": (
+                "GitHub does not provide unstar timestamps or historical peak counts through the "
+                "stargazers endpoint."
+            ),
+        },
+        "privacy": "No GitHub usernames, logins, profile URLs, or user ids are stored.",
+    }
+
+    if previous is not None:
+        previous_without_generated = dict(previous)
+        previous_generated = previous_without_generated.pop("generated_at_utc", None)
+        candidate_without_generated = dict(payload)
+        candidate_without_generated.pop("generated_at_utc", None)
+        if previous_without_generated == candidate_without_generated and isinstance(previous_generated, str):
+            payload["generated_at_utc"] = previous_generated
+    return payload
+
+
+def _chart_timezone(payload: Mapping[str, object]) -> tzinfo:
+    name = payload.get("display_timezone")
+    if not isinstance(name, str):
+        raise StarHistoryError("Metrics payload lacks a display timezone.")
+    return _load_timezone(name)
+
+
+def _svg_text(value: object) -> str:
+    return escape(str(value), quote=True)
+
+
+def _nice_y_max(value: int) -> int:
+    if value <= 5:
+        return 5
+    magnitude = 10 ** (len(str(value)) - 1)
+    for multiplier in (1, 2, 5, 10):
+        candidate = multiplier * magnitude
+        if candidate >= value:
+            return candidate
+    return value
+
+
+def render_svg(payload: Mapping[str, object]) -> str:
     """Render observed totals as the primary series and join dates as context."""
 
     join_history = payload.get("current_star_join_history")
