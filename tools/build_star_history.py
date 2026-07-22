@@ -3,9 +3,10 @@
 The collector uses GitHub's timestamped stargazers REST representation.  User
 identifiers are used only in memory to remove pagination overlaps; neither user
 ids nor logins are written to disk.  Retained aggregate-count observations form
-the primary trend and may rise or fall.  Current-stargazer join dates provide
-only dashed historical context because GitHub exposes neither unstar timestamps
-nor historical peak counts.  No missing timestamp is ever invented.
+the primary trend and may rise or fall.  The scheduled workflow intentionally
+uses aggregate-only collection.  Current-stargazer join dates are optional
+context for an eligible user token because GitHub now restricts listing access.
+No missing timestamp is ever invented.
 
 This module intentionally depends only on the Python standard library so it can
 run on a stock GitHub-hosted runner.
@@ -29,6 +30,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 API_VERSION = "2022-11-28"
+DEFAULT_MEDIA_TYPE = "application/vnd.github+json"
 STAR_MEDIA_TYPE = "application/vnd.github.star+json"
 DEFAULT_API_BASE = "https://api.github.com"
 DEFAULT_TIMEZONE = "Asia/Shanghai"
@@ -95,7 +97,11 @@ class GitHubClient:
         self.opener = opener
 
     def get_json(
-        self, path_or_url: str, *, params: Mapping[str, str | int] | None = None
+        self,
+        path_or_url: str,
+        *,
+        params: Mapping[str, str | int] | None = None,
+        accept: str = DEFAULT_MEDIA_TYPE,
     ) -> tuple[object, Mapping[str, str]]:
         if path_or_url.startswith("/"):
             url = f"{self.api_base}{path_or_url}"
@@ -107,7 +113,7 @@ class GitHubClient:
             separator = "&" if "?" in url else "?"
             url = f"{url}{separator}{urllib.parse.urlencode(params)}"
         headers = {
-            "Accept": STAR_MEDIA_TYPE,
+            "Accept": accept,
             "User-Agent": "EditaPlot-star-history",
             "X-GitHub-Api-Version": API_VERSION,
         }
@@ -167,7 +173,7 @@ def fetch_current_stargazer_timestamps(
         page_count += 1
         if page_count > max_pages:
             raise StarHistoryError(f"Stargazer pagination exceeded the safety limit of {max_pages} pages.")
-        payload, headers = client.get_json(next_url, params=params)
+        payload, headers = client.get_json(next_url, params=params, accept=STAR_MEDIA_TYPE)
         params = None
         if not isinstance(payload, list):
             raise StarHistoryError("GitHub returned a non-list stargazer response.")
@@ -199,7 +205,13 @@ def fetch_current_star_count(client: GitHubClient, repository: str) -> int:
     return count
 
 
-def _sync_status(current_stars: int, timestamped_current_stars: int) -> str:
+def _sync_status(
+    current_stars: int,
+    timestamped_current_stars: int,
+    current_star_listing_status: str,
+) -> str:
+    if current_star_listing_status != "available":
+        return "aggregate_only"
     if current_stars == timestamped_current_stars:
         return "synced"
     if current_stars > timestamped_current_stars:
@@ -266,6 +278,7 @@ def build_payload(
     current_stars: int,
     timestamps: Sequence[datetime],
     duplicate_rows: int = 0,
+    current_star_listing_status: str = "available",
     observed_at: datetime | None = None,
     display_timezone: str = DEFAULT_TIMEZONE,
     previous: Mapping[str, object] | None = None,
@@ -282,6 +295,8 @@ def build_payload(
         or duplicate_rows < 0
     ):
         raise StarHistoryError("Star counts cannot be negative.")
+    if current_star_listing_status not in {"available", "not_collected"}:
+        raise StarHistoryError("Current-star listing status is invalid.")
     _load_timezone(display_timezone)
     raw_observed_at = observed_at or datetime.now(UTC)
     if raw_observed_at.tzinfo is None:
@@ -293,6 +308,8 @@ def build_payload(
             raise StarHistoryError("A stargazer timestamp is timezone-naive.")
         normalized_timestamps.append(value.astimezone(UTC).replace(microsecond=0))
     normalized_timestamps.sort()
+    if current_star_listing_status == "not_collected" and normalized_timestamps:
+        raise StarHistoryError("Aggregate-only collection cannot include stargazer timestamps.")
     current_star_join_history = _aggregate_current_join_history(
         normalized_timestamps,
         observed_at=observed_at,
@@ -304,15 +321,29 @@ def build_payload(
             raise StarHistoryError("The new observation predates the previous metrics observation.")
         observations.append({"observed_at_utc": _format_utc(observed_at), "stars": current_stars})
 
+    context_series_meaning = (
+        "Join-date reconstruction for users who are currently starring the repository only; "
+        "it can change retroactively after an unstar and is not a true cumulative history."
+        if current_star_listing_status == "available"
+        else (
+            "Not collected by the scheduled workflow. GitHub restricts stargazer-list access; "
+            "the public trend therefore uses aggregate observations only."
+        )
+    )
     payload: dict[str, object] = {
         "schema_version": 2,
         "repository": repository,
         "generated_at_utc": _format_utc(observed_at),
         "display_timezone": display_timezone,
         "current_stars": current_stars,
+        "current_star_listing_status": current_star_listing_status,
         "timestamped_current_star_count": len(normalized_timestamps),
         "duplicate_api_rows_ignored": duplicate_rows,
-        "sync_status": _sync_status(current_stars, len(normalized_timestamps)),
+        "sync_status": _sync_status(
+            current_stars,
+            len(normalized_timestamps),
+            current_star_listing_status,
+        ),
         "current_star_join_history_resolution": {
             "recent_window_days": 7,
             "recent_buckets": "hourly",
@@ -327,10 +358,7 @@ def build_payload(
                 "this series may rise or fall and begins when metrics collection starts."
             ),
             "context_series": "current_star_join_history",
-            "context_series_meaning": (
-                "Join-date reconstruction for users who are currently starring the repository only; "
-                "it can change retroactively after an unstar and is not a true cumulative history."
-            ),
+            "context_series_meaning": context_series_meaning,
             "github_limitation": (
                 "GitHub does not provide unstar timestamps or historical peak counts through the "
                 "stargazers endpoint."
@@ -490,6 +518,33 @@ def render_svg(payload: Mapping[str, object]) -> str:
         if join_points
         else ""
     )
+    if join_points:
+        context_legend_markup = (
+            '<line x1="453" y1="117" x2="487" y2="117" stroke="#7CBFB5" '
+            'stroke-opacity="0.72" stroke-width="3" stroke-dasharray="8 7"/>'
+            '<text x="497" y="122" class="legend">Current-star join-date reconstruction*</text>'
+        )
+        footnote_markup = (
+            '<text x="92" y="493" class="footnote">* GitHub does not provide unstar timestamps '
+            'or historical peak counts;</text>'
+            '<text x="92" y="515" class="footnote">  dashed context can change retroactively. '
+            'Solid observations begin when collection starts.</text>'
+        )
+        subtitle_copy = "Solid observations are authoritative; dashed join dates are optional context"
+        context_aria = (
+            "The dashed line reconstructs join dates for current stargazers only. GitHub provides "
+            "no unstar timestamps or historical peak counts, so the context can change retroactively."
+        )
+    else:
+        context_legend_markup = ""
+        footnote_markup = (
+            '<text x="92" y="493" class="footnote">Aggregate-only collection: no stargazer '
+            'identities or join timestamps are requested.</text>'
+            '<text x="92" y="515" class="footnote">Solid observations begin when collection starts '
+            'and may rise or fall.</text>'
+        )
+        subtitle_copy = "Privacy-first aggregate observations retained whenever the total changes"
+        context_aria = "The scheduled workflow does not request the restricted stargazer listing."
     observed_markup = (
         f'<path id="observedTotalSeries" d="{observed_line_path}" fill="none" '
         'stroke="#14213D" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'
@@ -502,7 +557,10 @@ def render_svg(payload: Mapping[str, object]) -> str:
     )
 
     sync_status = payload.get("sync_status")
-    if sync_status == "synced":
+    if sync_status == "aggregate_only":
+        sync_copy = "Aggregate-only collection - no stargazer list requested"
+        sync_color = "#2A9D8F"
+    elif sync_status == "synced":
         sync_copy = f"{timestamped_count} current-star timestamps - synced"
         sync_color = "#2A9D8F"
     else:
@@ -512,8 +570,7 @@ def render_svg(payload: Mapping[str, object]) -> str:
     repository = payload.get("repository", "EditaPlot")
     aria_copy = (
         "Solid line shows retained point-in-time aggregate star-count observations and may rise or fall. "
-        "The dashed line reconstructs join dates for current stargazers only. GitHub provides no unstar "
-        f"timestamps or historical peak counts, so the dashed context can change retroactively. {sync_copy}"
+        f"{context_aria} {sync_copy}"
     )
 
     return f'''<svg xmlns="http://www.w3.org/2000/svg"
@@ -548,8 +605,7 @@ def render_svg(payload: Mapping[str, object]) -> str:
   <circle cx="47" cy="49" r="17" fill="#14213D"/>
   <path d="M47 34.5l4.2 8.5 9.4 1.4-6.8 6.6 1.6 9.3-8.4-4.4-8.4 4.4 1.6-9.3-6.8-6.6 9.4-1.4z" fill="#E9C46A"/>
   <text x="76" y="53" class="title">EditaPlot Stars - observed total over time</text>
-  <text x="77" y="79" class="subtitle">Solid observations are authoritative from collection start;
-    dashed history is context only</text>
+  <text x="77" y="79" class="subtitle">{_svg_text(subtitle_copy)}</text>
   <g transform="translate(914 31)">
     <rect width="154" height="76" rx="16" fill="#FFFFFF" stroke="#D8E3E9"/>
     <text x="18" y="39" class="badge-count">{current_stars}</text>
@@ -560,9 +616,7 @@ def render_svg(payload: Mapping[str, object]) -> str:
   <line x1="77" y1="117" x2="111" y2="117" stroke="#14213D" stroke-width="4"/>
   <circle cx="94" cy="117" r="4" fill="#FFFFFF" stroke="#14213D" stroke-width="2"/>
   <text x="121" y="122" class="legend">Observed totals (scheduled snapshots)</text>
-  <line x1="453" y1="117" x2="487" y2="117" stroke="#7CBFB5" stroke-opacity="0.72"
-    stroke-width="3" stroke-dasharray="8 7"/>
-  <text x="497" y="122" class="legend">Current-star join-date reconstruction*</text>
+  {context_legend_markup}
   {''.join(grid)}
   <line x1="{left:.1f}" y1="{bottom:.1f}" x2="{right:.1f}" y2="{bottom:.1f}"
     stroke="#14213D" stroke-width="1.6"/>
@@ -573,10 +627,7 @@ def render_svg(payload: Mapping[str, object]) -> str:
     transform="rotate(-90 29 {(top + bottom) / 2:.1f})">Stars</text>
   {join_markup}
   {observed_markup}
-  <text x="92" y="493" class="footnote">* GitHub does not provide unstar timestamps
-    or historical peak counts;</text>
-  <text x="92" y="515" class="footnote">  dashed context can change retroactively.
-    Solid observations begin when collection starts.</text>
+  {footnote_markup}
   <circle cx="92" cy="548" r="5" fill="{sync_color}"/>
   <text x="105" y="553" class="status" fill="{sync_color}">{_svg_text(sync_copy)}</text>
   <text x="1048" y="553" text-anchor="end" class="tick">Display timezone: {_svg_text(timezone_name)}</text>
@@ -612,6 +663,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--svg-output", type=Path, required=True, help="Path for branded SVG")
     parser.add_argument("--previous", type=Path, default=None, help="Existing metrics JSON to merge")
     parser.add_argument("--timezone", default=DEFAULT_TIMEZONE, help="IANA display timezone")
+    parser.add_argument(
+        "--include-current-star-join-context",
+        action="store_true",
+        help=(
+            "Request the access-restricted current-stargazer listing for optional dashed context. "
+            "The scheduled workflow intentionally leaves this disabled."
+        ),
+    )
     parser.add_argument("--api-base", default=DEFAULT_API_BASE, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
@@ -622,13 +681,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         _load_timezone(args.timezone)
         previous = _load_previous(args.previous)
         client = GitHubClient(token=os.environ.get("GITHUB_TOKEN"), api_base=args.api_base)
-        timestamps, duplicate_rows = fetch_current_stargazer_timestamps(client, repository)
         current_stars = fetch_current_star_count(client, repository)
+        if args.include_current_star_join_context:
+            timestamps, duplicate_rows = fetch_current_stargazer_timestamps(client, repository)
+            listing_status = "available"
+        else:
+            timestamps, duplicate_rows = [], 0
+            listing_status = "not_collected"
         payload = build_payload(
             repository=repository,
             current_stars=current_stars,
             timestamps=timestamps,
             duplicate_rows=duplicate_rows,
+            current_star_listing_status=listing_status,
             display_timezone=args.timezone,
             previous=previous,
         )

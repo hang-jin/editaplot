@@ -163,7 +163,7 @@ EditaPlot requires a separately obtained, locally installed, validly licensed co
   <img src="https://raw.githubusercontent.com/hang-jin/editaplot/metrics/stars.svg" alt="EditaPlot GitHub Star history">
 </a>
 
-GitHub Actions retains an observation whenever the observed Star total changes and publishes it to a separate `metrics` branch. The solid line starts with the first observation and can rise or fall; public star timestamps appear only as dashed context. GitHub exposes neither unstar timestamps nor historical peaks from before collection began. The image appears after the repository's first successful Star History workflow run. Click it to view the current stargazers.
+Every six hours, GitHub Actions reads only the repository's aggregate Star total, retains an observation when that value changes, and publishes it to a separate `metrics` branch. The automated job does not request the stargazer list, usernames, or join timestamps. The solid line starts with the first observation and can rise or fall; GitHub exposes neither unstar timestamps nor historical peaks from before collection began. The image appears after the repository's first successful Star History workflow run. Click it to view the current stargazers.
 
 - License: [Apache License 2.0](LICENSE)
 - Installation and troubleshooting: [docs/installation.md](docs/installation.md)
