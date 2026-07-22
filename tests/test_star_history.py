@@ -7,11 +7,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 PRODUCT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PRODUCT_ROOT / "tools"))
 
+import build_star_history as star_history  # noqa: E402
 from build_star_history import (  # noqa: E402
+    DEFAULT_MEDIA_TYPE,
+    STAR_MEDIA_TYPE,
     build_payload,
+    fetch_current_star_count,
     fetch_current_stargazer_timestamps,
     render_svg,
 )
@@ -22,10 +28,16 @@ UTC = timezone.utc
 class StubClient:
     def __init__(self, responses: list[tuple[object, dict[str, str]]]) -> None:
         self.responses = list(responses)
-        self.calls: list[tuple[str, object]] = []
+        self.calls: list[tuple[str, object, str]] = []
 
-    def get_json(self, path_or_url: str, *, params: object = None) -> tuple[object, dict[str, str]]:
-        self.calls.append((path_or_url, params))
+    def get_json(
+        self,
+        path_or_url: str,
+        *,
+        params: object = None,
+        accept: str = DEFAULT_MEDIA_TYPE,
+    ) -> tuple[object, dict[str, str]]:
+        self.calls.append((path_or_url, params, accept))
         return self.responses.pop(0)
 
 
@@ -78,7 +90,16 @@ def test_timestamped_stargazer_pagination_and_deduplication() -> None:
     assert duplicate_rows == 1
     assert len(client.calls) == 2
     assert client.calls[0][1] == {"per_page": 100, "page": 1}
+    assert client.calls[0][2] == STAR_MEDIA_TYPE
     assert client.calls[1][1] is None
+    assert client.calls[1][2] == STAR_MEDIA_TYPE
+
+
+def test_aggregate_count_uses_standard_repository_media_type() -> None:
+    client = StubClient([({"stargazers_count": 4}, {})])
+
+    assert fetch_current_star_count(client, "hang-jin/editaplot") == 4
+    assert client.calls == [("/repos/hang-jin/editaplot", None, DEFAULT_MEDIA_TYPE)]
 
 
 def test_payload_is_anonymous_and_does_not_invent_mismatched_event() -> None:
@@ -118,6 +139,71 @@ def test_aggregate_lag_is_reported_without_dropping_verified_events() -> None:
     assert payload["sync_status"] == "pending_aggregate_sync"
     assert payload["timestamped_current_star_count"] == 2
     assert payload["current_star_join_history"][-1]["cumulative_stars"] == 2
+
+
+def test_aggregate_only_payload_does_not_claim_stargazer_context() -> None:
+    payload = build_payload(
+        repository="hang-jin/editaplot",
+        current_stars=4,
+        timestamps=[],
+        current_star_listing_status="not_collected",
+        observed_at=datetime(2026, 7, 22, 8, 5, tzinfo=UTC),
+    )
+
+    assert payload["sync_status"] == "aggregate_only"
+    assert payload["current_star_listing_status"] == "not_collected"
+    assert payload["current_star_join_history"] == []
+    assert "aggregate observations only" in payload["semantics"]["context_series_meaning"]
+
+    svg = render_svg(payload)
+    assert 'id="currentStarJoinReconstruction"' not in svg
+    assert "no stargazer list requested" in svg
+    assert "no stargazer identities or join timestamps are requested" in svg
+
+
+def test_cli_defaults_to_aggregate_only_collection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, object, str]] = []
+
+    class AggregateClient:
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
+        def get_json(
+            self,
+            path_or_url: str,
+            *,
+            params: object = None,
+            accept: str = DEFAULT_MEDIA_TYPE,
+        ) -> tuple[object, dict[str, str]]:
+            calls.append((path_or_url, params, accept))
+            if path_or_url.endswith("/stargazers"):
+                raise AssertionError("The default workflow must not request the stargazer listing.")
+            return {"stargazers_count": 4}, {}
+
+    monkeypatch.setattr(star_history, "GitHubClient", AggregateClient)
+    json_output = tmp_path / "stars.json"
+    svg_output = tmp_path / "stars.svg"
+
+    returncode = star_history.main(
+        [
+            "--repository",
+            "hang-jin/editaplot",
+            "--json-output",
+            str(json_output),
+            "--svg-output",
+            str(svg_output),
+        ]
+    )
+
+    assert returncode == 0
+    assert calls == [("/repos/hang-jin/editaplot", None, DEFAULT_MEDIA_TYPE)]
+    payload = json.loads(json_output.read_text(encoding="utf-8"))
+    assert payload["sync_status"] == "aggregate_only"
+    assert payload["observations"][-1]["stars"] == 4
+    assert "currentStarJoinReconstruction" not in svg_output.read_text(encoding="utf-8")
 
 
 def test_svg_uses_asia_shanghai_calendar_dates_across_utc_boundary() -> None:

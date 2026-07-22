@@ -15,7 +15,8 @@
 - Made the V1 boundary explicit: physical Windows 10/11 x64 only; macOS, Linux, WSL,
   Wine/CrossOver, Parallels, and other VMs are unsupported.
 - Added a privacy-preserving GitHub Star history generator and scheduled workflow that publishes
-  only aggregate metrics to a separate `metrics` branch.
+  only aggregate metrics to a separate `metrics` branch and does not request the access-restricted
+  stargazer listing during automated runs.
 - Extended public CI coverage to CPython 3.10, 3.11, and 3.12 while preserving the existing
   `windows-python-310` protected-branch check.
 
