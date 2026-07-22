@@ -15,8 +15,11 @@
   plain-language scientific confirmation before any plan or render is created.
 - Made the V1 boundary explicit: physical Windows 10/11 x64 only; macOS, Linux, WSL,
   Wine/CrossOver, Parallels, and other VMs are unsupported.
-- Added a compact GitHub Star badge that displays only the aggregate repository count. Removed the
-  trend generator, scheduled metrics branch, stargazer-list code path, and identity/timestamp storage.
+- Added a compact GitHub Star badge and privacy-first daily trend. The updater reads only GitHub's
+  aggregate `stargazers_count`, stores date plus total count, and never requests account identities
+  or personal Star timestamps.
+- Changed the default render destination to a unique `<source_stem>_EditaPlot_<time>` folder beside
+  the original table, with the approved RenderPlan copied into the complete artifact set.
 - Extended public CI coverage to CPython 3.10, 3.11, and 3.12 while preserving the existing
   `windows-python-310` protected-branch check.
 

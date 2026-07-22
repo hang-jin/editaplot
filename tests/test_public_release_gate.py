@@ -86,14 +86,19 @@ def test_git_blob_audit_distinguishes_lf_from_crlf() -> None:
     assert _git_blob_id(b"header,value\nA,1\n") != _git_blob_id(b"header,value\r\nA,1\r\n")
 
 
-def test_public_readmes_use_aggregate_star_badge_without_identity_links() -> None:
+def test_public_readmes_use_aggregate_star_badge_and_anonymous_trend() -> None:
     badge = "https://img.shields.io/github/stars/hang-jin/editaplot?style=social"
+    trend = (
+        "https://raw.githubusercontent.com/hang-jin/editaplot/"
+        "metrics/assets/star-trend/stars.svg"
+    )
     repository_link = '<a href="https://github.com/hang-jin/editaplot">'
-    forbidden = ("/stargazers", "metrics/stars.svg", "api.star-history.com")
+    forbidden = ("/stargazers", "api.star-history.com")
 
     for name in ("README.md", "README.en.md"):
         content = (PRODUCT_ROOT / name).read_text(encoding="utf-8")
         assert badge in content
+        assert trend in content
         assert repository_link in content
         assert all(token not in content for token in forbidden)
 

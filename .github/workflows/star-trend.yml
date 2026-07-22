@@ -1,0 +1,62 @@
+name: anonymous aggregate Star trend
+
+on:
+  schedule:
+    - cron: "17 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: editaplot-star-trend
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Load the previous aggregate snapshot
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/star-trend/assets/star-trend"
+          data="$RUNNER_TEMP/star-trend/assets/star-trend/stars.json"
+          svg="$RUNNER_TEMP/star-trend/assets/star-trend/stars.svg"
+          if git fetch origin metrics:refs/remotes/origin/metrics --depth=1 \
+            && git show refs/remotes/origin/metrics:assets/star-trend/stars.json > "$data" \
+            && python tools/build_star_trend.py \
+              --repository "$GITHUB_REPOSITORY" \
+              --data "$data" \
+              --svg "$svg" \
+              --render-only >/dev/null; then
+            echo "Loaded the validated aggregate snapshot from metrics."
+          else
+            cp assets/star-trend/stars.json "$data"
+            echo "Using the checked-in aggregate baseline."
+          fi
+
+      - name: Record one daily aggregate and render SVG
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python tools/build_star_trend.py
+          --repository "$GITHUB_REPOSITORY"
+          --data "$RUNNER_TEMP/star-trend/assets/star-trend/stars.json"
+          --svg "$RUNNER_TEMP/star-trend/assets/star-trend/stars.svg"
+
+      - name: Publish only aggregate assets to the metrics branch
+        shell: bash
+        run: |
+          git switch --orphan metrics-publish
+          mkdir -p assets/star-trend
+          cp "$RUNNER_TEMP/star-trend/assets/star-trend/stars.json" assets/star-trend/stars.json
+          cp "$RUNNER_TEMP/star-trend/assets/star-trend/stars.svg" assets/star-trend/stars.svg
+          git add assets/star-trend/stars.json assets/star-trend/stars.svg
+          git config user.name "EditaPlot Automation"
+          git config user.email "editaplot-automation@users.noreply.github.com"
+          git commit -m "Update anonymous aggregate Star trend"
+          git push --force-with-lease origin HEAD:metrics

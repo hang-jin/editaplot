@@ -13,33 +13,43 @@
   <p><a href="README.md">中文说明</a> · Chinese is the primary documentation language</p>
 </div>
 
-EditaPlot is a local Windows Codex Skill that connects data inspection, chart selection, a frozen plotting contract, local Origin automation, and result verification. It turns a user's own experimental data into an **editable OPJU** plus PNG, PDF, and TIF exports.
+I built EditaPlot as a local Windows Codex Skill for turning your experimental data into an **editable OPJU** plus PNG, PDF, and TIF exports. It guides the job from data inspection and chart selection through a frozen plotting contract, local Origin automation, and result verification.
 
-It is not a collection of bitmaps or rigid “replace the numbers” templates, and it does not pass a Python-rendered image off as an Origin result. The user retains control of scientific meaning and final choices; ambiguous inputs require confirmation instead of invented columns, fits, or conclusions.
+I did not want this to become a collection of rigid “replace the numbers” templates, and a Python preview is never passed off as an Origin result. You keep control of the scientific meaning and final choices. When the input is ambiguous, EditaPlot asks you before drawing instead of inventing columns, fits, or conclusions.
 
 > [!WARNING]
-> **V1 supports only physical Windows 10/11 x64 computers.** macOS (Intel and Apple Silicon), Linux, WSL, Wine/CrossOver, Parallels, and other virtual machines are unsupported. Do not follow the Windows setup on a Mac: this release cannot automate Origin from macOS.
+> **I have completed full validation only on physical Windows 10/11 x64 computers.** V1 therefore does not yet provide a macOS (Intel or Apple Silicon), Linux, WSL, Wine/CrossOver, Parallels, or other virtual-machine version. If you use a Mac, this release cannot complete the Origin workflow; use a physical Windows computer and check future release notes for platform updates.
 
 > [!IMPORTANT]
-> EditaPlot is open source under the [Apache License 2.0](LICENSE). Rendering requires a local Origin/OriginPro application that can be reached through Automation; EditaPlot does not install or modify Origin.
+> I release EditaPlot under the [Apache License 2.0](LICENSE). To render a figure, your computer needs an existing Origin/OriginPro installation that can be reached through Automation. I do not install or modify Origin.
 
 ## Workflow at a glance
 
 ```mermaid
 flowchart LR
-    A["User data<br>CSV / TXT / XLS / XLSX"] --> B["Inspect<br>roles, units, ambiguity"]
-    B --> C["Recommend<br>chart and palette"]
-    C --> D["Confirm one-sentence scientific purpose"]
-    D --> E{"Confidence sufficient?"}
-    E -- No --> F["Confirm details<br>roles, errors, order, or Z"]
-    F --> G["Freeze RenderPlan"]
-    E -- Yes --> G
-    G --> H["Local Origin / OriginPro"]
-    H --> I["OPJU + PNG + PDF + TIF"]
-    I --> J["Object readback + source hash + visual QA"]
+    A["Your data<br>CSV / TXT / XLS / XLSX"] --> B["Read the table<br>understand each column"]
+    B --> C["Suggest 1–3 charts<br>and suitable colors"]
+    C --> D["You confirm<br>what the figure should show"]
+    D --> E{"Any important ambiguity?"}
+    E -- Yes --> F["Ask only what is needed<br>units, errors, order, or Z"]
+    F --> G["Save the confirmed choices"]
+    E -- No --> G
+    G --> H["Draw in local Origin"]
+    H --> I["Editable OPJU<br>PNG + PDF + TIF"]
+    I --> J["Check data, layout, and exports"]
 ```
 
-A successful job is more than a visible PNG: it requires an editable project, all four outputs, an unchanged source hash, axis/font/layer/object readback, and human visual inspection.
+When I say a figure is finished, you receive an editable Origin project plus PNG, PDF, and TIF files. I also check that the source data is unchanged, labels are complete, and every file opens correctly.
+
+## Star trend
+
+I started recording the repository's aggregate GitHub Star count on launch day. The first snapshot is a truthful 31-Star starting point; later daily snapshots will form the line naturally.
+
+<div align="center">
+  <a href="https://github.com/hang-jin/editaplot"><img src="https://raw.githubusercontent.com/hang-jin/editaplot/metrics/assets/star-trend/stars.svg" width="760" alt="EditaPlot GitHub Star trend"></a>
+</div>
+
+I store only the date and aggregate repository count. I do not read or store usernames, account IDs, personal star timestamps, or Stargazer lists.
 
 ## Coverage
 
@@ -50,11 +60,11 @@ A successful job is more than a visible PNG: it requires an editable project, al
 | Distributions and effects | raw summaries, box, violin, Raincloud, histogram, forest plot |
 | Medical and deep learning | ROC, PR, calibration, DCA, confusion matrix, Bland–Altman, paired longitudinal trajectories, grouped boxes, precomputed SHAP, medical panel planning |
 
-The drawing layer never silently smooths, fits, removes outliers, invents peaks, derives error bars, identifies phases, trains a model, invokes SHAP, or computes lifetime/band gap. It draws such evidence only when explicitly supplied.
+I do not silently smooth data, remove outliers, invent peaks, derive error bars, fit curves, identify phases, or train models. Lifetime, band-gap, SHAP, and similar analysis results are drawn only when you explicitly provide them.
 
 ## Origin-rendered examples
 
-These examples use neutral synthetic teaching data. They were rendered and reviewed with Origin/OriginPro 2024b (10.15); public PNG metadata is sanitized and every file is hash-locked in a manifest.
+I made and manually checked these examples with synthetic teaching data. Metadata that could expose local information has been removed, and every public image checksum is recorded in a manifest.
 
 <div align="center">
   <img src="assets/gallery/xps-fit.png" alt="XPS fit" width="31%">
@@ -71,23 +81,22 @@ These examples use neutral synthetic teaching data. They were rendered and revie
 
 ![Chinese scientific palette selector](assets/palettes/palette-selector-public.zh-CN.png)
 
-Eight launch palettes and two advanced palettes are machine-readable. A confirmed `palette_id` freezes exact HEX values, allowed modes, safe category count, and accessibility warnings into the RenderPlan. Semantic colors for XPS components, signed effects, heatmaps, diagnostic lines, and confusion matrices cannot be overwritten by a cosmetic preference.
+I provide eight beginner-friendly launch palettes and two advanced palettes. You only need to choose a palette; EditaPlot remembers the exact colors and limits so future redraws stay consistent. I do not change scientifically meaningful colors for XPS components, signed values, heatmaps, or diagnostic lines merely for decoration.
 
-The palettes are original abstractions and redraws. Reference covers, watermarks, and layouts are not redistributed, and no official journal endorsement is claimed. See the [palette guide](docs/palette-guide.md).
+I created these palettes as original abstractions and redraws. They do not copy journal covers, watermarks, or layouts, and they are not official journal templates. See the [palette guide](docs/palette-guide.md).
 
 ## Quick start
 
 ### Requirements
 
-| Item | Requirement |
+| Item | What you need to know |
 |---|---|
-| OS | Physical Windows 10/11 x64 computer; no macOS, Linux, WSL, or VM support |
-| Origin | Installed locally and reachable through Origin Automation |
-| Origin verification | Verified on Origin/OriginPro 2024b (10.15); every other version requires separate verification |
-| Python | CLI/dependencies are covered on 64-bit CPython 3.10–3.12; the live Origin end-to-end baseline is CPython 3.10 + Origin 2024b |
-| Input | CSV, TXT, XLS, or XLSX; Chinese headers and paths are supported |
+| OS | I have fully validated physical Windows 10/11 x64 computers; Mac, Linux, WSL, and VM versions are not available yet |
+| Origin | Your computer needs Origin/OriginPro and must allow EditaPlot to connect; I have fully validated 2024b (10.15) |
+| Python | You need 64-bit Python 3.10–3.12; the launcher selects it automatically, so no manual setup is needed |
+| Input | You can use CSV, TXT, XLS, or XLSX, including Chinese headers and paths |
 
-The root `editaplot.cmd` prefers a compatible Python already on the computer, then creates a project-local `.editaplot-venv` with locked dependencies. If no compatible Python exists, the Skill must explain the system-level change and obtain explicit consent before using official winget to install Python 3.12 in user scope; without winget it provides the official python.org instructions. Environment repair never installs or modifies Origin; the render worker tests the local Automation connection when drawing begins.
+You do not need to solve the Python environment first. I designed the root `editaplot.cmd` to find a compatible Python already on your computer and create an environment used only by this project. If none is available, it explains the change and waits for your consent before using official winget to install user-scope Python 3.12; without winget, it gives you the official python.org instructions. This setup does not install or modify Origin. The local connection is tested only when rendering begins.
 
 ### Install the Codex Skill
 
@@ -97,7 +106,7 @@ Set-Location editaplot
 .\editaplot.cmd setup
 ```
 
-Keep the complete repository. **Do not copy only `skill/editaplot`**: the rendering runtime would be missing and the result is `engine_not_found`. No GitHub experience or account is required—download the repository's Source ZIP, extract the whole archive, and run the same `setup` command in that folder. See the [installation guide](docs/installation.md).
+Please keep the complete repository because `skill/editaplot` and the rendering `runtime/` work together. Copying only the Skill folder leaves the drawing engine behind. If GitHub is new to you, simply download the repository's Source ZIP, extract the whole archive, and run the same `setup` command in that folder. See the [installation guide](docs/installation.md).
 
 Open a new Codex task and invoke `$editaplot`. For a first dataset, run:
 
@@ -105,7 +114,9 @@ Open a new Codex task and invoke `$editaplot`. For a first dataset, run:
 .\editaplot.cmd start "$HOME\Documents\my-data.csv"
 ```
 
-Or simply attach the file in Codex and say, “Use `$editaplot` to make the right figure from this data.” The Skill handles environment checks, read-only inspection, and chart suggestions behind the scenes. It always asks you to confirm a one-sentence scientific purpose; low-confidence cases add only the focused questions needed about roles, errors, or transformations. Advanced users can still use the deterministic commands:
+If this is your first run, the easiest route is to attach the file in Codex and say, “Use `$editaplot` to make the right figure from this data.” I designed EditaPlot to handle the environment check, read-only inspection, and chart suggestions. You confirm one sentence describing the scientific purpose; only unclear cases need a few extra details about roles, errors, or transformations. When you are comfortable with the command line, these commands are also available:
+
+When rendering begins, I have EditaPlot create a `<source_stem>_EditaPlot_<time>` folder directly beside your original data. The approved render plan, OPJU, PNG, PDF, TIF, readback, and verification files stay together there. Your source file is never overwritten, and the destination changes only when you explicitly request another location.
 
 ```powershell
 .\editaplot.cmd doctor
@@ -117,48 +128,45 @@ Or simply attach the file in Codex and say, “Use `$editaplot` to make the righ
 .\editaplot.cmd verify <Origin-output-directory>
 ```
 
-The repository contains a cleaned, self-contained `runtime/`. Only engine developers need the optional `--engine-home <engine-root>` override.
+The repository already contains the required `runtime/`. You can ignore `--engine-home` in normal use; it is needed only when you intentionally replace the built-in engine.
 
 ### Prompt for Codex
 
 ```text
-Use $editaplot. Check the local environment and reuse a compatible Python first. If none exists,
-explain that official Python 3.12 installation is a system-level change and wait for my explicit consent.
-Keep Python packages project-local; do not install or modify Origin. Inspect my selected data read-only, explain column roles, units, and
-ambiguity, then recommend at most three charts and show the Chinese palette selector. Ask me to
-confirm a one-sentence scientific purpose; when confidence is low, ask the additional focused questions
-needed. After confirmation, freeze the RenderPlan without changing my data.
-If doctor finds the local Origin Automation entry, test the connection during render without adding another Origin confirmation question.
+Use $editaplot to draw this data. Do not modify the source file. First tell me which columns you
+recognized, which chart you recommend, and what I still need to confirm. Ask before installing Python;
+do not install or modify Origin. Draw only after I confirm the scientific purpose, then check the
+editable project and PNG, PDF, and TIF files. If doctor finds Origin, test the connection while rendering.
 ```
 
-## Public repository vs local private evidence
+## What I publish and what stays local
 
-The public repository is complete, runnable software. The local private layer contains only evidence that should not travel with a source release; it is not a hidden feature set or paid edition.
+I keep the public repository complete and runnable. To avoid mixing private data and development records into a source release, I retain only non-release evidence locally; there is no hidden feature set or “paid complete edition.”
 
-| Included in the public repository | Kept only on the developer's or user's machine |
+| What I include in the public repository | What stays only on a local machine |
 |---|---|
 | Apache-2.0 source, complete Skill, sanitized runtime | `DEVELOPMENT_LEDGER.md`, internal plans, development logs |
-| Neutral synthetic examples and original palette assets | User data, reference screenshots, material without redistribution rights |
+| Neutral synthetic examples and original palette assets | Your original data, reference screenshots, material without redistribution rights |
 | 37 reviewed, metadata-sanitized PNG examples | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
 | Bilingual docs, tests, dependency locks, asset/runtime manifests | Absolute paths, caches, virtual environments, temporary outputs, secrets and tokens |
 
-A default-deny allowlist, extension/size rules, path and secret scanning, PNG structure/metadata checks, provenance records, and SHA-256 manifests protect the public boundary. See [release and licensing boundaries](docs/release-boundaries.md).
+To avoid publishing local material by mistake, I use an allowlist, secret scanning, PNG checks, and SHA-256 manifests. See [release and licensing boundaries](docs/release-boundaries.md).
 
-## Scientific and safety boundaries
+## Boundaries I keep for scientific reliability
 
-- Original files are read-only; helper columns live only in memory or the editable Origin workbook.
-- Missing data produces repair guidance, never fabricated measurements.
-- 3D is used only when the third axis has real experimental meaning and improves the evidence.
-- A movable legend is acceptable; missing axes, inconsistent fonts, overlapping colorbars, and clipped text are failures.
-- New Origin APIs require official documentation and an isolated experiment before entering a template.
+- I keep original files read-only; drawing-only helper columns live only in memory or the editable Origin workbook.
+- When columns are missing, I explain how to repair the table instead of fabricating measurements.
+- I use 3D only when the third axis has real experimental meaning and improves the evidence.
+- A legend may be moved later in OPJU, but missing axes, inconsistent fonts, overlapping colorbars, and clipped text still count as failures.
+- I review official documentation and run an isolated experiment before adding a new Origin API to a template.
 
 ## Independent project notice
 
-EditaPlot calls an Origin or OriginPro application that already exists on the user's computer. It does not bundle, install, or modify that application, and it does not expose the Automation Server over a network or cloud. EditaPlot is not affiliated with, sponsored by, or endorsed by OriginLab Corporation; names are used only to describe compatibility.
+I maintain EditaPlot independently. It calls an Origin or OriginPro application that already exists on your computer; it does not bundle, install, or modify that application, and it does not expose the Automation Server over a network or cloud. I am not affiliated with, sponsored by, or endorsed by OriginLab Corporation; names are used only to describe compatibility.
 
 ## Open source, contributing, and support
 
-The Star badge at the top displays only GitHub's aggregate repository count. EditaPlot does not request, store, display, or directly link any Stargazer list, username, account ID, or star timestamp.
+The badge and trend chart use only GitHub's aggregate repository count. I do not request, store, or display Stargazer lists, usernames, account IDs, or personal star timestamps.
 
 - License: [Apache License 2.0](LICENSE)
 - Installation and troubleshooting: [docs/installation.md](docs/installation.md)
@@ -168,4 +176,4 @@ The Star badge at the top displays only GitHub's aggregate repository count. Edi
 - Support scope: [SUPPORT.md](SUPPORT.md)
 - Dependencies and licenses: [docs/dependency-inventory.md](docs/dependency-inventory.md)
 
-The maintainer may separately offer consulting, installation help, customization, or support without restricting Apache-2.0 rights. Paid software licensing, hosted or multi-tenant operation, remote automation, or third-party trademarks in product branding require a fresh licensing and trademark review.
+I may later offer consulting, installation help, customization, or support, but that will not restrict the rights already granted by Apache-2.0. Before any future paid software licensing, hosted or multi-tenant service, or remote automation release, I will complete a fresh licensing and trademark review.

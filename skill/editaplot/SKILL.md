@@ -34,6 +34,9 @@ rendering, exporting, and readback.
    Origin as an existing user-managed application; never install or modify it during repair.
 6. Run `editaplot.cmd start <data-file>` for a new table. Add `--intent "<user intent>"` when the
    user states a goal. Treat its inspection and recommendation payload as internal working state.
+   Use the original local source path exposed by the attachment. If the host provides only a
+   temporary copied attachment and the original folder cannot be recovered, ask once for the intended
+   local source/output folder before rendering; never guess an unrelated workspace destination.
 7. Tell a beginner only: what was recognized, the best one to three chart choices, why they fit,
    and the smallest scientific decision still required. Do not dump an `inspect → recommend → plan`
    pipeline or raw JSON on them unless they ask for technical detail.
@@ -44,7 +47,8 @@ rendering, exporting, and readback.
    `assets/palettes/palette-selector-public.zh-CN.png`, and recommend no more than two compatible
    `palette_id` values. Read `references/palettes.md` before freezing one.
 10. Internally freeze the confirmed choice with `editaplot.cmd plan`; never hand-edit a plan or write
-   a decision back to the source file.
+   a decision back to the source file. The render command copies this approved plan into the final
+   output folder as `render-plan.json`.
 11. Treat Origin readiness as a technical check only. If `doctor` detects the local Automation
     application and reports `ready_for_render`, proceed after the scientific plan is confirmed
     without adding another Origin question. Doctor discovery is not a live connection: the render
@@ -52,9 +56,13 @@ rendering, exporting, and readback.
     entry. Report a connection failure as a technical error without speculating about its cause.
     Never use mouse automation or provide application patches or bypass instructions.
 12. Render only through a verified route with `editaplot.cmd render <plan>`. Keep Origin open unless
-    the user requests otherwise.
-13. Run `editaplot.cmd verify <output-directory>` and perform human visual QA. Do not report success
-    from a PNG alone.
+    the user requests otherwise. By default, let the runtime create a direct sibling of the source
+    file named `<source_stem>_EditaPlot_YYYYMMDD_HHMMSS`; keep all formal artifacts in that folder.
+    Do not redirect ordinary runs to the repository, Skill directory, current working directory, or
+    a shared global output folder. Use `--output-dir` only when the user explicitly requests another
+    location.
+13. Run `editaplot.cmd verify <output-directory>` against that source-adjacent folder and perform
+    human visual QA. Do not report success from a PNG alone.
 
 Before any render, read `references/origin-safety.md`, `references/figure-contract.md`, and
 `references/verification.md`. For a new table or chart decision, read
@@ -103,9 +111,9 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
 ## Report the result in plain language
 
 Return the recognized data shape and roles, selected chart and alternatives, confidence and confirmed
-transformations, plan path, OPJU/PNG/PDF/TIF paths, validation/readback paths, and any remaining human
-check. For a beginner, translate internal identifiers into natural language and put technical paths
-after the concise outcome.
+transformations, source-adjacent output folder, copied plan, OPJU/PNG/PDF/TIF paths,
+validation/readback paths, and any remaining human check. For a beginner, translate internal
+identifiers into natural language and put technical paths after the concise outcome.
 
 ## Load detailed references only as needed
 

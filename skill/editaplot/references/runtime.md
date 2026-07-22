@@ -102,13 +102,22 @@ The launcher forwards engine JSON to stdout. `--output` writes the same payload 
 command supports it. Render forwards the engine worker's JSON-lines progress protocol. Use
 `--engine-home <root>` only when an engine developer intentionally overrides runtime discovery.
 
+For an ordinary render, omit `--output-dir`. The runtime creates a unique folder named
+`<source_stem>_EditaPlot_YYYYMMDD_HHMMSS` directly beside the original CSV/TXT/XLS/XLSX file. This
+keeps one dataset and all of its deliverables together instead of writing to the repository, Skill
+directory, current working directory, or a shared global output location. Honor an explicit
+`--output-dir` only when the user asks for a different destination. If the host exposes only a
+temporary copy of an attachment, obtain the intended original folder from the user before rendering;
+the temporary filename alone cannot reveal that folder safely.
+
 ## Expected artifacts
 
 - `start-session.json`: source identity, recognized roles, ranked candidates, confidence, and gates.
 - `inspection.json`: file identity, layout, and column profiles.
 - `recommendations.json`: ranked candidates, confidence, reasons, and auto-selection gate.
 - `render-plan.json`: source hash, figure contract, template, mapping, digest, and transform.
-- Origin output directory: editable project, PNG/PDF/TIF exports, validation, provenance, and readback.
+- Source-adjacent Origin output directory: copied `render-plan.json`, editable project,
+  PNG/PDF/TIF exports, validation, provenance, and readback.
 - `medical-panel-plan.json`: verified quantitative subproject hashes, attested image panels, distinct
   evidence roles, adaptive layout, shared color semantics, and blocking gates.
 

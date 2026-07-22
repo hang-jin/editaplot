@@ -17,6 +17,7 @@ from .template_registry import TemplateManifest
 class RunOutput:
     output_dir: Path
     input_copy: Path
+    render_plan_copy: Path
     result_opju: Path
     result_png: Path
     result_pdf: Path
@@ -41,9 +42,11 @@ def _unique_dir(path: Path) -> Path:
 
 
 def default_output_dir(input_csv: str | Path, template_id: str, now: datetime | None = None) -> Path:
+    del template_id  # The source file, not the selected chart, owns the output folder.
     timestamp = (now or datetime.now()).strftime("%Y%m%d_%H%M%S")
-    label = "XPS_C1s" if template_id == "xps_c1s_fit" else safe_filename(template_id)
-    return Path(input_csv).resolve().parent / "OriginOutputs" / f"{label}_{timestamp}"
+    source = Path(input_csv).resolve()
+    label = safe_filename(source.stem, fallback="data")
+    return source.parent / f"{label}_EditaPlot_{timestamp}"
 
 
 def create_run_output(
@@ -53,7 +56,11 @@ def create_run_output(
     now: datetime | None = None,
 ) -> RunOutput:
     source = Path(input_csv).resolve()
-    target_dir = _unique_dir(Path(output_dir).resolve() if output_dir else default_output_dir(source, manifest.id, now))
+    target_dir = _unique_dir(
+        Path(output_dir).resolve()
+        if output_dir
+        else default_output_dir(source, manifest.id, now)
+    )
     target_dir.mkdir(parents=True, exist_ok=False)
 
     input_copy = target_dir / f"input_copy{source.suffix.lower()}"
@@ -66,14 +73,16 @@ def create_run_output(
     readme_output = target_dir / "README_output.txt"
     readme_output.write_text(
         "EditaPlot output folder\n"
-        "Files here are a reproducible copy of the input, template manifest, schema, "
-        "validation report, environment report, editable OPJU, and exported images.\n",
+        "Files here are a reproducible copy of the input, approved render plan (when invoked "
+        "through the Skill), template manifest, schema, validation report, environment report, "
+        "editable OPJU, and exported images.\n",
         encoding="utf-8",
     )
 
     return RunOutput(
         output_dir=target_dir,
         input_copy=input_copy,
+        render_plan_copy=target_dir / "render-plan.json",
         result_opju=target_dir / "result.opju",
         result_png=target_dir / "result.png",
         result_pdf=target_dir / "result.pdf",

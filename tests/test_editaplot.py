@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import types
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -530,7 +531,7 @@ def test_inspection_reports_new_evidence_layouts(relative_path: str, layout: str
     assert layout in result["table"]["layouts"]
 
 
-def test_plan_is_hash_bound_and_builds_safe_worker_command() -> None:
+def test_plan_is_hash_bound_and_builds_safe_worker_command(tmp_path: Path) -> None:
     source = ENGINE / "templates" / "xrd" / "example_standard.csv"
     plan = build_plan(
         source,
@@ -541,17 +542,45 @@ def test_plan_is_hash_bound_and_builds_safe_worker_command() -> None:
         engine_home=ENGINE,
     )
 
+    plan_file = tmp_path / "render-plan.json"
+    plan_file.write_text(json.dumps(plan), encoding="utf-8")
     validate_plan(plan)
-    command, env, root = build_worker_command(plan, engine_home=ENGINE)
+    command, env, root = build_worker_command(
+        plan,
+        plan_file=plan_file,
+        engine_home=ENGINE,
+    )
 
     assert plan["can_render"] is True
     assert plan["execution"]["origin_callability_check"] == "performed_by_render_worker"
+    assert plan["execution"]["output_directory_policy"] == "source_sibling_unique_folder"
+    assert plan["execution"]["output_folder_pattern"] == (
+        "<source_stem>_EditaPlot_YYYYMMDD_HHMMSS"
+    )
+    assert plan["execution"]["render_plan_copy"] == "render-plan.json"
     assert "requires_manual_origin_start_confirmation" not in plan["execution"]
     assert command[:3] == [sys.executable, "-m", "origin_sciplot.workers.run_template_worker"]
     assert "--expected-plan-digest" in command
+    assert command[command.index("--render-plan-file") + 1] == str(plan_file.resolve())
     assert "--keep-origin-open" in command
     assert root == ENGINE.resolve()
     assert str(ENGINE / "src") in env["PYTHONPATH"]
+
+
+def test_default_render_output_is_a_direct_sibling_of_the_source(tmp_path: Path) -> None:
+    core.bootstrap_engine(ENGINE)
+    from origin_sciplot.output_manager import default_output_dir
+
+    source = tmp_path / "实验结果.csv"
+    output = default_output_dir(
+        source,
+        "bar",
+        now=datetime(2026, 7, 22, 14, 32, 5),
+    )
+
+    assert output == tmp_path / "实验结果_EditaPlot_20260722_143205"
+    assert output.parent == source.parent.resolve()
+    assert "OriginOutputs" not in output.parts
 
 
 def test_changed_source_blocks_plan(tmp_path: Path) -> None:
