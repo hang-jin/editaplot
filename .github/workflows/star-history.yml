@@ -1,0 +1,78 @@
+name: publish star history metrics
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/star-history.yml"
+      - "tools/build_star_history.py"
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: star-history-metrics
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Prepare isolated metrics worktree
+        id: metrics
+        shell: bash
+        run: |
+          set -euo pipefail
+          metrics_dir="$RUNNER_TEMP/editaplot-metrics"
+          if git ls-remote --exit-code --heads origin metrics >/dev/null 2>&1; then
+            git fetch --no-tags origin refs/heads/metrics:refs/remotes/origin/metrics
+            git worktree add --detach "$metrics_dir" refs/remotes/origin/metrics
+          else
+            git worktree add --detach "$metrics_dir"
+            git -C "$metrics_dir" switch --orphan metrics
+            git -C "$metrics_dir" rm -rf .
+          fi
+          echo "directory=$metrics_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Collect anonymous history and render SVG
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          metrics_dir="${{ steps.metrics.outputs.directory }}"
+          python tools/build_star_history.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --previous "$metrics_dir/stars.json" \
+            --json-output "$metrics_dir/stars.json" \
+            --svg-output "$metrics_dir/stars.svg" \
+            --timezone Asia/Shanghai
+
+      - name: Publish changed metrics only
+        shell: bash
+        run: |
+          set -euo pipefail
+          metrics_dir="${{ steps.metrics.outputs.directory }}"
+          git -C "$metrics_dir" config user.name "github-actions[bot]"
+          git -C "$metrics_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$metrics_dir" add -- stars.json stars.svg
+          if git -C "$metrics_dir" diff --cached --quiet; then
+            echo "Star metrics are unchanged; no metrics commit is needed."
+            exit 0
+          fi
+          git -C "$metrics_dir" commit -m "chore(metrics): update star history"
+          git -C "$metrics_dir" push origin HEAD:metrics

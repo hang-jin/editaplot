@@ -15,13 +15,13 @@
     },
     {
       "path": "pyproject.toml",
-      "size_bytes": 1043,
-      "sha256": "19beb45b89da5eaf4318c7c43fdd9e248990addac2bc62842c59b5f1a520985b"
+      "size_bytes": 1049,
+      "sha256": "226852cd16aa92176ff9f5aaa56d846f5d171ba6907b3174b93cb178cb112d46"
     },
     {
       "path": "requirements-runtime.lock",
-      "size_bytes": 618,
-      "sha256": "ec6a0d4456aedb15454d1273d5675484324954b9ee0c7c2c62f14281cf15728e"
+      "size_bytes": 629,
+      "sha256": "c2f4198ce3e64634fca2dc5712f141bcf164b67a2c8d4fb1221388d9b8f9d4da"
     },
     {
       "path": "requirements-runtime.txt",

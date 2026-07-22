@@ -6,6 +6,13 @@ __pycache__/
 
 .venv/
 .editaplot-venv/
+.editaplot-venv.build-*/
+.editaplot-venv.stale-*/
+.editaplot-environment.lock
+.*.editaplot-build-*/
+.*.editaplot-backup-*/
+.*.editaplot-setup.lock
+.*.editaplot-transaction.json
 .build-venv/
 venv/
 dist/
@@ -21,6 +28,7 @@ artifacts/
 .env
 .env.*
 !.env.example
+.editaplot-local.json
 *.key
 *.pem
 *.pfx
