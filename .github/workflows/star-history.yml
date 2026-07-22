@@ -44,7 +44,7 @@ jobs:
           else
             git worktree add --detach "$metrics_dir"
             git -C "$metrics_dir" switch --orphan metrics
-            git -C "$metrics_dir" rm -rf .
+            git -C "$metrics_dir" rm -rf --ignore-unmatch -- .
           fi
           echo "directory=$metrics_dir" >> "$GITHUB_OUTPUT"
 

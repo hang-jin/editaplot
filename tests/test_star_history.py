@@ -29,6 +29,14 @@ class StubClient:
         return self.responses.pop(0)
 
 
+def test_workflow_allows_an_empty_first_metrics_branch() -> None:
+    workflow = (PRODUCT_ROOT / ".github" / "workflows" / "star-history.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'git -C "$metrics_dir" rm -rf --ignore-unmatch -- .' in workflow
+
+
 def _event(user_id: int, timestamp: str, login: str = "private-user") -> dict[str, Any]:
     return {"starred_at": timestamp, "user": {"id": user_id, "login": login}}
 
