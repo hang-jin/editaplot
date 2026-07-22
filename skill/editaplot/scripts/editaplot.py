@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 from editaplot_core import (
@@ -21,6 +23,7 @@ from editaplot_core import (
     palette_catalog,
     recommend_charts,
     repair_environment,
+    start_session,
     verify_output,
     write_json,
 )
@@ -45,6 +48,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _engine_option(doctor_parser)
 
+    repair_parser = subparsers.add_parser(
+        "repair-environment",
+        help=argparse.SUPPRESS,
+    )
+    _engine_option(repair_parser)
+
     catalog_parser = subparsers.add_parser("catalog", help="List verified public Origin routes")
     _engine_option(catalog_parser)
 
@@ -56,6 +65,16 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_parser.add_argument("input_file")
     inspect_parser.add_argument("--output")
     _engine_option(inspect_parser)
+
+    start_parser = subparsers.add_parser(
+        "start",
+        help="Open a read-only beginner session and ask for scientific confirmation",
+    )
+    start_parser.add_argument("input_file")
+    start_parser.add_argument("--intent", default="")
+    start_parser.add_argument("--limit", type=int, default=3)
+    start_parser.add_argument("--output")
+    _engine_option(start_parser)
 
     recommend_parser = subparsers.add_parser("recommend", help="Rank suitable verified templates")
     recommend_parser.add_argument("input_file")
@@ -114,6 +133,78 @@ def _emit(payload: dict[str, Any], output: str | None = None) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2), flush=True)
 
 
+def _paths_refer_to_same_file(left: str | Path, right: str | Path) -> bool:
+    left_path = Path(left).expanduser()
+    right_path = Path(right).expanduser()
+    try:
+        if left_path.resolve() == right_path.resolve():
+            return True
+        if left_path.exists() and right_path.exists():
+            return os.path.samefile(left_path, right_path)
+    except OSError:
+        return False
+    return False
+
+
+def _ensure_output_does_not_replace_paths(
+    output: str | None,
+    protected_paths: list[str | Path],
+    *,
+    code: str,
+    message: str,
+) -> None:
+    if not output:
+        return
+    conflict = next(
+        (path for path in protected_paths if _paths_refer_to_same_file(path, output)),
+        None,
+    )
+    if conflict is not None:
+        raise EditaPlotError(
+            code,
+            message,
+            protected_path=str(Path(conflict).expanduser().resolve()),
+        )
+
+
+def _ensure_output_does_not_replace_input(
+    input_path: str | None,
+    output: str | None,
+) -> None:
+    if not input_path:
+        return
+    _ensure_output_does_not_replace_paths(
+        output,
+        [input_path],
+        code="source_output_conflict",
+        message="A JSON output cannot replace the command's input file.",
+    )
+
+
+def _ensure_verify_output_does_not_replace_artifact(
+    output_directory: str,
+    output: str | None,
+) -> None:
+    directory = Path(output_directory).expanduser()
+    required = [
+        directory / name
+        for name in (
+            "result.png",
+            "result.pdf",
+            "result.tif",
+            "result.opju",
+            "origin_verify_report.json",
+            "validation_report.json",
+        )
+    ]
+    _ensure_output_does_not_replace_paths(
+        output,
+        required,
+        code="verification_artifact_output_conflict",
+        message="A verification JSON output cannot replace a required Origin artifact.",
+    )
+
+
 def _run_render(args: argparse.Namespace) -> int:
     if not args.confirm_origin_started:
         raise EditaPlotError(
@@ -160,16 +251,28 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "doctor":
             before = doctor(engine_home=args.engine_home)
             if args.repair and not before["ready_for_render"]:
-                _emit(
-                    {
-                        "schema_version": "1.0",
-                        "ok": True,
-                        "before": before,
-                        "repair": repair_environment(engine_home=args.engine_home),
-                    }
-                )
+                if before["automatic_repair"]["available"]:
+                    _emit(
+                        {
+                            "schema_version": "1.0",
+                            "ok": True,
+                            "before": before,
+                            "repair": repair_environment(engine_home=args.engine_home),
+                        }
+                    )
+                elif before["missing_python_dependencies"]:
+                    raise EditaPlotError(
+                        "automatic_repair_unavailable",
+                        "Project-local dependency repair is unavailable for the reported blockers.",
+                        manual_blockers=before["manual_blockers"],
+                        supported_python=before["automatic_repair"]["supported_python"],
+                    )
+                else:
+                    _emit(before)
             else:
                 _emit(before)
+        elif args.command == "repair-environment":
+            _emit(repair_environment(engine_home=args.engine_home))
         elif args.command == "catalog":
             _emit(catalog(engine_home=args.engine_home))
         elif args.command == "palettes":
@@ -180,11 +283,24 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         elif args.command == "inspect":
+            _ensure_output_does_not_replace_input(args.input_file, args.output)
             _emit(
                 inspect_data(args.input_file, engine_home=args.engine_home),
                 args.output,
             )
+        elif args.command == "start":
+            _ensure_output_does_not_replace_input(args.input_file, args.output)
+            _emit(
+                start_session(
+                    args.input_file,
+                    intent=args.intent,
+                    engine_home=args.engine_home,
+                    limit=args.limit,
+                ),
+                args.output,
+            )
         elif args.command == "recommend":
+            _ensure_output_does_not_replace_input(args.input_file, args.output)
             _emit(
                 recommend_charts(
                     args.input_file,
@@ -195,6 +311,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.output,
             )
         elif args.command == "plan":
+            _ensure_output_does_not_replace_input(args.input_file, args.output)
+            _ensure_output_does_not_replace_input(args.mapping_json, args.output)
             mapping = load_json(args.mapping_json) if args.mapping_json else None
             payload = build_plan(
                 args.input_file,
@@ -213,8 +331,10 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "render":
             return _run_render(args)
         elif args.command == "verify":
+            _ensure_verify_output_does_not_replace_artifact(args.output_directory, args.output)
             _emit(verify_output(args.output_directory), args.output)
         elif args.command == "panel-plan":
+            _ensure_output_does_not_replace_input(args.config_file, args.output)
             _emit(
                 build_medical_panel_plan(
                     args.config_file,

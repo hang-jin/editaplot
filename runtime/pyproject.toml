@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "editaplot-runtime"
 version = "0.1.0"
 description = "Windows compatibility runtime for editable scientific plotting."
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 license = "Apache-2.0"
 authors = [{ name = "EditaPlot contributors" }]
 dependencies = [

@@ -4,8 +4,8 @@
   <p><strong>AI-guided editable scientific figures</strong><br>AI 驱动的可编辑科研绘图工作流</p>
   <p>
     <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-4c6ef5">
-    <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078d4">
-    <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776ab">
+    <img alt="Platform: Windows 10/11 x64 only" src="https://img.shields.io/badge/platform-Windows%2010%2F11%20x64%20only-0078d4">
+    <img alt="Python 3.10–3.12" src="https://img.shields.io/badge/Python-3.10%E2%80%933.12-3776ab">
     <img alt="Codex Skill" src="https://img.shields.io/badge/Codex-Skill-7c3aed">
     <img alt="Tested with Origin 2024b" src="https://img.shields.io/badge/tested%20with-Origin%202024b-0f766e">
   </p>
@@ -16,6 +16,9 @@ EditaPlot is a local Windows Codex Skill that connects data inspection, chart se
 
 It is not a collection of bitmaps or rigid “replace the numbers” templates, and it does not pass a Python-rendered image off as an Origin result. The user retains control of scientific meaning and final choices; ambiguous inputs require confirmation instead of invented columns, fits, or conclusions.
 
+> [!WARNING]
+> **V1 supports only physical Windows 10/11 x64 computers.** macOS (Intel and Apple Silicon), Linux, WSL, Wine/CrossOver, Parallels, and other virtual machines are unsupported. Do not follow the Windows setup on a Mac: this release cannot automate Origin from macOS.
+
 > [!IMPORTANT]
 > EditaPlot is open source under the [Apache License 2.0](LICENSE). Rendering requires a separately obtained, legally licensed Origin/OriginPro installation that the user can start manually. Origin, licenses, patches, and activation bypasses are not included.
 
@@ -25,13 +28,14 @@ It is not a collection of bitmaps or rigid “replace the numbers” templates, 
 flowchart LR
     A["User data<br>CSV / TXT / XLS / XLSX"] --> B["Inspect<br>roles, units, ambiguity"]
     B --> C["Recommend<br>chart and palette"]
-    C --> D{"Confidence sufficient?"}
-    D -- No --> E["User confirms<br>semantics, errors, order, or Z"]
-    E --> F["Freeze RenderPlan"]
-    D -- Yes --> F
-    F --> G["Local Origin / OriginPro"]
-    G --> H["OPJU + PNG + PDF + TIF"]
-    H --> I["Object readback + source hash + visual QA"]
+    C --> D["Confirm one-sentence scientific purpose"]
+    D --> E{"Confidence sufficient?"}
+    E -- No --> F["Confirm details<br>roles, errors, order, or Z"]
+    F --> G["Freeze RenderPlan"]
+    E -- Yes --> G
+    G --> H["Local Origin / OriginPro"]
+    H --> I["OPJU + PNG + PDF + TIF"]
+    I --> J["Object readback + source hash + visual QA"]
 ```
 
 A successful job is more than a visible PNG: it requires an editable project, all four outputs, an unchanged source hash, axis/font/layer/object readback, and human visual inspection.
@@ -76,33 +80,40 @@ The palettes are original abstractions and redraws. Reference covers, watermarks
 
 | Item | Requirement |
 |---|---|
-| OS | Windows 10/11 |
+| OS | Physical Windows 10/11 x64 computer; no macOS, Linux, WSL, or VM support |
 | Origin | Legally installed and activated by the user, with manual startup confirmed |
-| Testing baseline | Origin/OriginPro 2024b (10.15); compatibility target is 2021+ |
-| Python | 3.10+ |
+| Origin verification | Verified on Origin/OriginPro 2024b (10.15); every other version requires separate verification |
+| Python | CLI/dependencies are covered on 64-bit CPython 3.10–3.12; the live Origin end-to-end baseline is CPython 3.10 + Origin 2024b |
 | Input | CSV, TXT, XLS, or XLSX; Chinese headers and paths are supported |
 
-`doctor --repair` creates only a project-local `.editaplot-venv` and installs the locked Python dependency allowlist. It never installs, modifies, activates, or launches Origin.
+The root `editaplot.cmd` prefers a compatible Python already on the computer, then creates a project-local `.editaplot-venv` with locked dependencies. If no compatible Python exists, the Skill must explain the system-level change and obtain explicit consent before using official winget to install Python 3.12 in user scope; without winget it provides the official python.org instructions. It never changes the system silently and never installs, modifies, activates, or launches Origin.
 
 ### Install the Codex Skill
 
 ```powershell
 git clone https://github.com/hang-jin/editaplot.git
 Set-Location editaplot
-New-Item -ItemType Directory -Force "$HOME\.codex\skills" | Out-Null
-Copy-Item -Recurse -Force "skill\editaplot" "$HOME\.codex\skills\editaplot"
+.\editaplot.cmd setup
 ```
 
-Open a new Codex task and invoke `$editaplot`, or use the deterministic CLI:
+Keep the complete repository. **Do not copy only `skill/editaplot`**: the rendering runtime would be missing and the result is `engine_not_found`. No GitHub experience or account is required—download the repository's Source ZIP, extract the whole archive, and run the same `setup` command in that folder. See the [installation guide](docs/installation.md).
+
+Open a new Codex task and invoke `$editaplot`. For a first dataset, run:
 
 ```powershell
-python skill/editaplot/scripts/editaplot.py doctor
-python skill/editaplot/scripts/editaplot.py inspect <data.csv>
-python skill/editaplot/scripts/editaplot.py recommend <data.csv> --intent "compare models with uncertainty"
-python skill/editaplot/scripts/editaplot.py palettes
-python skill/editaplot/scripts/editaplot.py plan <data.csv> --template-id bar --claim "Model A performs better" --evidence-role comparison --palette-id ocean_coral --output render-plan.json
-python skill/editaplot/scripts/editaplot.py render render-plan.json --confirm-origin-started
-python skill/editaplot/scripts/editaplot.py verify <Origin-output-directory>
+.\editaplot.cmd start "$HOME\Documents\my-data.csv"
+```
+
+Or simply attach the file in Codex and say, “Use `$editaplot` to make the right figure from this data.” The Skill handles environment checks, read-only inspection, and chart suggestions behind the scenes. It always asks you to confirm a one-sentence scientific purpose; low-confidence cases add only the focused questions needed about roles, errors, or transformations. Advanced users can still use the deterministic commands:
+
+```powershell
+.\editaplot.cmd doctor
+.\editaplot.cmd inspect <data.csv>
+.\editaplot.cmd recommend <data.csv> --intent "compare models with uncertainty"
+.\editaplot.cmd palettes
+.\editaplot.cmd plan <data.csv> --template-id bar --claim "Model A performs better" --evidence-role comparison --palette-id ocean_coral --output render-plan.json
+.\editaplot.cmd render render-plan.json --confirm-origin-started
+.\editaplot.cmd verify <Origin-output-directory>
 ```
 
 The repository contains a cleaned, self-contained `runtime/`. Only engine developers need the optional `--engine-home <engine-root>` override.
@@ -110,10 +121,12 @@ The repository contains a cleaned, self-contained `runtime/`. Only engine develo
 ### Prompt for Codex
 
 ```text
-Use $editaplot. Check the local environment first. Repair only project-level Python dependencies;
-do not install or modify Origin. Inspect my selected data read-only, explain column roles, units, and
-ambiguity, then recommend at most three charts and show the Chinese palette selector. Ask before
-proceeding when confidence is low. After confirmation, freeze the RenderPlan without changing my data.
+Use $editaplot. Check the local environment and reuse a compatible Python first. If none exists,
+explain that official Python 3.12 installation is a system-level change and wait for my explicit consent.
+Keep Python packages project-local; do not install or modify Origin. Inspect my selected data read-only, explain column roles, units, and
+ambiguity, then recommend at most three charts and show the Chinese palette selector. Ask me to
+confirm a one-sentence scientific purpose; when confidence is low, ask the additional focused questions
+needed. After confirmation, freeze the RenderPlan without changing my data.
 I will authorize rendering only after I have manually started Origin.
 ```
 
@@ -143,6 +156,14 @@ A default-deny allowlist, extension/size rules, path and secret scanning, PNG st
 EditaPlot requires a separately obtained, locally installed, validly licensed copy of Origin or OriginPro. It does not bundle, install, activate, patch, or bypass that software, and it does not expose the Automation Server over a network or cloud. EditaPlot is not affiliated with, sponsored by, or endorsed by OriginLab Corporation; names are used only to describe compatibility.
 
 ## Open source, contributing, and support
+
+### Star history
+
+<a href="https://github.com/hang-jin/editaplot/stargazers">
+  <img src="https://raw.githubusercontent.com/hang-jin/editaplot/metrics/stars.svg" alt="EditaPlot GitHub Star history">
+</a>
+
+GitHub Actions retains an observation whenever the observed Star total changes and publishes it to a separate `metrics` branch. The solid line starts with the first observation and can rise or fall; public star timestamps appear only as dashed context. GitHub exposes neither unstar timestamps nor historical peaks from before collection began. The image appears after the repository's first successful Star History workflow run. Click it to view the current stargazers.
 
 - License: [Apache License 2.0](LICENSE)
 - Installation and troubleshooting: [docs/installation.md](docs/installation.md)

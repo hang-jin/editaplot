@@ -42,10 +42,56 @@ jobs:
           tools/build_asset_provenance.py
           tools/build_palette_assets.py
           tools/build_runtime_manifest.py
+          tools/build_star_history.py
           tools/build_showcase.py
           tools/generate_showcase_data.py
           tools/sync_public_gallery.py
           tools/verify_public_release.py
+
+      - name: Run reproducible tests
+        shell: pwsh
+        run: >-
+          python -m pytest
+          -p no:cacheprovider
+          --basetemp "$env:RUNNER_TEMP\editaplot-pytest"
+          -ra
+
+      - name: Enforce public-release allowlist
+        run: python tools/verify_public_release.py
+
+  windows-python-newer:
+    name: windows-python-${{ matrix.minor }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        minor: ["311", "312"]
+        include:
+          - minor: "311"
+            python-version: "3.11"
+          - minor: "312"
+            python-version: "3.12"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-runtime.txt
+            requirements-runtime.lock
+
+      - name: Install audited runtime and test tools
+        run: >-
+          python -m pip install
+          --constraint requirements-runtime.lock
+          --requirement requirements-runtime.txt
+          pytest==9.1.1
+          ruff==0.14.11
 
       - name: Run reproducible tests
         shell: pwsh

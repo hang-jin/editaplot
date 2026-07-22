@@ -7,7 +7,9 @@ import hashlib
 import json
 from pathlib import Path
 
-EXCLUDED_PARTS = {"__pycache__", ".pytest_cache", ".ruff_cache"}
+EXCLUDED_PARTS = {"__pycache__", ".pytest_cache", ".ruff_cache", ".editaplot-venv"}
+EXCLUDED_PREFIXES = (".editaplot-venv.build-", ".editaplot-venv.stale-")
+EXCLUDED_FILES = {".editaplot-environment.lock"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 
 
@@ -34,7 +36,11 @@ def main() -> int:
         if (
             not path.is_file()
             or path == manifest_path
-            or any(part in EXCLUDED_PARTS for part in relative.parts)
+            or path.name in EXCLUDED_FILES
+            or any(
+                part in EXCLUDED_PARTS or part.startswith(EXCLUDED_PREFIXES)
+                for part in relative.parts
+            )
             or path.suffix.lower() in EXCLUDED_SUFFIXES
         ):
             continue

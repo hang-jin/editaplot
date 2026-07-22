@@ -1,7 +1,17 @@
 # Support scope
 
-The initial open-source release formally targets Windows 10/11 and Origin/OriginPro 2024b (10.15). Other Origin
-versions, custom templates, new LabTalk parameters, and new 3D routes require separate verification.
+EditaPlot V1 supports physical Windows 10/11 x64 computers only. Its CLI and locked dependency
+layer are covered on 64-bit CPython 3.10, 3.11, and 3.12; the live Origin end-to-end baseline is
+CPython 3.10 with Origin/OriginPro 2024b (10.15). Python 3.11/3.12 rendering still requires the
+same local full-artifact verification before a route is claimed. macOS (Intel or Apple Silicon),
+Linux, WSL, Wine/CrossOver, Parallels, and other virtual machines are outside the supported product
+boundary. Other Origin versions, custom templates, new LabTalk
+parameters, and new 3D routes require separate verification.
+
+The launcher reuses an existing compatible Python and keeps packages in EditaPlot's project-local
+environment. If no compatible Python exists, an agent may offer an official CPython 3.12 user-scope
+installation only after the user explicitly approves that system change. This exception never
+extends to Origin: EditaPlot does not install, activate, repair, patch, or silently start Origin.
 
 Support does not include Origin installation, activation, license recovery, cracks, patches, or
 authorization bypass. The user remains responsible for scientific meaning, statistics, units,

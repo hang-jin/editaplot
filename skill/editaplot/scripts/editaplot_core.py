@@ -9,17 +9,20 @@ import math
 import os
 import platform
 import re
+import shutil
+import struct
 import subprocess
 import sys
 import unicodedata
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 try:
     from importlib import metadata as importlib_metadata
-except ImportError:  # pragma: no cover - Python 3.10+ is required, kept for a useful doctor error
+except ImportError:  # pragma: no cover - supported runtime is CPython 3.10-3.12
     try:
         import importlib_metadata  # type: ignore[no-redef]
     except ImportError:  # pragma: no cover - lets doctor explain unsupported legacy Python
@@ -31,6 +34,13 @@ MEDICAL_PANEL_PLAN_VERSION = "1.0"
 AUTO_SCORE_THRESHOLD = 0.84
 AUTO_MARGIN_THRESHOLD = 0.13
 MANAGED_ENV_DIRECTORY = ".editaplot-venv"
+MANAGED_ENV_FINGERPRINT = ".editaplot-environment.json"
+MANAGED_ENV_BUILD_PREFIX = f"{MANAGED_ENV_DIRECTORY}.build-"
+MANAGED_ENV_STALE_PREFIX = f"{MANAGED_ENV_DIRECTORY}.stale-"
+MANAGED_ENV_LOCK = ".editaplot-environment.lock"
+PYTHON_MIN_VERSION = (3, 10)
+PYTHON_MAX_VERSION_EXCLUSIVE = (3, 13)
+PYTHON_REQUIRED_BITS = 64
 RUNTIME_DEPENDENCIES = (
     ("numpy", "numpy==1.26.4"),
     ("pandas", "pandas==2.3.3"),
@@ -136,6 +146,95 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def windows_host_compatibility(
+    *,
+    system: str | None = None,
+    machine: str | None = None,
+    windows_major: int | None = None,
+) -> dict[str, Any]:
+    """Return the enforceable portion of the Windows 10/11 x64 support contract."""
+
+    selected_system = system or platform.system()
+    selected_machine = machine or platform.machine()
+    selected_major = windows_major
+    if selected_system == "Windows" and selected_major is None:
+        try:
+            selected_major = int(sys.getwindowsversion().major)
+        except (AttributeError, OSError, ValueError):
+            selected_major = None
+    normalized_machine = selected_machine.strip().casefold()
+    reasons: list[str] = []
+    if selected_system != "Windows":
+        reasons.append("windows_required")
+    else:
+        if normalized_machine not in {"amd64", "x86_64"}:
+            reasons.append("windows_x64_amd64_required")
+        if selected_major is None:
+            reasons.append("windows_version_unknown")
+        elif selected_major < 10:
+            reasons.append("windows_10_or_newer_required")
+    return {
+        "compatible": not reasons,
+        "system": selected_system,
+        "machine": selected_machine,
+        "windows_major": selected_major,
+        "required": "physical Windows 10/11 x64 (AMD64/x86_64)",
+        "virtual_machine_detection_performed": False,
+        "reasons": reasons,
+    }
+
+
+def python_compatibility(
+    *,
+    version: tuple[int, ...] | None = None,
+    implementation: str | None = None,
+    architecture_bits: int | None = None,
+    system: str | None = None,
+    machine: str | None = None,
+    windows_major: int | None = None,
+) -> dict[str, Any]:
+    """Return the single compatibility decision used by doctor, repair, and bootstrap.
+
+    EditaPlot deliberately selects only the interpreter range covered by the
+    audited Windows dependency lock.  A numerically newer interpreter is not
+    automatically safer when a compiled dependency has no matching wheel.
+    """
+
+    selected_version = tuple(version or tuple(sys.version_info[:3]))
+    selected_implementation = implementation or platform.python_implementation()
+    selected_bits = architecture_bits or struct.calcsize("P") * 8
+    host = windows_host_compatibility(
+        system=system,
+        machine=machine,
+        windows_major=windows_major,
+    )
+    reasons: list[str] = []
+    if selected_implementation != "CPython":
+        reasons.append("cpython_required")
+    if selected_bits != PYTHON_REQUIRED_BITS:
+        reasons.append("64_bit_python_required")
+    if selected_version[:2] < PYTHON_MIN_VERSION:
+        reasons.append("python_too_old")
+    if selected_version[:2] >= PYTHON_MAX_VERSION_EXCLUSIVE:
+        reasons.append("python_not_yet_verified")
+    reasons.extend(host["reasons"])
+    return {
+        "compatible": not reasons,
+        "implementation": selected_implementation,
+        "version": ".".join(str(part) for part in selected_version[:3]),
+        "version_info": list(selected_version[:3]),
+        "architecture_bits": selected_bits,
+        "required": "64-bit CPython >=3.10,<3.13",
+        "host": host,
+        "reasons": reasons,
+    }
+
+
+def _dependency_policy_hash() -> str:
+    payload = {"dependencies": [spec for _module, spec in RUNTIME_DEPENDENCIES]}
+    return _json_hash(payload)
 
 
 def _json_hash(payload: dict[str, Any]) -> str:
@@ -274,7 +373,22 @@ def _semantic_tags(column: str) -> list[str]:
     canonical = _canonical(column)
     tags: list[str] = []
     for tag, aliases in _SEMANTIC_ALIASES.items():
-        if any(_canonical(alias) in canonical for alias in aliases):
+        matched = False
+        for alias in aliases:
+            canonical_alias = _canonical(alias)
+            if canonical_alias.isascii() and canonical_alias.isalnum() and len(canonical_alias) <= 2:
+                normalized_column = unicodedata.normalize("NFKC", column).casefold()
+                matched = bool(
+                    re.search(
+                        rf"(?<![0-9a-z]){re.escape(str(alias).casefold())}(?![0-9a-z])",
+                        normalized_column,
+                    )
+                )
+            else:
+                matched = canonical_alias in canonical
+            if matched:
+                break
+        if matched:
             tags.append(tag)
     return tags
 
@@ -885,10 +999,10 @@ def recommend_charts(
         )
 
     candidates.sort(key=lambda item: (-item["score"], item["template_id"]))
-    selected = candidates[: max(1, limit)]
-    top = selected[0] if selected else None
-    second_score = selected[1]["score"] if len(selected) > 1 else 0.0
+    top = candidates[0] if candidates else None
+    second_score = candidates[1]["score"] if len(candidates) > 1 else 0.0
     margin = (top["score"] - second_score) if top else 0.0
+    selected = candidates[: max(1, limit)]
     auto_allowed = bool(
         top
         and top["score"] >= AUTO_SCORE_THRESHOLD
@@ -929,6 +1043,235 @@ def recommend_charts(
         },
         "rejected_template_count": len(rejected),
         "engine_home": str(root),
+    }
+
+
+_PRECOMPUTED_EVIDENCE: dict[str, str] = {
+    "forest": "效应值与置信区间上下限",
+    "diagnostic_curve": "ROC/PR 曲线坐标，以及需要展示的 AUC 等指标",
+    "confusion_matrix": "混淆矩阵的计数或比例",
+    "bland_altman": "配对均值、差值、偏倚和一致性界限",
+    "calibration_curve": "分箱后的预测概率、观察比例和分箱样本数",
+    "decision_curve": "各阈值下的模型、全部干预和不干预净获益",
+    "shap_summary": "已经由模型计算好的 SHAP 值",
+}
+
+
+def _beginner_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Keep only recommendation facts useful to a conversational Skill."""
+    return {
+        "template_id": candidate["template_id"],
+        "template_name": candidate["template_name"],
+        "score": candidate["score"],
+        "requires_column_confirmation": candidate["requires_column_confirmation"],
+        "reasons": candidate["reasons"],
+        "warnings": candidate["warnings"],
+    }
+
+
+def start_session(
+    path: str | Path,
+    *,
+    intent: str = "",
+    engine_home: str | Path | None = None,
+    limit: int = 3,
+) -> dict[str, Any]:
+    """Open a read-only beginner session without planning, fitting, or rendering.
+
+    This envelope is designed for a Skill to translate into a short natural-
+    language conversation.  Even when a verified route clears the automatic
+    recommendation gate, the scientific purpose remains a human confirmation.
+    """
+    source_path = Path(path).expanduser()
+    try:
+        before_sha256 = _sha256(source_path)
+    except FileNotFoundError as exc:
+        raise EditaPlotError("file_not_found", f"Data file does not exist: {source_path}") from exc
+    except IsADirectoryError as exc:
+        raise EditaPlotError("not_a_file", f"Data path is not a file: {source_path}") from exc
+    except OSError as exc:
+        raise EditaPlotError("file_read_error", f"Could not read data file: {source_path}") from exc
+
+    inspection = inspect_data(source_path, engine_home=engine_home)
+    recommendation = recommend_charts(
+        source_path,
+        intent=intent,
+        engine_home=engine_home,
+        limit=limit,
+    )
+    try:
+        after_sha256 = _sha256(source_path)
+    except OSError:
+        after_sha256 = "unavailable_after_inspection"
+    observed_hashes = {
+        "before": before_sha256,
+        "inspection": inspection["source"]["sha256"],
+        "recommendation": recommendation["source"]["sha256"],
+        "after": after_sha256,
+    }
+    if len(set(observed_hashes.values())) != 1:
+        raise EditaPlotError(
+            "source_changed_during_start",
+            "The source file changed while EditaPlot was inspecting it; no session was created.",
+            observed_hashes=observed_hashes,
+        )
+
+    candidates = recommendation["candidates"]
+    top = candidates[0] if candidates else None
+    auto_gate = recommendation["auto_selection"]
+    column_roles = [
+        {
+            "name": profile["name"],
+            "kind": profile["kind"],
+            "semantic_roles": profile["semantic_tags"] or ["未识别，需结合科研语境确认"],
+            "missing_count": profile["missing_count"],
+        }
+        for profile in inspection["columns"]
+    ]
+    unassigned_columns = [
+        profile["name"] for profile in inspection["columns"] if not profile["semantic_tags"]
+    ]
+    error_columns = [
+        profile["name"]
+        for profile in inspection["columns"]
+        if "error" in profile["semantic_tags"]
+    ]
+
+    confirmation_questions: list[dict[str, Any]] = [
+        {
+            "id": "scientific_purpose",
+            "required": True,
+            "question_zh": "请用一句话说明这张图要传达的科学结论、比较目的或读图重点。",
+        }
+    ]
+    if not auto_gate["allowed"]:
+        names = "、".join(
+            f"{candidate['template_name']}（{candidate['template_id']}）" for candidate in candidates
+        )
+        confirmation_questions.append(
+            {
+                "id": "template_choice",
+                "required": True,
+                "question_zh": (
+                    f"当前识别置信度不足，请从候选中确认图表类型：{names}。"
+                    if names
+                    else "当前没有足够证据匹配已验证模板，请说明希望绘制的图表类型。"
+                ),
+            }
+        )
+        if unassigned_columns or (top and top["requires_column_confirmation"]):
+            listed = "、".join(unassigned_columns) if unassigned_columns else "候选模板涉及的列"
+            confirmation_questions.append(
+                {
+                    "id": "column_meanings",
+                    "required": True,
+                    "question_zh": f"请确认这些列在实验中的含义及 X/Y/分组角色：{listed}。",
+                }
+            )
+    if error_columns:
+        confirmation_questions.append(
+            {
+                "id": "error_semantics",
+                "required": True,
+                "question_zh": (
+                    f"请明确误差列 {', '.join(error_columns)} 表示 SD、SE 还是 SEM；"
+                    "EditaPlot 不会根据数值外观猜测误差类型。"
+                ),
+            }
+        )
+
+    selected_template_id = top["template_id"] if top else None
+    all_semantic_tags = {
+        tag for profile in inspection["columns"] for tag in profile["semantic_tags"]
+    }
+    canonical_headers = {_canonical(profile["name"]) for profile in inspection["columns"]}
+    precomputed = _PRECOMPUTED_EVIDENCE.get(selected_template_id or "")
+    if selected_template_id == "xps" and (
+        {"background", "envelope", "residual"} & all_semantic_tags
+        or any(
+            token in header
+            for header in canonical_headers
+            for token in ("component", "peak", "组分", "分峰")
+        )
+    ):
+        precomputed = "文件中实际出现的背景、包络、峰组分或残差等结果"
+    elif selected_template_id == "pl" and (
+        "fit" in all_semantic_tags
+        or any(
+            token in header
+            for header in canonical_headers
+            for token in ("lifetime", "tau", "寿命", "拟合")
+        )
+    ):
+        precomputed = "用户认可的拟合曲线与寿命参数"
+    elif selected_template_id == "uv_vis" and {"tauc", "bandgap"} & all_semantic_tags:
+        precomputed = "Tauc 变换、拟合区间与带隙辅助结果"
+    professional_notice: dict[str, Any] | None = None
+    if precomputed:
+        professional_notice = {
+            "template_id": selected_template_id,
+            "required_precomputed_evidence": precomputed,
+            "message_zh": (
+                f"该专业图需要用户提供{precomputed}；EditaPlot 只负责识别、排版和 Origin 绘图，"
+                "不会代做统计分析、模型解释或曲线拟合。"
+            ),
+        }
+        confirmation_questions.append(
+            {
+                "id": "precomputed_evidence",
+                "required": True,
+                "question_zh": f"请确认文件中的{precomputed}已经计算完成并经过你的科学审核。",
+            }
+        )
+
+    return {
+        "schema_version": "1.0",
+        "session_type": "beginner_start",
+        "ok": True,
+        "state": "awaiting_scientific_confirmation",
+        "source": {
+            "file_name": Path(inspection["source"]["path"]).name,
+            "sha256": inspection["source"]["sha256"],
+            "size_bytes": inspection["source"]["size_bytes"],
+            "format": inspection["source"]["format"],
+            "row_count": inspection["table"]["row_count"],
+            "column_count": inspection["table"]["column_count"],
+            "bytes_unchanged": True,
+        },
+        "column_roles": column_roles,
+        "detected_layouts": inspection["table"]["layouts"],
+        "intent": intent,
+        "recommendation": {
+            "top_candidate": _beginner_candidate(top) if top else None,
+            "alternatives": [_beginner_candidate(candidate) for candidate in candidates[1:]],
+            "auto_selection_gate": {
+                **auto_gate,
+                "meaning_zh": (
+                    "候选模板可作为默认建议，但尚未获得科学目的确认。"
+                    if auto_gate["allowed"]
+                    else "不能自动选定模板，需要用户确认图表类型或列含义。"
+                ),
+            },
+        },
+        "requires_scientific_confirmation": True,
+        "confirmation_questions": confirmation_questions,
+        "professional_precomputed_notice": professional_notice,
+        "safe_defaults": {
+            "source_data": "只读检查；不修改、不补列、不覆盖原始文件。",
+            "helper_columns": "如绘图确有需要，只能在 Origin 工作簿内部创建 helper columns。",
+            "palette": "配色暂不锁定；模板和科学目的确认后再选择或接受色盲友好默认值。",
+            "origin": "仅支持官方合法 Origin；真正渲染前必须由用户确认 Origin 可手动正常启动。",
+            "analysis_boundary": "不推断统计检验、误差语义、拟合参数或模型输出。",
+        },
+        "execution": {
+            "plan_created": False,
+            "render_started": False,
+            "origin_called": False,
+        },
+        "next_step": {
+            "action": "collect_scientific_confirmations",
+            "message_zh": "请先回答上述确认问题；确认后 Skill 才能冻结绘图方案，随后再单独请求 Origin 渲染。",
+        },
     }
 
 
@@ -1421,9 +1764,287 @@ def build_medical_panel_plan(
 
 
 def _managed_python(root: Path) -> Path:
+    return _environment_python(root / MANAGED_ENV_DIRECTORY)
+
+
+@contextmanager
+def _exclusive_environment_lock(root: Path) -> Iterator[None]:
+    """Serialize repairs without stale PID files; the OS releases this lock on exit."""
+
+    lock_path = root / MANAGED_ENV_LOCK
+    handle: BinaryIO = lock_path.open("a+b")
+    handle.seek(0)
+    if handle.read(1) != b"1":
+        handle.seek(0)
+        handle.write(b"1")
+        handle.flush()
+    handle.seek(0)
+    locked = False
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:  # pragma: no cover - production support is Windows; used by cross-platform tests
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        locked = True
+    except OSError as exc:
+        handle.close()
+        raise EditaPlotError(
+            "environment_repair_in_progress",
+            "Another EditaPlot process is already repairing this managed environment.",
+            engine_home=str(root),
+        ) from exc
+    try:
+        yield
+    finally:
+        if locked:
+            handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:  # pragma: no cover - production support is Windows
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
+
+
+def _environment_python(environment: Path) -> Path:
     scripts = "Scripts" if platform.system() == "Windows" else "bin"
     executable = "python.exe" if platform.system() == "Windows" else "python"
-    return root / MANAGED_ENV_DIRECTORY / scripts / executable
+    return environment / scripts / executable
+
+
+def _probe_python_executable(python: Path) -> dict[str, Any]:
+    probe = (
+        "import json,platform,struct,sys;"
+        "print(json.dumps({'executable':sys.executable,'implementation':"
+        "platform.python_implementation(),'version':list(sys.version_info[:3]),"
+        "'architecture_bits':struct.calcsize('P')*8}))"
+    )
+    try:
+        completed = subprocess.run(  # noqa: S603 - probing a selected local Python executable
+            [str(python), "-I", "-c", probe],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"ok": False, "error": type(exc).__name__}
+    if completed.returncode != 0:
+        return {"ok": False, "error": "probe_failed", "returncode": completed.returncode}
+    try:
+        raw = json.loads(completed.stdout.strip().splitlines()[-1])
+        compatibility = python_compatibility(
+            version=tuple(int(part) for part in raw["version"]),
+            implementation=str(raw["implementation"]),
+            architecture_bits=int(raw["architecture_bits"]),
+        )
+    except (IndexError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        return {"ok": False, "error": f"invalid_probe_output:{type(exc).__name__}"}
+    return {"ok": True, "executable": str(raw["executable"]), **compatibility}
+
+
+def managed_environment_status(root: Path) -> dict[str, Any]:
+    """Validate the dedicated environment without importing packages from it."""
+
+    resolved_root = root.expanduser().resolve()
+    env_root = resolved_root / MANAGED_ENV_DIRECTORY
+    python = _managed_python(resolved_root)
+    fingerprint_path = env_root / MANAGED_ENV_FINGERPRINT
+    result: dict[str, Any] = {
+        "exists": env_root.exists() or env_root.is_symlink(),
+        "valid": False,
+        "environment": str(env_root),
+        "python_executable": str(python),
+        "fingerprint": str(fingerprint_path),
+    }
+    if not result["exists"]:
+        return {**result, "reason": "managed_environment_missing"}
+    if env_root.is_symlink() or not env_root.is_dir():
+        return {**result, "reason": "managed_environment_not_a_dedicated_directory"}
+    if not python.is_file():
+        return {**result, "reason": "managed_python_missing"}
+    if not fingerprint_path.is_file():
+        return {**result, "reason": "managed_fingerprint_missing"}
+    lock = Path(__file__).with_name("requirements-runtime.lock")
+    if not lock.is_file():
+        return {**result, "reason": "dependency_lock_missing"}
+    try:
+        fingerprint = json.loads(fingerprint_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {**result, "reason": "managed_fingerprint_invalid"}
+    result = {
+        **result,
+        "dependency_lock_sha256": fingerprint.get("dependency_lock_sha256"),
+    }
+    if fingerprint.get("schema_version") != "1.0":
+        return {**result, "reason": "managed_fingerprint_schema_mismatch"}
+    if fingerprint.get("dependency_lock_sha256") != _sha256(lock):
+        return {**result, "reason": "dependency_lock_changed"}
+    if fingerprint.get("dependency_policy_sha256") != _dependency_policy_hash():
+        return {**result, "reason": "dependency_policy_changed"}
+    probe = _probe_python_executable(python)
+    if not probe.get("ok"):
+        return {**result, "reason": "managed_python_unusable", "probe": probe}
+    if not probe.get("compatible"):
+        return {**result, "reason": "managed_python_incompatible", "probe": probe}
+    if fingerprint.get("managed_python_version") != probe.get("version"):
+        return {**result, "reason": "managed_python_version_changed", "probe": probe}
+    expected_python = os.path.normcase(str(python.resolve()))
+    actual_python = os.path.normcase(str(Path(str(probe["executable"])).resolve()))
+    if expected_python != actual_python:
+        return {**result, "reason": "managed_python_path_changed", "probe": probe}
+    dependency_check = _verify_managed_dependencies(python)
+    if not dependency_check["ok"]:
+        return {
+            **result,
+            "reason": "managed_dependencies_changed",
+            "probe": probe,
+            "dependency_status": dependency_check,
+        }
+    return {
+        **result,
+        "valid": True,
+        "reason": "ready",
+        "probe": probe,
+        "base_python_executable": fingerprint.get("base_python_executable"),
+        "dependency_lock_sha256": fingerprint.get("dependency_lock_sha256"),
+    }
+
+
+def _validated_managed_child(root: Path, path: Path) -> Path:
+    """Accept only EditaPlot-owned direct children of the resolved engine root."""
+
+    resolved_root = root.expanduser().resolve()
+    candidate = path.expanduser()
+    allowed_name = (
+        candidate.name == MANAGED_ENV_DIRECTORY
+        or candidate.name.startswith(MANAGED_ENV_BUILD_PREFIX)
+        or candidate.name.startswith(MANAGED_ENV_STALE_PREFIX)
+    )
+    try:
+        direct_child = candidate.parent.resolve() == resolved_root
+    except OSError as exc:
+        raise EditaPlotError(
+            "managed_path_validation_failed",
+            "Could not validate an EditaPlot-managed path.",
+            path=str(candidate),
+        ) from exc
+    if not allowed_name or not direct_child:
+        raise EditaPlotError(
+            "managed_path_outside_engine_root",
+            "Refusing to modify a path outside EditaPlot's managed engine-root entries.",
+            path=str(candidate),
+            engine_home=str(resolved_root),
+        )
+    if candidate.exists() and not candidate.is_symlink():
+        try:
+            resolved_candidate = candidate.resolve()
+            contained = resolved_candidate.parent == resolved_root
+        except OSError:
+            contained = False
+        if not contained:
+            raise EditaPlotError(
+                "managed_path_outside_engine_root",
+                "Refusing to traverse a managed path that resolves outside the engine root.",
+                path=str(candidate),
+                engine_home=str(resolved_root),
+            )
+    return candidate
+
+
+def _remove_managed_path(root: Path, path: Path) -> None:
+    path = _validated_managed_child(root, path)
+    if path.is_symlink() or path.is_file():
+        path.unlink(missing_ok=True)
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+
+def _next_managed_path(root: Path, prefix: str) -> Path:
+    candidate = root / f"{prefix}{os.getpid()}"
+    suffix = 0
+    while candidate.exists() or candidate.is_symlink():
+        suffix += 1
+        candidate = root / f"{prefix}{os.getpid()}-{suffix}"
+    return _validated_managed_child(root, candidate)
+
+
+def _managed_recovery_paths(root: Path, prefix: str) -> list[Path]:
+    paths: list[Path] = []
+    for candidate in root.iterdir():
+        if candidate.name.startswith(prefix):
+            paths.append(_validated_managed_child(root, candidate))
+    return sorted(paths, key=lambda item: item.name)
+
+
+def _recover_managed_environment(root: Path, actions: list[dict[str, Any]]) -> None:
+    """Clean abandoned builds and restore the old env after an interrupted swap."""
+
+    env_root = _validated_managed_child(root, root / MANAGED_ENV_DIRECTORY)
+    for build in _managed_recovery_paths(root, MANAGED_ENV_BUILD_PREFIX):
+        _remove_managed_path(root, build)
+        actions.append({"action": "remove_abandoned_environment_build", "path": build.name})
+
+    stale_paths = _managed_recovery_paths(root, MANAGED_ENV_STALE_PREFIX)
+    if not (env_root.exists() or env_root.is_symlink()):
+        for stale in reversed(stale_paths):
+            os.replace(stale, env_root)
+            if managed_environment_status(root)["valid"]:
+                actions.append(
+                    {"action": "restore_interrupted_environment_swap", "path": stale.name}
+                )
+                stale_paths.remove(stale)
+                break
+            os.replace(env_root, stale)
+
+    if managed_environment_status(root)["valid"]:
+        for stale in stale_paths:
+            _remove_managed_path(root, stale)
+            actions.append({"action": "remove_obsolete_stale_environment", "path": stale.name})
+
+
+def _verify_managed_dependencies(python: Path) -> dict[str, Any]:
+    expected = {
+        {"yaml": "PyYAML", "PIL": "pillow"}.get(module, module): spec.partition("==")[2]
+        for module, spec in RUNTIME_DEPENDENCIES
+    }
+    script = (
+        "import importlib.metadata as m,json;"
+        f"e=json.loads({json.dumps(json.dumps(expected))});"
+        "a={};"
+        "exec(\"for n,v in e.items():\\n try:a[n]=m.version(n)==v\\n except "
+        "m.PackageNotFoundError:a[n]=False\");"
+        "print(json.dumps(a))"
+    )
+    try:
+        completed = subprocess.run(  # noqa: S603 - fixed managed interpreter and metadata-only probe
+            [str(python), "-I", "-c", script],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"ok": False, "reason": f"dependency_probe_{type(exc).__name__}"}
+    if completed.returncode != 0:
+        return {"ok": False, "reason": "dependency_probe_failed"}
+    try:
+        state = json.loads(completed.stdout.strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError):
+        return {"ok": False, "reason": "dependency_probe_invalid"}
+    missing = sorted(name for name, available in state.items() if not available)
+    return {"ok": not missing, "missing_or_mismatched": missing}
 
 
 def repair_environment(*, engine_home: str | Path | None = None) -> dict[str, Any]:
@@ -1433,39 +2054,34 @@ def repair_environment(*, engine_home: str | Path | None = None) -> dict[str, An
     licensed Origin installation remains a manual prerequisite for rendering.
     """
 
-    if sys.version_info < (3, 10):  # noqa: UP036 - keep a structured error for direct script use
+    host = windows_host_compatibility()
+    if not host["compatible"]:
+        raise EditaPlotError(
+            "unsupported_windows_host",
+            "Automatic repair requires a physical Windows 10/11 x64 AMD64 host.",
+            host=host,
+        )
+    compatibility = python_compatibility()
+    if not compatibility["compatible"]:
         raise EditaPlotError(
             "python_version_unrepairable",
-            "Python 3.10 or newer must be installed before automatic dependency repair.",
-        )
-    if platform.system() != "Windows":
-        raise EditaPlotError(
-            "windows_required",
-            "EditaPlot rendering is supported on Windows only.",
+            "Automatic repair requires 64-bit CPython 3.10, 3.11, or 3.12.",
+            compatibility=compatibility,
         )
     root = bootstrap_engine(engine_home)
+    with _exclusive_environment_lock(root):
+        return _repair_environment_transaction(root, compatibility)
+
+
+def _repair_environment_transaction(
+    root: Path,
+    compatibility: dict[str, Any],
+) -> dict[str, Any]:
+    """Build, verify, and activate the managed environment while holding its lock."""
+
     env_root = root / MANAGED_ENV_DIRECTORY
     python = _managed_python(root)
     actions: list[dict[str, Any]] = []
-    if not python.is_file():
-        command = [sys.executable, "-m", "venv", str(env_root)]
-        completed = subprocess.run(  # noqa: S603 - fixed interpreter/module invocation
-            command,
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
-        )
-        actions.append({"action": "create_project_venv", "returncode": completed.returncode})
-        if completed.returncode != 0 or not python.is_file():
-            raise EditaPlotError(
-                "venv_creation_failed",
-                "Could not create the project-local EditaPlot environment.",
-                returncode=completed.returncode,
-            )
-
     constraints = Path(__file__).with_name("requirements-runtime.lock")
     if not constraints.is_file():
         raise EditaPlotError(
@@ -1473,32 +2089,173 @@ def repair_environment(*, engine_home: str | Path | None = None) -> dict[str, An
             "The audited dependency lock is missing; refusing an unpinned repair.",
         )
 
-    install_command = [
-        str(python),
-        "-m",
-        "pip",
-        "install",
-        "--disable-pip-version-check",
-        "--constraint",
-        str(constraints),
-        *[spec for _module, spec in RUNTIME_DEPENDENCIES],
-    ]
-    completed = subprocess.run(  # noqa: S603 - fixed managed interpreter/package allowlist
-        install_command,
-        cwd=str(root),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
+    _recover_managed_environment(root, actions)
+    status = managed_environment_status(root)
+    if status["valid"]:
+        dependency_check = _verify_managed_dependencies(python)
+        if dependency_check["ok"]:
+            actions.append({"action": "reuse_verified_project_venv"})
+            return {
+                "schema_version": "1.0",
+                "ok": True,
+                "managed_environment": str(env_root),
+                "python_executable": str(python),
+                "actions": actions,
+                "installed_specs": [spec for _module, spec in RUNTIME_DEPENDENCIES],
+                "constraint_file": str(constraints),
+                "dependency_lock_sha256": _sha256(constraints),
+                "python_compatibility": compatibility,
+                "origin_installation_modified": False,
+                "next_step": (
+                    "Run doctor again with the returned python_executable, then manually confirm "
+                    "licensed Origin starts before render."
+                ),
+            }
+
+    current_executable = os.path.normcase(str(Path(sys.executable).resolve()))
+    running_managed = python.is_file() and current_executable == os.path.normcase(
+        str(python.resolve())
     )
-    actions.append({"action": "install_audited_runtime_dependencies", "returncode": completed.returncode})
-    if completed.returncode != 0:
+    if running_managed:
         raise EditaPlotError(
-            "dependency_install_failed",
-            "Could not install the audited Python dependencies in the project-local environment.",
-            returncode=completed.returncode,
+            "managed_environment_self_repair_requires_base_python",
+            "The active managed Python cannot safely replace itself. Rerun setup through "
+            "editaplot.cmd so a compatible base Python can perform the repair.",
         )
+
+    build = _next_managed_path(root, MANAGED_ENV_BUILD_PREFIX)
+    build_python = _environment_python(build)
+    backup: Path | None = None
+    new_installed = False
+    try:
+        command = [sys.executable, "-m", "venv", str(build)]
+        try:
+            completed = subprocess.run(  # noqa: S603 - fixed interpreter/module invocation
+                command,
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+                timeout=180,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise EditaPlotError(
+                "venv_creation_timeout",
+                "Creating the staged project-local environment exceeded 180 seconds.",
+            ) from exc
+        actions.append({"action": "create_staged_project_venv", "returncode": completed.returncode})
+        if completed.returncode != 0 or not build_python.is_file():
+            raise EditaPlotError(
+                "venv_creation_failed",
+                "Could not create the staged project-local EditaPlot environment.",
+                returncode=completed.returncode,
+            )
+
+        install_command = [
+            str(build_python),
+            "-m",
+            "pip",
+            "install",
+            "--disable-pip-version-check",
+            "--constraint",
+            str(constraints),
+            *[spec for _module, spec in RUNTIME_DEPENDENCIES],
+        ]
+        try:
+            completed = subprocess.run(  # noqa: S603 - fixed managed interpreter/package allowlist
+                install_command,
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+                timeout=900,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise EditaPlotError(
+                "dependency_install_timeout",
+                "Installing the audited dependencies exceeded 900 seconds.",
+            ) from exc
+        actions.append(
+            {"action": "install_audited_runtime_dependencies", "returncode": completed.returncode}
+        )
+        if completed.returncode != 0:
+            raise EditaPlotError(
+                "dependency_install_failed",
+                "Could not install the audited Python dependencies in the staged environment.",
+                returncode=completed.returncode,
+                stderr_tail=completed.stderr[-1200:],
+            )
+        dependency_check = _verify_managed_dependencies(build_python)
+        if not dependency_check["ok"]:
+            raise EditaPlotError(
+                "dependency_verification_failed",
+                "The staged environment did not match the audited dependency set.",
+                **dependency_check,
+            )
+        probe = _probe_python_executable(build_python)
+        if not probe.get("ok") or not probe.get("compatible"):
+            raise EditaPlotError(
+                "managed_python_verification_failed",
+                "The staged project-local Python is not compatible.",
+                probe=probe,
+            )
+        fingerprint = {
+            "schema_version": "1.0",
+            "managed_by": "EditaPlot",
+            "base_python_executable": str(Path(sys.executable).resolve()),
+            "base_python_version": compatibility["version"],
+            "managed_python_version": probe["version"],
+            "architecture_bits": probe["architecture_bits"],
+            "dependency_lock_sha256": _sha256(constraints),
+            "dependency_policy_sha256": _dependency_policy_hash(),
+        }
+        fingerprint_path = build / MANAGED_ENV_FINGERPRINT
+        temporary_fingerprint = fingerprint_path.with_suffix(".tmp")
+        temporary_fingerprint.write_text(
+            json.dumps(fingerprint, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(temporary_fingerprint, fingerprint_path)
+        actions.append({"action": "write_staged_environment_fingerprint"})
+
+        backup = _next_managed_path(root, MANAGED_ENV_STALE_PREFIX)
+        if env_root.exists() or env_root.is_symlink():
+            os.replace(env_root, backup)
+        os.replace(build, env_root)
+        new_installed = True
+        post_status = managed_environment_status(root)
+        post_dependencies = _verify_managed_dependencies(python)
+        if not post_status["valid"] or not post_dependencies["ok"]:
+            raise EditaPlotError(
+                "managed_environment_post_swap_verification_failed",
+                "The staged environment did not remain valid after the final swap.",
+                managed_status=post_status,
+                dependency_status=post_dependencies,
+            )
+        actions.append({"action": "activate_verified_project_venv"})
+    except BaseException:
+        backup_exists = backup is not None and (backup.exists() or backup.is_symlink())
+        build_was_activated = not (build.exists() or build.is_symlink()) and (
+            env_root.exists() or env_root.is_symlink()
+        )
+        if backup_exists and backup is not None:
+            if env_root.exists() or env_root.is_symlink():
+                _remove_managed_path(root, env_root)
+            os.replace(backup, env_root)
+        elif new_installed or build_was_activated:
+            _remove_managed_path(root, env_root)
+        if build.exists() or build.is_symlink():
+            _remove_managed_path(root, build)
+        raise
+
+    if backup is not None and (backup.exists() or backup.is_symlink()):
+        _remove_managed_path(root, backup)
+        actions.append({"action": "remove_stale_environment_after_success"})
+    _recover_managed_environment(root, actions)
     return {
         "schema_version": "1.0",
         "ok": True,
@@ -1507,6 +2264,8 @@ def repair_environment(*, engine_home: str | Path | None = None) -> dict[str, An
         "actions": actions,
         "installed_specs": [spec for _module, spec in RUNTIME_DEPENDENCIES],
         "constraint_file": str(constraints),
+        "dependency_lock_sha256": _sha256(constraints),
+        "python_compatibility": compatibility,
         "origin_installation_modified": False,
         "next_step": (
             "Run doctor again with the returned python_executable, then manually confirm "
@@ -1515,19 +2274,132 @@ def repair_environment(*, engine_home: str | Path | None = None) -> dict[str, An
     }
 
 
+def _origin_executable_from_command(command: str) -> Path | None:
+    expanded = os.path.expandvars(command.strip())
+    quoted = re.match(r'^\s*"([^"]+\.exe)"', expanded, flags=re.IGNORECASE)
+    unquoted = re.match(r"^\s*(.+?\.exe)(?:\s|$)", expanded, flags=re.IGNORECASE)
+    match = quoted or unquoted
+    if match is None:
+        return None
+    executable = Path(match.group(1).strip()).expanduser()
+    if executable.name.casefold() != "origin64.exe":
+        return None
+    try:
+        resolved = executable.resolve()
+    except OSError:
+        return None
+    return resolved if resolved.is_file() else None
+
+
+def discover_origin_application() -> dict[str, Any]:
+    """Locate Origin64.exe through its COM registration without asserting license state."""
+
+    result: dict[str, Any] = {
+        "application_present": False,
+        "path": None,
+        "progid": "Origin.ApplicationSI",
+        "clsid": None,
+        "registry_view": None,
+        "license_confirmed": False,
+        "manual_startup_confirmation": "required_before_render",
+    }
+    if platform.system() != "Windows":
+        return {**result, "reason": "windows_required"}
+    try:
+        import winreg
+    except ImportError:  # pragma: no cover - winreg exists on supported Windows CPython
+        return {**result, "reason": "winreg_unavailable"}
+
+    def query_default(subkey: str, view: int) -> str | None:
+        try:
+            with winreg.OpenKey(
+                winreg.HKEY_CLASSES_ROOT,
+                subkey,
+                0,
+                winreg.KEY_READ | view,
+            ) as key:
+                value, _kind = winreg.QueryValueEx(key, None)
+        except OSError:
+            return None
+        return str(value).strip() if value else None
+
+    view_32 = getattr(winreg, "KEY_WOW64_32KEY", 0)
+    view_64 = getattr(winreg, "KEY_WOW64_64KEY", 0)
+    clsid = None
+    for view in dict.fromkeys((0, view_32, view_64)):
+        clsid = query_default(r"Origin.ApplicationSI\CLSID", view)
+        if clsid:
+            break
+    if not clsid:
+        return {**result, "reason": "origin_com_progid_not_registered"}
+    result["clsid"] = clsid
+
+    searches = [
+        (rf"CLSID\{clsid}\LocalServer32", view_32, "32-bit registry view"),
+        (rf"WOW6432Node\CLSID\{clsid}\LocalServer32", 0, "WOW6432Node"),
+        (rf"CLSID\{clsid}\LocalServer32", 0, "default registry view"),
+        (rf"CLSID\{clsid}\LocalServer32", view_64, "64-bit registry view"),
+    ]
+    for subkey, view, label in searches:
+        command = query_default(subkey, view)
+        if not command:
+            continue
+        executable = _origin_executable_from_command(command)
+        if executable is not None:
+            return {
+                **result,
+                "application_present": True,
+                "path": str(executable),
+                "registry_view": label,
+                "reason": "registered_origin64_executable_found",
+            }
+    return {**result, "reason": "registered_origin64_executable_missing"}
+
+
 def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
-    python_ok = sys.version_info >= (3, 10)
+    host = windows_host_compatibility()
+    compatibility = python_compatibility()
+    python_reason_codes = {
+        "cpython_required",
+        "64_bit_python_required",
+        "python_too_old",
+        "python_not_yet_verified",
+    }
+    python_ok = not any(reason in python_reason_codes for reason in compatibility["reasons"])
     checks.append(
         {
             "name": "python_version",
             "ok": python_ok,
             "value": platform.python_version(),
-            "required": ">=3.10",
+            "required": compatibility["required"],
+            "implementation": compatibility["implementation"],
+            "architecture_bits": compatibility["architecture_bits"],
+            "reasons": compatibility["reasons"],
         }
     )
-    windows = platform.system() == "Windows"
-    checks.append({"name": "windows", "ok": windows, "value": platform.platform()})
+    windows = bool(host["compatible"])
+    checks.append(
+        {
+            "name": "supported_windows_host",
+            "ok": windows,
+            "value": platform.platform(),
+            "machine": host["machine"],
+            "windows_major": host["windows_major"],
+            "required": host["required"],
+            "reasons": host["reasons"],
+        }
+    )
+    origin_application = discover_origin_application()
+    checks.append(
+        {
+            "name": "origin_application",
+            "ok": origin_application["application_present"],
+            "value": origin_application["path"],
+            "required": "registered official Origin64.exe",
+            "license_confirmed": False,
+        }
+    )
     try:
         root = bootstrap_engine(engine_home)
         engine_ok = True
@@ -1559,32 +2431,35 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
             }
         )
 
-    ready_analysis = (
-        python_ok
-        and engine_ok
-        and all(dependency_state[name] for name in dependencies if name != "originpro")
+    ready_analysis = python_ok and windows and engine_ok and all(
+        dependency_state[name] for name in dependencies if name != "originpro"
     )
-    ready_render = ready_analysis and windows and dependency_state["originpro"]
+    ready_render = (
+        ready_analysis
+        and dependency_state["originpro"]
+        and origin_application["application_present"]
+    )
     missing_dependencies = [name for name in dependencies if not dependency_state[name]]
-    repair_python_ok = sys.version_info[:2] == (3, 10)
     checks.append(
         {
             "name": "automatic_repair_python",
-            "ok": repair_python_ok,
+            "ok": python_ok,
             "value": platform.python_version(),
-            "required": "CPython 3.10.x verified lock",
+            "required": compatibility["required"],
         }
     )
-    repairable = bool(repair_python_ok and windows and engine_ok and missing_dependencies)
+    repairable = bool(python_ok and windows and engine_ok and missing_dependencies)
     manual_blockers: list[str] = []
     if not python_ok:
-        manual_blockers.append("install_python_3_10_or_newer")
+        manual_blockers.append("install_64_bit_cpython_3_10_to_3_12")
     if not windows:
-        manual_blockers.append("use_supported_windows_host")
+        manual_blockers.extend(host["reasons"] or ["use_supported_windows_host"])
     if not engine_ok:
         manual_blockers.append("provide_editaplot_engine_home")
-    if missing_dependencies and python_ok and not repair_python_ok:
-        manual_blockers.append("automatic_repair_requires_verified_cpython_3_10")
+    if windows and not origin_application["application_present"]:
+        manual_blockers.append("install_or_repair_official_origin_application_registration")
+    if missing_dependencies and not python_ok:
+        manual_blockers.append("automatic_repair_requires_verified_python")
     if not dependency_state.get("originpro", False):
         manual_blockers.append(
             "python_originpro_package_can_be_repaired_but_licensed_origin_must_be_installed_manually"
@@ -1594,12 +2469,15 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
         "ok": ready_analysis,
         "ready_for_analysis": ready_analysis,
         "ready_for_render": ready_render,
+        "origin_application": origin_application,
         "manual_origin_launch_confirmation": "required_before_render",
         "missing_python_dependencies": missing_dependencies,
         "automatic_repair": {
             "available": repairable,
             "scope": "project_local_python_dependencies_only",
             "managed_environment": str((root / MANAGED_ENV_DIRECTORY) if root else MANAGED_ENV_DIRECTORY),
+            "managed_environment_status": managed_environment_status(root) if root else None,
+            "supported_python": compatibility["required"],
             "origin_installation_modified": False,
         },
         "manual_blockers": manual_blockers,
