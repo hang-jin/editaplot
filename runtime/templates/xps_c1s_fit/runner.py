@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-
 from origin_sciplot.logging_utils import RunLogger
 from origin_sciplot.origin_backend.base_style_contract import (
     FIXED_ORIGIN_STYLE,
@@ -33,7 +32,6 @@ from origin_sciplot.origin_backend.verify_utils import (
 from origin_sciplot.output_manager import RunOutput, write_json
 from origin_sciplot.template_registry import TemplateManifest
 from origin_sciplot.xps_workflow import XpsPreparation, prepare_xps
-
 
 PEAKS = (
     ("Peak_CC", "C-C / C=C", "#4C78A8"),
@@ -138,6 +136,7 @@ def _style_axis(layer: Any, axis_name: str, show_ticks: bool) -> None:
         layer.set_int(f"{axis_name}.label.type", 1)
         layer.set_int(f"{axis_name}.label.numFormat", 1)
         layer.set_int(f"{axis_name}.label.align", X_LABEL_ALIGN_ON_TICK)
+    layer.set_float(f"{axis_name}.label.rotate", 0.0)
     layer.set_float(f"{axis_name}.thickness", style.frame_line_width_pt)
     layer.set_float(f"{axis_name}.tickthickness", style.frame_line_width_pt)
     layer.set_float(f"{axis_name}.mtickthickness", 1.2)
@@ -158,6 +157,57 @@ def _style_label(label: Any, font_size: float, *, bold: bool) -> None:
     label.set_float("fsize", font_size)
     label.set_int("bold", int(bold))
     label.set_int("color", 1)
+
+
+def _position_axis_titles(
+    op: Any,
+    x_title: Any,
+    y_title: Any,
+) -> dict[str, float]:
+    """Place fixed-XPS titles using the verified Origin auto-layout route.
+
+    Origin first lays out the 24 pt tick labels and the 26 pt XB/YL titles.
+    The contracted 3% upward correction then prevents XB clipping while
+    retaining the separation Origin calculated between ticks and title.
+    """
+
+    page_height = float(op.lt_float("page.height"))
+    x_title.set_float(
+        "top",
+        x_title.get_float("top")
+        - page_height * FIXED_ORIGIN_STYLE.x_title_upshift_page_percent / 100.0,
+    )
+    op.lt_exec("doc -uw;")
+    state: dict[str, float] = {
+        "page.width": float(op.lt_float("page.width")),
+        "page.height": page_height,
+    }
+    for name, label in (("x_title", x_title), ("y_title", y_title)):
+        state[f"{name}.attach"] = float(label.get_int("attach"))
+        for prop in ("left", "top", "width", "height"):
+            state[f"{name}.{prop}"] = float(label.get_float(prop))
+        if int(state[f"{name}.attach"]) not in {0, 1, 2}:
+            raise OriginDrawError(
+                f"Origin fixed XPS {name.replace('_', ' ')} uses an unknown "
+                "attachment mode."
+            )
+        right = state[f"{name}.left"] + state[f"{name}.width"]
+        bottom = state[f"{name}.top"] + state[f"{name}.height"]
+        if (
+            state[f"{name}.left"] < 0
+            or state[f"{name}.top"] < 0
+            or right > state["page.width"]
+            or bottom > page_height
+        ):
+            raise OriginDrawError(
+                f"Origin fixed XPS {name.replace('_', ' ')} is clipped."
+            )
+    if state["x_title.top"] < page_height * 0.90:
+        raise OriginDrawError(
+            "Origin fixed XPS X title is too close to the plot frame and may "
+            "overlap the 24 pt tick labels."
+        )
+    return state
 
 
 def _add_plot(layer: Any, worksheet: Any, name: str, color: str, width_pt: float, plot_type: str = "l"):
@@ -253,8 +303,10 @@ def _read_axis_state(layer: Any) -> dict[str, float | int]:
         "x.label.divideBy",
         "x.label.pt",
         "x.label.font",
+        "x.label.rotate",
         "y.label.pt",
         "y.label.font",
+        "y.label.rotate",
         "x.thickness",
         "x2.thickness",
         "y.thickness",
@@ -308,7 +360,9 @@ def _verify_axis_contract(
         "x.inc": FIXED_ORIGIN_STYLE.x_major_step,
         "x.label.divideBy": -1.0,
         "x.label.pt": FIXED_ORIGIN_STYLE.tick_label_size_pt,
+        "x.label.rotate": 0.0,
         "y.label.pt": FIXED_ORIGIN_STYLE.tick_label_size_pt,
+        "y.label.rotate": 0.0,
         "x.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
         "x2.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
         "y.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
@@ -415,10 +469,12 @@ def _build_origin_graph(
     legend = layer.label("legend")
     if legend is not None:
         legend.set_int("link", 1)
+        raw_edge_width = RAW_SYMBOL_SIZE_PT * RAW_SYMBOL_EDGE_PERCENT / 200
         legend.text = "\n".join(
             [
                 rf"\L(O Shape:Circle,Interior:Open,Style:sss,EdgeColor:#808080,"
-                rf"Size:{RAW_SYMBOL_SIZE_PT:g},EdgeWidth:{RAW_SYMBOL_SIZE_PT * RAW_SYMBOL_EDGE_PERCENT / 200:g},Gap:5) \b(Raw)",
+                rf"Size:{RAW_SYMBOL_SIZE_PT:g},EdgeWidth:{raw_edge_width:g},"
+                r"Gap:5) \b(Raw)",
                 r"\L(O Style:L,LineColor:#D62728,LineWidth:5,Length:22,Gap:8) \b(Envelope)",
                 r"\L(O Style:L,LineColor:#6F6887,LineWidth:5,Length:22,Gap:8) \b(Background)",
                 r"\L(O Style:L,LineColor:#4C78A8,LineWidth:5,Length:22,Gap:8) \b(C-C / C=C)",
@@ -440,9 +496,7 @@ def _build_origin_graph(
     x_title.set_int("show", 1)
     y_title.set_int("show", 1)
     op.lt_exec("doc -uw;")
-    page_height = op.lt_float("page.height")
-    x_title.set_float("top", x_title.get_float("top") - page_height * style.x_title_upshift_page_percent / 100.0)
-    op.lt_exec("doc -uw;")
+    title_position = _position_axis_titles(op, x_title, y_title)
     axis_state = _verify_axis_contract(layer, -X_FIRST_MAJOR_TICK_EV, op=op)
     try:
         text_state = verify_text_sizes(
@@ -495,6 +549,7 @@ def _build_origin_graph(
                 "plot_line_width_pt": style.plot_line_width_pt,
                 "plot_set_w_units": pt_to_origin_width_units(style.plot_line_width_pt),
                 "frame_line_width_pt": style.frame_line_width_pt,
+                **title_position,
             },
             "origin_plot_state": {
                 "visible_line_plots": line_width_state,
@@ -537,9 +592,7 @@ def run(
             {
                 "template_id": manifest.id,
                 "template_version": manifest.version,
-                "python_version": __import__("sys").version.split()[0],
-                "originpro_version": session.environment.originpro_version,
-                "origin_version": session.environment.origin_version,
+                **session.environment.to_dict(),
             },
         )
         write_json(output.origin_verify_report, verify_report)

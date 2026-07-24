@@ -5,11 +5,11 @@ from __future__ import annotations
 import hashlib
 import re
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
-
 from origin_sciplot.logging_utils import RunLogger
 from origin_sciplot.origin_backend.base_style_contract import (
     FIXED_ORIGIN_STYLE,
@@ -30,7 +30,6 @@ from origin_sciplot.output_manager import RunOutput, write_json
 from origin_sciplot.template_registry import TemplateManifest
 from origin_sciplot.xps_adaptive import XpsAxisPlan, XpsProfile, XpsSeries, build_axis_plan
 from origin_sciplot.xps_workflow import XpsPreparation, prepare_xps, xps_y_axis_title
-
 
 RAW_COLOR = "#0F4D92"
 RAW_FILL_COLOR = "#7884B4"
@@ -120,8 +119,18 @@ def _style_label(label: Any, font_size: float, *, bold: bool) -> None:
     label.set_int("color", 1)
 
 
-def _position_axis_titles(op: Any, x_title: Any, y_title: Any) -> dict[str, float]:
-    """Keep locked large titles inside the page without shrinking their fonts."""
+def _position_axis_titles(
+    op: Any,
+    x_title: Any,
+    y_title: Any,
+) -> dict[str, float]:
+    """Keep locked large titles inside the page without shrinking their fonts.
+
+    The 2024b-verified XPS route lets Origin place its special XB/YL objects,
+    then moves XB upward by the contracted page percentage.  Rebuilding both
+    positions from layer geometry makes the 26 pt X title collide with 24 pt
+    tick labels, so do not replace this with generic centering.
+    """
     page_height = float(op.lt_float("page.height"))
     x_title.set_float(
         "top",
@@ -135,6 +144,8 @@ def _axis_title_geometry(op: Any, x_title: Any, y_title: Any) -> dict[str, float
     return {
         "page.width": float(op.lt_float("page.width")),
         "page.height": float(op.lt_float("page.height")),
+        "x_title.attach": float(x_title.get_int("attach")),
+        "y_title.attach": float(y_title.get_int("attach")),
         **{
             f"{name}.{prop}": float(label.get_float(prop))
             for name, label in (("x_title", x_title), ("y_title", y_title))
@@ -147,6 +158,11 @@ def _require_axis_titles_inside_page(state: dict[str, float]) -> None:
     page_width = state["page.width"]
     page_height = state["page.height"]
     for name in ("x_title", "y_title"):
+        if int(state[f"{name}.attach"]) not in {0, 1, 2}:
+            raise OriginDrawError(
+                f"Origin adaptive {name.replace('_', ' ')} uses an unknown "
+                "attachment mode."
+            )
         left = state[f"{name}.left"]
         top = state[f"{name}.top"]
         right = left + state[f"{name}.width"]
@@ -156,6 +172,11 @@ def _require_axis_titles_inside_page(state: dict[str, float]) -> None:
                 f"Origin adaptive {name.replace('_', ' ')} is clipped: "
                 f"left={left:g}, top={top:g}, right={right:g}, bottom={bottom:g}"
             )
+    if state["x_title.top"] < page_height * 0.90:
+        raise OriginDrawError(
+            "Origin adaptive X title is too close to the plot frame and may "
+            "overlap the 24 pt tick labels."
+        )
 
 
 def _style_axis(layer: Any, axis_name: str, show_ticks: bool) -> None:
@@ -171,6 +192,7 @@ def _style_axis(layer: Any, axis_name: str, show_ticks: bool) -> None:
         layer.set_int(f"{axis_name}.label.type", 1)
         layer.set_int(f"{axis_name}.label.numFormat", 1)
         layer.set_int(f"{axis_name}.label.align", X_LABEL_ALIGN_ON_TICK)
+    layer.set_float(f"{axis_name}.label.rotate", 0.0)
     layer.set_float(f"{axis_name}.thickness", style.frame_line_width_pt)
     layer.set_float(f"{axis_name}.tickthickness", style.frame_line_width_pt)
     layer.set_float(f"{axis_name}.mtickthickness", 1.2)
@@ -455,8 +477,10 @@ def _read_axis_state(layer: Any) -> dict[str, float | int]:
         "x.label.divideBy",
         "x.label.pt",
         "x.label.font",
+        "x.label.rotate",
         "y.label.pt",
         "y.label.font",
+        "y.label.rotate",
         "x.thickness",
         "x2.thickness",
         "y.thickness",
@@ -513,7 +537,9 @@ def _verify_axis_contract(
         "x.inc": axis_plan.x_step_ev,
         "x.label.divideBy": float(getattr(axis_plan, "x_label_divide_by", -1.0)),
         "x.label.pt": FIXED_ORIGIN_STYLE.tick_label_size_pt,
+        "x.label.rotate": 0.0,
         "y.label.pt": FIXED_ORIGIN_STYLE.tick_label_size_pt,
+        "y.label.rotate": 0.0,
         "x.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
         "x2.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
         "y.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
@@ -549,7 +575,7 @@ def _style_legend(layer: Any, entries: list[tuple[str, str, str]]) -> None:
     if legend is None:
         return
     lines = []
-    for role, color, label in entries:
+    for _role, color, label in entries:
         text = _legend_label(label)
         lines.append(rf"\L(O Style:L,LineColor:{color},LineWidth:5,Length:22,Gap:8) {text}")
     legend.set_int("link", 1)
@@ -562,12 +588,10 @@ def _style_legend(layer: Any, entries: list[tuple[str, str, str]]) -> None:
 
 def _remove_legend(layer: Any) -> None:
     for name in ("legend", "Legend"):
-        try:
+        with suppress(Exception):
             legend = layer.label(name)
             if legend is not None:
                 legend.remove()
-        except Exception:  # noqa: BLE001 - Origin label lookup can vary by template
-            continue
 
 
 def _build_origin_graph(
@@ -809,9 +833,7 @@ def run(
             {
                 "template_id": manifest.id,
                 "template_version": manifest.version,
-                "python_version": __import__("sys").version.split()[0],
-                "originpro_version": session.environment.originpro_version,
-                "origin_version": session.environment.origin_version,
+                **session.environment.to_dict(),
             },
         )
         write_json(output.origin_verify_report, verify_report)

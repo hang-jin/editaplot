@@ -113,6 +113,16 @@ EditaPlot never infers method pairs, LoA, subject identity, missing visits, or i
 Use semantic headers and units, not only numerical range, to distinguish XPS, XRD, XAS, EIS,
 CV, and LSV. Ask when `Energy + Intensity` is scientifically ambiguous.
 
+XRD has two modes. Ordinary scans use one 2θ/X coordinate and one or more intensity series.
+Rietveld refinement requires X plus explicit Observed and Calculated columns; Background,
+Difference, and sparse Phase reflection-position columns are optional visible elements. GSAS-II
+Powder CSV may contain metadata records before `x,y_obs,weight,y_calc,y_bkg,Q`. GSAS-II Publication
+CSV may contain `Used,Obs,Calc,Bkg,Diff`, named Phase columns, `tick-pos`, `diff/sigma`, and
+`Axis-limits`. Preserve `weight`, Q/alternative coordinates, masks, diagnostics, and control
+columns without drawing them as intensity curves. Publication `Diff` is already positioned by the
+exporter and must be drawn directly without another offset. Never infer phases, reflections, fit
+metrics, a missing difference, or background.
+
 PL accepts either `Wavelength` plus one or more PL intensity columns, or `Time` plus observed
 decay columns. A fit column must repeat the observed-series name and add `Fit`/`拟合`; it remains a
 user-supplied curve. TRPL uses a logarithmic Y axis and rejects nonpositive plotted values.
@@ -140,6 +150,8 @@ edit the source without explicit permission. Provide a new working copy or blank
 
 - Duplicate/empty headers: rename columns uniquely.
 - Mixed notes and data: move notes outside the rectangular table.
+- Unknown XRD numeric/control columns: explain their scientific purpose and confirm an explicit
+  `support` or `ignored` mapping; do not let them become ordinary intensity series by position.
 - Unknown error columns: rename with an explicit SD/SE/SEM/custom suffix.
 - Sankey wide matrix: convert to source-target-value edge rows in a new copy.
 - Radar with mixed physical units: provide a user-approved normalized copy or choose small multiples.

@@ -21,8 +21,17 @@ from origin_sciplot.origin_backend.safe_errors import (
     WorkerExitCode,
     safe_error_message,
 )
+from origin_sciplot.origin_backend.template_capabilities import (
+    OriginCapability,
+    evaluate_template_compatibility,
+    get_template_capability_profile,
+)
 from origin_sciplot.origin_backend.verify_utils import require_nonempty
 from origin_sciplot.output_manager import RunOutput, create_run_output, write_json
+from origin_sciplot.reference_style import (
+    ReferenceStyleError,
+    apply_reference_style,
+)
 from origin_sciplot.scientific_workflow import (
     ScientificColumnMapping,
     ScientificWorkflowError,
@@ -67,10 +76,75 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--column-mapping-json")
     parser.add_argument("--text-overrides-json")
     parser.add_argument("--palette-id")
+    parser.add_argument("--reference-style-json")
     parser.set_defaults(keep_origin_open=True)
     parser.add_argument("--keep-origin-open", dest="keep_origin_open", action="store_true")
     parser.add_argument("--close-origin", dest="keep_origin_open", action="store_false")
     return parser
+
+
+def _parse_reference_style_request(raw: str | None) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ScientificWorkflowError(
+            "reference_style_json_invalid",
+            "The frozen reference-style request is not valid JSON.",
+        ) from exc
+    if not isinstance(payload, dict) or set(payload) != {
+        "adaptation",
+        "expected_report_hash",
+        "locked_palette_id",
+    }:
+        raise ScientificWorkflowError(
+            "reference_style_json_invalid",
+            "The frozen reference-style request has an invalid structure.",
+        )
+    if not isinstance(payload["adaptation"], dict) or not isinstance(
+        payload["expected_report_hash"],
+        str,
+    ):
+        raise ScientificWorkflowError(
+            "reference_style_json_invalid",
+            "The frozen reference-style request is incomplete.",
+        )
+    locked_palette_id = payload["locked_palette_id"]
+    if locked_palette_id is not None and not isinstance(locked_palette_id, str):
+        raise ScientificWorkflowError(
+            "reference_style_json_invalid",
+            "The locked palette identifier is invalid.",
+        )
+    return payload
+
+
+def _apply_reference_style_request(
+    preparation: Any,
+    request: dict[str, Any] | None,
+) -> tuple[Any, dict[str, Any] | None]:
+    if request is None:
+        return preparation, None
+    try:
+        application = apply_reference_style(
+            preparation,
+            request["adaptation"],
+            locked_palette_id=request["locked_palette_id"],
+        )
+    except ReferenceStyleError as exc:
+        raise ScientificWorkflowError(exc.code, str(exc)) from exc
+    report = application.report
+    if not report["execution_allowed"]:
+        raise ScientificWorkflowError(
+            "reference_style_blocked",
+            "The frozen reference-style route is not executable.",
+        )
+    if report["report_hash"] != request["expected_report_hash"]:
+        raise ScientificWorkflowError(
+            "reference_style_report_mismatch",
+            "The worker reference-style decision differs from the approved plan.",
+        )
+    return application.preparation, report
 
 
 def _validate_runner_result(
@@ -110,12 +184,106 @@ def _validate_runner_result(
         raise OriginDrawError(str(exc)) from exc
 
 
+def _activated_optional_capabilities(
+    template_id: str,
+    scientific_analysis: Any,
+) -> frozenset[OriginCapability]:
+    if scientific_analysis is None:
+        return frozenset()
+    profile = get_template_capability_profile(template_id)
+    spec = scientific_analysis.plot_spec
+    route_capabilities: set[OriginCapability] = set()
+    if getattr(spec, "aggregate_error_column", None) or any(
+        getattr(series, "error_column", None) for series in spec.series
+    ):
+        route_capabilities.add(OriginCapability.ERROR_BARS)
+    if getattr(spec, "inset_series", ()):
+        route_capabilities.add(OriginCapability.INSET_LAYER)
+    if any(getattr(spec, name, None) == "log10" for name in ("x_scale", "y_scale")):
+        route_capabilities.add(OriginCapability.LOG_AXIS)
+    return frozenset(route_capabilities & profile.optional)
+
+
+def _record_template_compatibility(
+    output: RunOutput,
+    manifest: TemplateManifest,
+    scientific_analysis: Any,
+) -> dict[str, Any]:
+    """Attach a post-render capability decision to the auditable reports."""
+
+    try:
+        environment = json.loads(output.environment_report.read_text(encoding="utf-8"))
+        verify_report = json.loads(output.origin_verify_report.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise OriginDrawError(
+            "Origin compatibility evidence could not be read",
+            code="origin_compatibility_report_invalid",
+            stage="compatibility_report",
+        ) from exc
+    if not isinstance(environment, dict) or not isinstance(verify_report, dict):
+        raise OriginDrawError(
+            "Origin compatibility evidence is invalid",
+            code="origin_compatibility_report_invalid",
+            stage="compatibility_report",
+        )
+
+    profile = get_template_capability_profile(manifest.id)
+    activated = _activated_optional_capabilities(manifest.id, scientific_analysis)
+    decision = evaluate_template_compatibility(
+        manifest.id,
+        str(environment.get("origin_version", "")),
+        profile.required | activated,
+        activated_optional=activated,
+    )
+    decision_payload = decision.to_dict()
+    decision_payload["evidence_source"] = "successful_template_render"
+    decision_payload["global_capability_probe"] = False
+    environment["template_capability_profile"] = profile.to_dict()
+    environment["template_compatibility"] = decision_payload
+    verify_report["template_capability_profile"] = profile.to_dict()
+    verify_report["template_compatibility"] = decision_payload
+    write_json(output.environment_report, environment)
+    write_json(output.origin_verify_report, verify_report)
+    return decision_payload
+
+
+def _record_reference_style(
+    output: RunOutput,
+    result: Any,
+    report: dict[str, Any] | None,
+) -> None:
+    if report is None:
+        return
+    write_json(output.output_dir / "reference_style_report.json", report)
+    try:
+        verify_report = json.loads(
+            output.origin_verify_report.read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        raise OriginDrawError(
+            "Origin reference-style evidence could not be read",
+            code="reference_style_report_invalid",
+            stage="reference_style_report",
+        ) from exc
+    if not isinstance(verify_report, dict):
+        raise OriginDrawError(
+            "Origin reference-style evidence is invalid",
+            code="reference_style_report_invalid",
+            stage="reference_style_report",
+        )
+    verify_report["reference_style"] = report
+    write_json(output.origin_verify_report, verify_report)
+    if isinstance(result, dict) and isinstance(result.get("verify"), dict):
+        result["verify"]["reference_style"] = report
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     output = None
     logger = None
     xps_analysis = None
     scientific_analysis = None
+    reference_style_report: dict[str, Any] | None = None
     try:
         render_plan_source = None
         if args.render_plan_file:
@@ -127,6 +295,9 @@ def main(argv: list[str] | None = None) -> int:
                 )
         selected_template_id = args.template_id
         selected_renderer_template_id = None
+        reference_style_request = _parse_reference_style_request(
+            args.reference_style_json
+        )
         column_mapping = None
         scientific_mapping = None
         scientific_text_overrides: dict[str, str] | None = None
@@ -197,6 +368,11 @@ def main(argv: list[str] | None = None) -> int:
                     "mapping_json_invalid", "The confirmed column mapping is invalid."
                 ) from exc
         if args.template_id in {"auto", "xps"}:
+            if reference_style_request is not None:
+                raise ScientificWorkflowError(
+                    "reference_style_xps_unsupported",
+                    "XPS keeps its verified component and fill style contract.",
+                )
             if scientific_text_overrides:
                 raise ScientificWorkflowError(
                     "text_overrides_unsupported",
@@ -238,6 +414,12 @@ def main(argv: list[str] | None = None) -> int:
                     scientific_analysis,
                     palette_id=args.palette_id,
                 )
+            scientific_analysis, reference_style_report = (
+                _apply_reference_style_request(
+                    scientific_analysis,
+                    reference_style_request,
+                )
+            )
             selected_renderer_template_id = manifest.id
             if scientific_analysis.requires_confirmation:
                 proto.error(
@@ -278,6 +460,11 @@ def main(argv: list[str] | None = None) -> int:
                     "The scientific analysis changed after preview. Refresh the preview and run again.",
                 )
                 return WorkerExitCode.VALIDATION_FAILED
+            if reference_style_report is not None:
+                write_json(
+                    output.output_dir / "reference_style_report.json",
+                    reference_style_report,
+                )
         proto.progress("create_output_dir", "success", "输出文件夹已创建")
 
         if (
@@ -331,6 +518,12 @@ def main(argv: list[str] | None = None) -> int:
         elif scientific_analysis is not None:
             runner_options["preparation"] = scientific_analysis
         result = runner.run(manifest, validation_frame, output, logger, **runner_options)
+        _record_reference_style(output, result, reference_style_report)
+        compatibility = _record_template_compatibility(
+            output,
+            manifest,
+            scientific_analysis,
+        )
         _validate_runner_result(manifest, output, result)
         proto.progress("export", "success", "OPJU/PNG/PDF/TIFF 导出流程完成")
         done_payload = dict(result)
@@ -338,6 +531,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "output_dir": str(output.output_dir),
                 "selected_template_id": selected_template_id,
+                "origin_compatibility": compatibility,
             }
         )
         if xps_analysis is not None:
@@ -354,6 +548,7 @@ def main(argv: list[str] | None = None) -> int:
                     "plan_digest": scientific_analysis.plan_digest,
                     "plot_spec": asdict(scientific_analysis.plot_spec),
                     "selected_renderer_template_id": selected_renderer_template_id,
+                    "reference_style": reference_style_report,
                 }
             )
         proto.done(**done_payload)
@@ -372,18 +567,27 @@ def main(argv: list[str] | None = None) -> int:
         return WorkerExitCode.VALIDATION_FAILED
     except OriginEnvironmentError as exc:
         if logger:
-            logger.write("Origin environment error: " + safe_error_message(exc))
-        proto.error("origin_environment", safe_error_message(exc))
+            logger.write(
+                "Origin environment error "
+                f"[{exc.code}/{exc.stage}]: {safe_error_message(exc)}"
+            )
+        proto.error(exc.code, safe_error_message(exc), stage=exc.stage)
         return WorkerExitCode.ORIGIN_ENVIRONMENT
     except OriginDrawError as exc:
         if logger:
-            logger.write("Origin draw error: " + safe_error_message(exc))
-        proto.error("origin_draw_failed", safe_error_message(exc))
+            logger.write(
+                f"Origin draw error [{exc.code}/{exc.stage}]: "
+                + safe_error_message(exc)
+            )
+        proto.error(exc.code, safe_error_message(exc), stage=exc.stage)
         return WorkerExitCode.ORIGIN_DRAW
     except OriginExportError as exc:
         if logger:
-            logger.write("Origin export error: " + safe_error_message(exc))
-        proto.error("origin_export_failed", safe_error_message(exc))
+            logger.write(
+                f"Origin export error [{exc.code}/{exc.stage}]: "
+                + safe_error_message(exc)
+            )
+        proto.error(exc.code, safe_error_message(exc), stage=exc.stage)
         return WorkerExitCode.EXPORT_FAILED
     except Exception as exc:  # noqa: BLE001
         safe = safe_error_message(exc)

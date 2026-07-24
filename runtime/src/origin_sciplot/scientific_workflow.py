@@ -22,7 +22,12 @@ import pandas as pd
 from .data_loader import DataLoadError, LoadedTable, load_table
 from .palette_catalog import get_palette
 from .scientific_visual import AdaptiveOriginStyle, resolve_adaptive_style
-
+from .xrd_semantics import (
+    GSAS_II_PUBLICATION_CSV,
+    XrdSemanticError,
+    detect_xrd_source_profile,
+    propose_xrd_semantics,
+)
 
 ScientificTemplateId = Literal[
     "eis",
@@ -226,6 +231,8 @@ class ScientificPlotSpec:
     inset_y_title: str | None = None
     inset_axis_plan: ScientificAxisPlan | None = None
     inset_annotation: str | None = None
+    phase_tick_columns: tuple[str, ...] = ()
+    source_profile: str | None = None
 
 
 @dataclass(frozen=True)
@@ -392,10 +399,7 @@ def apply_scientific_palette_override(
         category_count = len(spec.group_order)
     else:
         category_count = len(spec.series)
-    if (
-        required_mode == "qualitative"
-        and category_count > palette.max_qualitative_categories
-    ):
+    if required_mode == "qualitative" and category_count > palette.max_qualitative_categories:
         raise ScientificWorkflowError(
             "palette_category_limit_exceeded",
             (
@@ -759,6 +763,11 @@ _FEATURE_VALUE_ALIASES = (
 _ROLE_LABELS: dict[str, str] = {
     "x": "X / 自变量",
     "series": "Series / 数据系列",
+    "observed": "Observed / 实测强度",
+    "calculated": "Calculated / 计算强度",
+    "background": "Background / 背景",
+    "phase_tick": "Phase tick / 物相刻线",
+    "support": "Support / 辅助或控制数据",
     "error": "Error / 误差",
     "category": "Category / 类别",
     "z_real": "Z real / 阻抗实部",
@@ -804,7 +813,20 @@ def role_label(role: str) -> str:
 
 def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
     """Return role key, bilingual label, and uniqueness for the mapping UI."""
-    if template_id == "trajectory3d":
+    if template_id == "xrd":
+        keys = (
+            "x",
+            "observed",
+            "calculated",
+            "background",
+            "difference",
+            "phase_tick",
+            "support",
+            "series",
+            "ignored",
+        )
+        unique = {"x", "observed", "calculated", "background", "difference"}
+    elif template_id == "trajectory3d":
         keys = ("x3d", "y3d", "z3d", "series_id", "ignored")
         unique = {"x3d", "y3d", "z3d", "series_id"}
     elif template_id == "eis":
@@ -858,16 +880,25 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
         keys = ("category", "series", "ignored")
         unique = {"category"}
     else:
-        keys = ("x", "series", "error", "ignored") if template_id == "line_error" else (
-            "x",
-            "series",
-            "ignored",
+        keys = (
+            ("x", "series", "error", "ignored")
+            if template_id == "line_error"
+            else (
+                "x",
+                "series",
+                "ignored",
+            )
         )
         unique = {"x"}
     return tuple((key, role_label(key), key in unique) for key in keys)
 
 
 def mapping_context_options(template_id: str) -> tuple[tuple[str, str], ...]:
+    if template_id == "xrd":
+        return (
+            ("ordinary_scan", "普通 XRD 图谱"),
+            ("rietveld_refinement", "Rietveld 精修图"),
+        )
     if template_id == "eis":
         return (("nyquist", "Nyquist"), ("bode", "Bode"))
     if template_id == "diagnostic_curve":
@@ -967,7 +998,7 @@ def _error_info(column: str) -> tuple[str, str] | None:
     for pattern, kind in patterns:
         match = re.search(pattern, text)
         if match:
-            base = text[: match.start()].rstrip(" _-(（(")
+            base = text[: match.start()].rstrip(" _-(（")
             return base, kind
     return None
 
@@ -1028,6 +1059,15 @@ def _standard_line_axis_titles(
     series_columns: list[str],
 ) -> tuple[str, str]:
     x_unit = _physical_unit(x_column)
+    if template_id == "xrd" and x_unit and "," in x_unit:
+        # GSAS-II Publication headers commonly use ``X (2theta, deg)``.
+        # ``2theta`` describes the coordinate rather than its unit, so retain
+        # only the final, recognized angular unit in the public axis title.
+        coordinate_hint, candidate_unit = x_unit.rsplit(",", maxsplit=1)
+        if "2theta" in _canonical(coordinate_hint) and _canonical(
+            candidate_unit
+        ) in {"deg", "degree", "degrees"}:
+            x_unit = candidate_unit.strip()
     unit_suffix = f" ({_format_unit(x_unit)})" if x_unit else ""
     if template_id in {"cv", "lsv"}:
         x_title = f"Potential{unit_suffix}"
@@ -1054,11 +1094,78 @@ def _standard_line_axis_titles(
 def _automatic_line_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
     x_column, confidence, reasons = _select_x_column(loaded.frame, template_id)
     assignments = {
-        str(column): ("x" if str(column) == x_column else "series")
-        for column in loaded.frame.columns
+        str(column): ("x" if str(column) == x_column else "series") for column in loaded.frame.columns
     }
     warnings = list(reasons)
     return _AutoMapping(assignments, "default", confidence, reasons, tuple(warnings))
+
+
+def _automatic_xrd_mapping(loaded: LoadedTable) -> _AutoMapping:
+    """Map XRD columns from the source-bound semantic proposal.
+
+    Unknown numeric columns are assigned to the non-rendering support role as a
+    safe suggestion, but their blocking ambiguity remains visible to the user.
+    """
+
+    try:
+        proposal = propose_xrd_semantics(loaded)
+        source_profile = detect_xrd_source_profile(loaded)
+    except XrdSemanticError as exc:
+        raise ScientificWorkflowError(
+            exc.code,
+            str(exc),
+            column=(
+                str(exc.details["columns"][0])
+                if isinstance(exc.details.get("columns"), list) and exc.details["columns"]
+                else None
+            ),
+        ) from exc
+
+    role_map = {
+        "x_coordinate": "x",
+        "intensity_series": "series",
+        "observed_intensity": "observed",
+        "calculated_intensity": "calculated",
+        "background_intensity": "background",
+        "difference_curve": "difference",
+        "phase_reflection_positions": "phase_tick",
+        "statistical_weight": "support",
+        "alternative_q_coordinate": "support",
+        "fit_mask": "support",
+        "weighted_residual_diagnostic": "support",
+        "upstream_axis_limits": "support",
+        "phase_tick_position_control": "support",
+        "unbound_phase_tick_metadata": "support",
+        "unclassified_numeric": "support",
+        "unclassified_metadata": "ignored",
+    }
+    has_identified_ordinary_series = any(
+        item.semantic_role == "intensity_series" for item in proposal.data_items
+    )
+    assignments: dict[str, str] = {}
+    for item in proposal.data_items:
+        role = role_map.get(item.semantic_role, "support")
+        if (
+            source_profile == "ordinary_xrd"
+            and item.semantic_role == "unclassified_numeric"
+            and not has_identified_ordinary_series
+        ):
+            # Keep generic numeric-wide data reachable through the confirmation
+            # UI; no such suggested series can render before user approval.
+            role = "series"
+        assignments[item.source_column] = role
+    reasons = [ambiguity.code for ambiguity in proposal.ambiguities if ambiguity.blocking]
+    if source_profile == "generic_rietveld":
+        reasons.append("xrd_generic_rietveld_requires_confirmation")
+    reasons = list(dict.fromkeys(reasons))
+    confidence = min(proposal.domain_confidence, 0.68) if reasons else proposal.domain_confidence
+    return _AutoMapping(
+        assignments=assignments,
+        plot_mode=proposal.domain_mode,
+        confidence=confidence,
+        reasons=tuple(reasons),
+        warnings=tuple(reasons),
+    )
 
 
 def _automatic_error_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
@@ -1086,7 +1193,10 @@ def _automatic_error_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapp
     for column in map(str, frame.columns):
         if column == anchor:
             assignments[column] = anchor_role
-        elif template_id in {"bar", "horizontal_bar", "stacked_bar", "line_error"} and _error_info(column) is not None:
+        elif (
+            template_id in {"bar", "horizontal_bar", "stacked_bar", "line_error"}
+            and _error_info(column) is not None
+        ):
             assignments[column] = "error"
             if _error_info(column)[1] == "custom":  # type: ignore[index]
                 warnings.append("error_kind_unspecified")
@@ -1245,9 +1355,7 @@ def _automatic_trajectory3d_mapping(loaded: LoadedTable) -> _AutoMapping:
             selected[role] = remaining_numeric.pop(0)
             reasons.append(f"{role}_role_inferred")
     if "series_id" not in selected:
-        remaining = [
-            str(column) for column in frame.columns if str(column) not in selected.values()
-        ]
+        remaining = [str(column) for column in frame.columns if str(column) not in selected.values()]
         nonnumeric = [column for column in remaining if not _numeric_compatible(frame[column])]
         if nonnumeric or remaining:
             selected["series_id"] = (nonnumeric or remaining)[0]
@@ -1255,7 +1363,8 @@ def _automatic_trajectory3d_mapping(loaded: LoadedTable) -> _AutoMapping:
     if set(selected) != {"x3d", "y3d", "z3d", "series_id"}:
         raise ScientificWorkflowError(
             "trajectory3d_roles_missing",
-            "trajectory3d needs four distinct long-table columns: Zreal, a real third variable with unit, -Zimag, and Series.",
+            "trajectory3d needs four distinct long-table columns: Zreal, "
+            "a real third variable with unit, -Zimag, and Series.",
         )
     if len(set(selected.values())) != 4:
         raise ScientificWorkflowError(
@@ -1266,7 +1375,8 @@ def _automatic_trajectory3d_mapping(loaded: LoadedTable) -> _AutoMapping:
     if _trajectory3d_semantic_axis(y_column) is None:
         raise ScientificWorkflowError(
             "trajectory3d_third_axis_unit_missing",
-            "The third-axis header must state a scientific meaning and unit, for example 'Condition Position (mm)' or 'Temperature (K)'.",
+            "The third-axis header must state a scientific meaning and unit, "
+            "for example 'Condition Position (mm)' or 'Temperature (K)'.",
             column=y_column,
         )
     for role, column in selected.items():
@@ -1313,10 +1423,7 @@ def _automatic_pl_mapping(loaded: LoadedTable) -> _AutoMapping:
     if not any(role == "series" for role in assignments.values()):
         raise ScientificWorkflowError("series_missing", "PL data needs at least one measured signal series.")
     canonical_x = _canonical(x_column)
-    time_like = any(
-        token in canonical_x
-        for token in ("time", "decay", "lifetime", "时间", "寿命")
-    )
+    time_like = any(token in canonical_x for token in ("time", "decay", "lifetime", "时间", "寿命"))
     mode = "trpl" if time_like or fit_columns else "steady_state"
     reasons = list(x_reasons)
     if ignored:
@@ -1370,7 +1477,9 @@ def _automatic_uv_vis_mapping(loaded: LoadedTable) -> _AutoMapping:
             "series_missing",
             "UV-Vis data needs at least one absorbance or transmittance signal series.",
         )
-    inset_roles = {role for role in assignments.values() if role in {"photon_energy", "tauc", "tauc_fit", "bandgap"}}
+    inset_roles = {
+        role for role in assignments.values() if role in {"photon_energy", "tauc", "tauc_fit", "bandgap"}
+    }
     if inset_roles and not {"photon_energy", "tauc"}.issubset(inset_roles):
         reasons.append("tauc_inset_roles_incomplete")
     return _AutoMapping(
@@ -1407,11 +1516,7 @@ def _automatic_shap_summary_mapping(loaded: LoadedTable) -> _AutoMapping:
     if feature_ambiguous:
         reasons.append("feature_role_ambiguous")
     if feature is None:
-        text_columns = [
-            str(column)
-            for column in frame.columns
-            if not _numeric_compatible(frame[column])
-        ]
+        text_columns = [str(column) for column in frame.columns if not _numeric_compatible(frame[column])]
         if text_columns:
             feature = text_columns[0]
             reasons.append("feature_role_inferred")
@@ -1570,11 +1675,7 @@ def _automatic_forest_mapping(loaded: LoadedTable) -> _AutoMapping:
         if ambiguous:
             reasons.append(f"{role}_role_ambiguous")
     if "category" not in selected:
-        text_columns = [
-            str(column)
-            for column in frame.columns
-            if not _numeric_compatible(frame[column])
-        ]
+        text_columns = [str(column) for column in frame.columns if not _numeric_compatible(frame[column])]
         if text_columns:
             selected["category"] = text_columns[0]
             reasons.append("category_role_inferred")
@@ -1817,10 +1918,7 @@ def _automatic_eis_mapping(loaded: LoadedTable) -> _AutoMapping:
     found: dict[str, str] = {}
     ambiguous = False
     for role in ("z_real", "z_imag", "frequency", "magnitude", "phase"):
-        scored = [
-            (str(column), _eis_role_score(str(column), role))
-            for column in loaded.frame.columns
-        ]
+        scored = [(str(column), _eis_role_score(str(column), role)) for column in loaded.frame.columns]
         best = max((score for _, score in scored), default=0)
         winners = [column for column, score in scored if score == best and score > 0]
         if len(winners) == 1:
@@ -1845,7 +1943,9 @@ def _automatic_eis_mapping(loaded: LoadedTable) -> _AutoMapping:
     elif bode:
         mode = "bode"
     else:
-        numeric = [str(column) for column in loaded.frame.columns if _numeric_compatible(loaded.frame[column])]
+        numeric = [
+            str(column) for column in loaded.frame.columns if _numeric_compatible(loaded.frame[column])
+        ]
         if len(numeric) < 2:
             raise ScientificWorkflowError(
                 "eis_roles_missing",
@@ -1898,7 +1998,33 @@ def _validate_assignment_shape(
             raise ScientificWorkflowError(
                 f"mapping_{role}_conflict", f"Only one column can be assigned to {role}."
             )
-    mode = mapping.plot_mode or ("nyquist" if template_id == "eis" else "default")
+    if template_id == "xrd":
+        inferred_xrd_mode = (
+            "rietveld_refinement"
+            if {"observed", "calculated"}.issubset(assignments.values())
+            else "ordinary_scan"
+        )
+        mode = mapping.plot_mode or inferred_xrd_mode
+    else:
+        mode = mapping.plot_mode or ("nyquist" if template_id == "eis" else "default")
+    if template_id == "xrd" and mode not in {"ordinary_scan", "rietveld_refinement"}:
+        raise ScientificWorkflowError(
+            "mapping_plot_mode",
+            "Select ordinary XRD or Rietveld refinement mode.",
+        )
+    if (
+        template_id == "xrd"
+        and loaded.source_profile
+        in {
+            "gsas_ii_powder_csv",
+            GSAS_II_PUBLICATION_CSV,
+        }
+        and mode != "rietveld_refinement"
+    ):
+        raise ScientificWorkflowError(
+            "xrd_source_profile_mode_conflict",
+            "Documented GSAS-II exports must keep the Rietveld refinement mode.",
+        )
     if template_id == "eis" and mode not in {"nyquist", "bode"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select Nyquist or Bode for EIS.")
     if template_id == "diagnostic_curve" and mode not in {"roc", "pr"}:
@@ -1911,9 +2037,7 @@ def _validate_assignment_shape(
 def _require_one(assignments: dict[str, str], role: str) -> str:
     matches = [column for column, assigned in assignments.items() if assigned == role]
     if len(matches) != 1:
-        raise ScientificWorkflowError(
-            f"{role}_missing", f"Exactly one column must be assigned to {role}."
-        )
+        raise ScientificWorkflowError(f"{role}_missing", f"Exactly one column must be assigned to {role}.")
     return matches[0]
 
 
@@ -1931,13 +2055,13 @@ def _pair_errors(series_columns: list[str], error_columns: list[str]) -> dict[st
         exact = [
             error
             for error in available
-            if _error_info(error) is not None
-            and _canonical(_error_info(error)[0]) == _canonical(series)  # type: ignore[index]
+            if _error_info(error) is not None and _canonical(_error_info(error)[0]) == _canonical(series)  # type: ignore[index]
         ]
         if len(exact) == 1:
             error = exact[0]
             info = _error_info(error)
-            assert info is not None
+            if info is None:
+                continue
             pairs[series] = (error, info[1])
             available.remove(error)
     for series in series_columns:
@@ -1961,6 +2085,10 @@ def _coerced_selected_frame(
     numeric_roles = {
         "x",
         "series",
+        "observed",
+        "calculated",
+        "background",
+        "phase_tick",
         "error",
         "z_real",
         "z_imag",
@@ -2037,7 +2165,9 @@ def _nice_number(value: float, *, round_value: bool) -> float:
     if round_value:
         nice_fraction = 1.0 if fraction < 1.5 else 2.0 if fraction < 3.0 else 5.0 if fraction < 7.0 else 10.0
     else:
-        nice_fraction = 1.0 if fraction <= 1.0 else 2.0 if fraction <= 2.0 else 5.0 if fraction <= 5.0 else 10.0
+        nice_fraction = (
+            1.0 if fraction <= 1.0 else 2.0 if fraction <= 2.0 else 5.0 if fraction <= 5.0 else 10.0
+        )
     return nice_fraction * 10**exponent
 
 
@@ -2143,18 +2273,8 @@ def _axis_plan(
             arrays.extend((values - errors, values + errors))
         return arrays
 
-    left_arrays = [
-        array
-        for item in series
-        if item.axis == "left"
-        for array in display_arrays(item)
-    ]
-    right_arrays = [
-        array
-        for item in series
-        if item.axis == "right"
-        for array in display_arrays(item)
-    ]
+    left_arrays = [array for item in series if item.axis == "left" for array in display_arrays(item)]
+    right_arrays = [array for item in series if item.axis == "right" for array in display_arrays(item)]
     if not left_arrays:
         raise ScientificWorkflowError("series_missing", "No series is assigned to the left Y axis.")
     left = np.concatenate(left_arrays)
@@ -2182,7 +2302,8 @@ def _eis_imag_transform(frame: pd.DataFrame, column: str) -> tuple[SeriesTransfo
     if explicit_negative and median < 0:
         raise ScientificWorkflowError(
             "eis_sign_conflict",
-            "The imaginary column is labelled as negative imaginary impedance but contains mostly negative values.",
+            "The imaginary column is labelled as negative imaginary impedance "
+            "but contains mostly negative values.",
             column=column,
         )
     if explicit_negative:
@@ -2281,6 +2402,157 @@ def _build_line_spec(
         axis_plan=axis_plan,
     )
     return spec, tuple(warnings)
+
+
+def _build_xrd_spec(
+    frame: pd.DataFrame,
+    assignments: dict[str, str],
+    plot_mode: str,
+    source_profile: str,
+) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    """Freeze ordinary or Rietveld XRD without deriving scientific values."""
+
+    if plot_mode == "ordinary_scan":
+        refinement_roles = {
+            "observed",
+            "calculated",
+            "background",
+            "difference",
+            "phase_tick",
+        }
+        if any(role in refinement_roles for role in assignments.values()):
+            raise ScientificWorkflowError(
+                "xrd_role_mode_conflict",
+                "Rietveld roles require the Rietveld refinement plotting mode.",
+            )
+        ordinary_spec, warnings = _build_line_spec("xrd", frame, assignments)
+        return (
+            replace(
+                ordinary_spec,
+                plot_mode="ordinary_scan",
+                source_profile=source_profile,
+            ),
+            warnings,
+        )
+
+    if plot_mode != "rietveld_refinement":
+        raise ScientificWorkflowError(
+            "mapping_plot_mode",
+            "Select ordinary XRD or Rietveld refinement mode.",
+        )
+    if any(role == "series" for role in assignments.values()):
+        raise ScientificWorkflowError(
+            "xrd_role_mode_conflict",
+            "Assign refinement curves as Observed, Calculated, Background, or Difference.",
+        )
+
+    x_column = _require_one(assignments, "x")
+    observed_column = _require_one(assignments, "observed")
+    calculated_column = _require_one(assignments, "calculated")
+
+    def optional_role(role: str) -> str | None:
+        columns = [column for column, assigned in assignments.items() if assigned == role]
+        if len(columns) > 1:
+            raise ScientificWorkflowError(
+                f"mapping_{role}_conflict",
+                f"Only one column can be assigned to {role}.",
+            )
+        return columns[0] if columns else None
+
+    background_column = optional_role("background")
+    difference_column = optional_role("difference")
+    if source_profile == GSAS_II_PUBLICATION_CSV and difference_column is None:
+        raise ScientificWorkflowError(
+            "xrd_publication_difference_missing",
+            "GSAS-II Publication CSV requires its supplied Diff column.",
+        )
+
+    series_items = [
+        ScientificSeries(
+            observed_column,
+            "Observed",
+            series_role="observed",
+        ),
+        ScientificSeries(
+            calculated_column,
+            "Calculated",
+            series_role="calculated",
+        ),
+    ]
+    if background_column is not None:
+        series_items.append(
+            ScientificSeries(
+                background_column,
+                "Background",
+                series_role="background",
+            )
+        )
+    if difference_column is not None:
+        series_items.append(
+            ScientificSeries(
+                difference_column,
+                "Difference",
+                transform="identity",
+                series_role="difference",
+            )
+        )
+    series = tuple(series_items)
+    _require_points(
+        frame,
+        x_column,
+        [item.source_column for item in series],
+    )
+
+    phase_tick_columns = tuple(column for column, role in assignments.items() if role == "phase_tick")
+    for column in phase_tick_columns:
+        if int(frame[column].notna().sum()) < 1:
+            raise ScientificWorkflowError(
+                "xrd_phase_tick_empty",
+                f"Phase tick column {column!r} has no supplied positions.",
+                column=column,
+            )
+
+    style = resolve_adaptive_style(
+        template_id="xrd",
+        plot_kind="rietveld_refinement",
+        row_count=len(frame),
+        series_count=len(series),
+    )
+    return (
+        ScientificPlotSpec(
+            plot_kind="rietveld_refinement",
+            plot_mode="rietveld_refinement",
+            x_column=x_column,
+            category_column=None,
+            series=series,
+            x_title=_standard_line_axis_titles(
+                "xrd",
+                x_column,
+                [observed_column],
+            )[0],
+            y_title="Intensity (a.u.)",
+            y2_title=None,
+            x_scale="linear",
+            y_scale="linear",
+            display_transform="identity",
+            display_plan=ScientificDisplayPlan(
+                5.2,
+                0.8,
+                0.72,
+                figure_style=style,
+            ),
+            axis_plan=_axis_plan(
+                frame,
+                x_column=x_column,
+                series=series,
+                category=False,
+                include_zero_y=False,
+            ),
+            phase_tick_columns=phase_tick_columns,
+            source_profile=source_profile,
+        ),
+        (),
+    )
 
 
 def _build_trajectory3d_spec(
@@ -2662,9 +2934,7 @@ def _build_raw_distribution_spec(
                 column=column,
             )
     series = tuple(ScientificSeries(column, column) for column in series_columns)
-    values = np.concatenate(
-        [frame[column].dropna().to_numpy(dtype=float) for column in series_columns]
-    )
+    values = np.concatenate([frame[column].dropna().to_numpy(dtype=float) for column in series_columns])
     warnings: list[str] = []
     if len(series) > 12:
         warnings.append("series_count_excessive")
@@ -2944,9 +3214,7 @@ def _build_forest_spec(
                     column=reference_columns[0],
                 )
             reference_value = float(reference[0])
-    x_values = np.concatenate(
-        (frame[lower].to_numpy(dtype=float), frame[upper].to_numpy(dtype=float))
-    )
+    x_values = np.concatenate((frame[lower].to_numpy(dtype=float), frame[upper].to_numpy(dtype=float)))
     x_axis = _nice_axis(x_values)
     series = (
         ScientificSeries(
@@ -3104,8 +3372,7 @@ def _build_calibration_curve_spec(
     probability_values = frame[[x_column, observed_column]].to_numpy(dtype=float)
     finite_probability = probability_values[np.isfinite(probability_values)]
     if finite_probability.size and (
-        float(np.min(finite_probability)) < 0.0
-        or float(np.max(finite_probability)) > 1.0
+        float(np.min(finite_probability)) < 0.0 or float(np.max(finite_probability)) > 1.0
     ):
         raise ScientificWorkflowError(
             "calibration_probability_range",
@@ -3171,16 +3438,13 @@ def _build_decision_curve_spec(
             column=x_column,
         )
     series = tuple(
-        ScientificSeries(column, column)
-        for column in [*model_columns, treat_all_column, treat_none_column]
+        ScientificSeries(column, column) for column in [*model_columns, treat_all_column, treat_none_column]
     )
     # The model is the evidentiary target.  Treat-all can diverge sharply at
     # high thresholds and must not collapse every model into a few pixels.
     # Keep all source points editable, but plan the visible Y window from the
     # model curves and the explicit zero baseline.
-    y_values = np.concatenate(
-        [frame[column].dropna().to_numpy(dtype=float) for column in model_columns]
-    )
+    y_values = np.concatenate([frame[column].dropna().to_numpy(dtype=float) for column in model_columns])
     y_axis = _nice_axis(
         np.concatenate([y_values, np.asarray([0.0])]),
         include_zero=True,
@@ -3189,8 +3453,7 @@ def _build_decision_curve_spec(
     warnings: list[str] = []
     treat_all_values = frame[treat_all_column].dropna().to_numpy(dtype=float)
     if treat_all_values.size and (
-        float(np.min(treat_all_values)) < y_axis[0]
-        or float(np.max(treat_all_values)) > y_axis[1]
+        float(np.min(treat_all_values)) < y_axis[0] or float(np.max(treat_all_values)) > y_axis[1]
     ):
         warnings.append("treat_all_clipped_to_model_evidence_window")
     threshold_min = float(np.min(thresholds))
@@ -3341,12 +3604,9 @@ def _build_grouped_box_spec(
     if any((category, group) not in combinations for category in categories for group in groups):
         warnings.append("grouped_box_unbalanced_design")
     series = tuple(
-        ScientificSeries(column, column, category=category, group=group)
-        for column, category, group in parsed
+        ScientificSeries(column, column, category=category, group=group) for column, category, group in parsed
     )
-    values = np.concatenate(
-        [frame[column].dropna().to_numpy(dtype=float) for column in series_columns]
-    )
+    values = np.concatenate([frame[column].dropna().to_numpy(dtype=float) for column in series_columns])
     # Reserve a stable lower evidence band for per-box sample-size labels.
     # The labels are part of the graph, not page-margin decorations.
     y_axis = _nice_axis(values, padding_fraction=0.30)
@@ -3426,11 +3686,7 @@ def _build_pl_spec(
                 )
     x_unit = _physical_unit(x_column)
     unit_suffix = f" ({_format_unit(x_unit)})" if x_unit else ""
-    x_title = (
-        f"Time after excitation{unit_suffix}"
-        if mode == "trpl"
-        else f"Wavelength{unit_suffix}"
-    )
+    x_title = f"Time after excitation{unit_suffix}" if mode == "trpl" else f"Wavelength{unit_suffix}"
     normalized = all(
         any(token in _canonical(column) for token in ("normalized", "normalised", "归一化"))
         for column in observed_columns
@@ -3529,9 +3785,15 @@ def _build_uv_vis_spec(
             inset_annotation = f"Eg = {bandgap:g} eV"
             warnings.append("bandgap_annotation_from_input")
     canonical_signals = [_canonical(column) for column in signal_columns]
-    if all(any(token in value for token in ("absorbance", "absorption", "吸光度", "吸收")) for value in canonical_signals):
+    if all(
+        any(token in value for token in ("absorbance", "absorption", "吸光度", "吸收"))
+        for value in canonical_signals
+    ):
         y_title = "Absorbance (a.u.)"
-    elif all(any(token in value for token in ("transmittance", "transmission", "透过率", "透射")) for value in canonical_signals):
+    elif all(
+        any(token in value for token in ("transmittance", "transmission", "透过率", "透射"))
+        for value in canonical_signals
+    ):
         y_title = "Transmittance (%)"
     else:
         y_title = signal_columns[0] if len(signal_columns) == 1 else "Optical response"
@@ -3735,7 +3997,8 @@ def _build_eis_spec(
             index = int(np.flatnonzero(nonpositive_magnitude.to_numpy())[0])
             raise ScientificWorkflowError(
                 "log_axis_nonpositive",
-                f"Log-magnitude column {magnitude[0]!r} contains a nonpositive value at data row {index + 2}.",
+                f"Log-magnitude column {magnitude[0]!r} contains a nonpositive "
+                f"value at data row {index + 2}.",
                 column=magnitude[0],
                 row=index + 2,
             )
@@ -3802,7 +4065,16 @@ def _build_plot_spec(
     frame: pd.DataFrame,
     assignments: dict[str, str],
     plot_mode: str,
+    *,
+    source_profile: str | None = None,
 ) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    if template_id == "xrd":
+        return _build_xrd_spec(
+            frame,
+            assignments,
+            plot_mode,
+            source_profile or "ordinary_xrd",
+        )
     if template_id == "trajectory3d":
         return _build_trajectory3d_spec(frame, assignments)
     if template_id == "eis":
@@ -3837,6 +4109,8 @@ def _build_plot_spec(
 
 
 def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
+    if template_id == "xrd":
+        return _automatic_xrd_mapping(loaded)
     if template_id == "trajectory3d":
         return _automatic_trajectory3d_mapping(loaded)
     if template_id == "eis":
@@ -3900,7 +4174,14 @@ def prepare_scientific(
     else:
         assignments, plot_mode = _validate_assignment_shape(loaded, template_id, column_mapping)
     frame = _coerced_selected_frame(loaded, assignments)
-    spec, build_warnings = _build_plot_spec(template_id, frame, assignments, plot_mode)
+    source_profile = detect_xrd_source_profile(loaded) if template_id == "xrd" else None
+    spec, build_warnings = _build_plot_spec(
+        template_id,
+        frame,
+        assignments,
+        plot_mode,
+        source_profile=source_profile,
+    )
 
     warnings = list(automatic.warnings if column_mapping is None else ())
     warnings.extend(build_warnings)

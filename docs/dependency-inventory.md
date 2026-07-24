@@ -27,7 +27,7 @@ inventory from the exact artifacts being installed or redistributed.
 | fonttools | 4.63.0 | transitive | MIT | [source](https://github.com/fonttools/fonttools) |
 | jsonschema-specifications | 2025.9.1 | transitive | MIT | [documentation](https://jsonschema-specifications.readthedocs.io/) |
 | kiwisolver | 1.5.0 | transitive | BSD-3-Clause | [source](https://github.com/nucleic/kiwi) |
-| OriginExt | 1.2.5 | transitive | BSD | [OriginLab](https://www.originlab.com/) |
+| OriginExt | 1.2.5 | direct | BSD | [OriginLab](https://www.originlab.com/) |
 | packaging | 26.2 | transitive | Apache-2.0 OR BSD-2-Clause | [documentation](https://packaging.pypa.io/) |
 | pyparsing | 3.3.2 | transitive | MIT | [documentation](https://pyparsing-docs.readthedocs.io/) |
 | python-dateutil | 2.9.0.post0 | transitive | Apache-2.0 OR BSD-3-Clause | [source](https://github.com/dateutil/dateutil) |
