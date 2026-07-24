@@ -2,9 +2,28 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "template_id": "xrd",
   "required_roles": ["x", "series"],
+  "required_roles_by_mode": {
+    "ordinary_scan": ["x", "series"],
+    "rietveld_refinement": ["x", "observed", "calculated"]
+  },
+  "optional_roles": [
+    "background",
+    "difference",
+    "phase_tick",
+    "support",
+    "ignored"
+  ],
+  "supported_source_profiles": [
+    "ordinary_xrd",
+    "gsas_ii_powder_csv",
+    "gsas_ii_publication_csv",
+    "generic_rietveld"
+  ],
   "automatic_peak_labels": false,
+  "automatic_phase_identification": false,
+  "publication_diff_policy": "preserve_upstream_display_offset",
+  "source_columns_immutable": true,
   "min_columns": 2,
   "min_rows": 2,
   "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
 }
-

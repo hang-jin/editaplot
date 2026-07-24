@@ -1,8 +1,8 @@
 id: xrd
 name: XRD 衍射图谱
 category: spectroscopy/xrd
-version: 0.1.0
-description: 自动识别 2θ 与单条或多条强度曲线，不自动添加材料峰位
+version: 0.2.0
+description: 自动识别普通 XRD 与 GSAS-II 精修数据，区分实测、计算、背景、差值、物相刻线和非绘图控制列
 requires_origin: true
 runner: runner.py
 schema: schema.json
@@ -18,12 +18,37 @@ examples:
   - id: standard
     name_zh: XRD 多图谱样例
     file: example_standard.csv
-    description_zh: 2θ 与一个或多个强度系列。
+    description_zh: 普通 XRD 宽表：2θ 与一个或多个强度系列。
+  - id: gsas-powder
+    name_zh: GSAS-II Powder CSV 样例
+    file: example_gsas_powder.csv
+    description_zh: 带前导元数据的官方 Powder CSV 结构；weight 与 Q 保留但不画。
+  - id: gsas-publication
+    name_zh: GSAS-II Publication CSV 样例
+    file: example_gsas_publication.csv
+    description_zh: 实测、计算、背景、已定位差值、两组物相刻线与控制列。
 blank_template: data_template.csv
 data_guide:
-  headline_zh: 绘制衍射角与单条或多条强度图谱。
-  required_columns: [2θ 衍射角列, 一个或多个强度列]
-  optional_columns: []
-  accepted_layouts: [宽表]
-  aliases: [2Theta/TwoTheta/2θ/衍射角, Intensity/Counts/强度/计数]
-  notes_zh: [不自动添加材料峰位或物相结论, 多图谱显示变换会明确写入报告]
+  headline_zh: 绘制普通 XRD 图谱，或读取 GSAS-II Powder / Publication CSV 的 Rietveld 精修元素。
+  required_columns:
+    - 普通图谱：2θ 衍射角列 + 一个或多个强度列
+    - 精修图：X/2θ + Obs/实测 + Calc/计算
+  optional_columns:
+    - Bkg/背景
+    - Diff/差值
+    - 具有明确物相名称的 Phase 刻线列
+    - weight、Q、Used、diff/sigma、Axis-limits 等辅助或控制列
+  accepted_layouts: [普通 XRD 宽表, GSAS-II Powder CSV, GSAS-II Publication CSV]
+  aliases:
+    - 2Theta/TwoTheta/2θ/衍射角
+    - Intensity/Counts/强度/计数
+    - Obs/y_obs/Observed/实测
+    - Calc/y_calc/Calculated/计算
+    - Bkg/y_bkg/Background/背景
+    - Diff/Difference/Residual/差值/残差
+  notes_zh:
+    - 不根据曲线形状自动添加材料峰位、物相名称或精修结论
+    - 未识别的数值列必须先确认用途，默认不会画成曲线
+    - GSAS-II Publication 的 Diff 保留其原始显示偏移，不会再次偏移
+    - 辅助和控制列保留在映射与 Origin 工作簿中，但不会误画成数据系列
+    - 原始 CSV/TXT/XLS/XLSX 始终只读

@@ -464,8 +464,7 @@ def run_trajectory3d_template(
             output.environment_report,
             {
                 "backend": "Origin",
-                "origin_version": session.environment.origin_version,
-                "originpro_version": session.environment.originpro_version,
+                **session.environment.to_dict(),
             },
         )
         if keep_origin_open:

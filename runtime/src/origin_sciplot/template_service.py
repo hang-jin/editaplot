@@ -234,9 +234,7 @@ class XpsTemplateService:
             components=tuple(
                 column for column in prepared.source_columns if assignments[column] == "component"
             ),
-            ignored=tuple(
-                column for column in prepared.source_columns if assignments[column] == "ignored"
-            ),
+            ignored=tuple(column for column in prepared.source_columns if assignments[column] == "ignored"),
             energy_kind=energy_kind,  # type: ignore[arg-type]
         )
         try:
@@ -267,6 +265,37 @@ class ScientificTemplateService:
     def _summary(self, preparation: ScientificPreparation) -> TemplateSummary:
         spec = preparation.plot_spec
         assignments = dict(preparation.assignments)
+        if self.manifest.id == "xrd":
+
+            def assigned(role: str) -> str:
+                columns = [
+                    column for column, assigned_role in preparation.assignments if assigned_role == role
+                ]
+                return ", ".join(columns) if columns else "—"
+
+            mode_label = "Rietveld 精修" if spec.plot_kind == "rietveld_refinement" else "普通图谱"
+            return TemplateSummary(
+                heading=f"{self.manifest.name} · {mode_label}",
+                facts=(
+                    ("绘图模式", spec.plot_mode),
+                    ("数据 Profile", spec.source_profile or "ordinary_xrd"),
+                    ("图形类型", spec.plot_kind),
+                    ("X 轴", spec.x_title),
+                    ("Y 轴", spec.y_title),
+                ),
+                roles=(
+                    ("X / 2θ", spec.x_column or "—"),
+                    ("Observed / 实测", assigned("observed")),
+                    ("Calculated / 计算", assigned("calculated")),
+                    ("Background / 背景", assigned("background")),
+                    ("Difference / 差值", assigned("difference")),
+                    ("Phase ticks / 物相刻线", assigned("phase_tick")),
+                    ("Support / 辅助控制", assigned("support")),
+                    ("Series / 普通图谱", assigned("series")),
+                ),
+                components=tuple(item.label for item in spec.series),
+                warnings=preparation.warnings,
+            )
         if spec.plot_kind == "trajectory3d":
             return TemplateSummary(
                 heading=f"{self.manifest.name} · {len(spec.group_order)} 条轨迹",
@@ -326,8 +355,7 @@ class ScientificTemplateService:
     def _mapping_request(self, preparation: ScientificPreparation) -> ColumnMappingRequest:
         contexts = mapping_context_options(self.manifest.id)
         role_items = tuple(
-            MappingRoleOption(key, label, unique)
-            for key, label, unique in role_options(self.manifest.id)
+            MappingRoleOption(key, label, unique) for key, label, unique in role_options(self.manifest.id)
         )
         context_value = preparation.plot_spec.plot_mode if contexts else None
         return ColumnMappingRequest(

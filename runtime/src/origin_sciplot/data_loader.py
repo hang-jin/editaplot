@@ -5,12 +5,13 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import re
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 import pandas as pd
-
 
 SourceFormat = Literal["csv", "txt", "xls", "xlsx"]
 SUPPORTED_TABLE_SUFFIXES = frozenset({".csv", ".txt", ".xls", ".xlsx"})
@@ -46,6 +47,9 @@ class LoadedTable:
     columns: tuple[str, ...]
     frame: pd.DataFrame
     ignored_empty_rows: int
+    metadata: tuple[tuple[str, str], ...] = ()
+    header_row_number: int = 1
+    source_profile: str | None = None
 
     def copy_frame(self) -> pd.DataFrame:
         return self.frame.copy(deep=True)
@@ -85,7 +89,67 @@ def _detect_delimiter(text: str) -> str:
         return detected if counts[detected] else ","
 
 
-def _read_text_table(source: bytes) -> tuple[pd.DataFrame, str, int]:
+def _canonical_header(value: object) -> str:
+    text = unicodedata.normalize("NFKC", "" if value is None else str(value)).casefold()
+    return re.sub(r"[^0-9a-z\u4e00-\u9fff]+", "", text)
+
+
+def _gsas_header_profile(rows: list[list[str]]) -> tuple[int, str] | None:
+    """Locate documented GSAS-II rectangular data inside an exported CSV.
+
+    GSAS-II's ordinary Powder CSV can place Histogram, instrument and sample
+    parameter records before the six-column data header. Its publication CSV
+    starts with a wider table whose sparse control columns can have fewer
+    values than the main pattern columns. Detection is intentionally based on
+    the documented header roles, not on a filename or a broad "looks numeric"
+    guess.
+    """
+
+    for index, row in enumerate(rows[:200]):
+        tokens = tuple(_canonical_header(value) for value in row)
+        token_set = set(tokens)
+        if {"x", "yobs", "weight", "ycalc", "ybkg", "q"}.issubset(token_set):
+            if index == 0:
+                return index, "gsas_ii_powder_csv"
+            prefix_keys = {_canonical_header(prefix[0]) for prefix in rows[:index] if prefix}
+            if "histogram" in prefix_keys and any(
+                key.startswith(("instparm", "samparm")) for key in prefix_keys
+            ):
+                return index, "gsas_ii_powder_csv"
+
+        publication_required = {"used", "obs", "calc", "bkg", "diff"}
+        has_x = any(
+            header_value == "x"
+            or header_value.startswith("x2")
+            or header_value.startswith("xq")
+            for header_value in tokens
+        )
+        if publication_required.issubset(token_set) and has_x:
+            return index, "gsas_ii_publication_csv"
+    return None
+
+
+def _metadata_records(rows: list[list[str]]) -> tuple[tuple[str, str], ...]:
+    records: list[tuple[str, str]] = []
+    for row in rows:
+        if not row or all(not str(value).strip() for value in row):
+            continue
+        key = str(row[0]).strip()
+        value = " | ".join(str(item).strip() for item in row[1:] if str(item).strip())
+        records.append((key, value))
+    return tuple(records)
+
+
+def _read_text_table(
+    source: bytes,
+) -> tuple[
+    pd.DataFrame,
+    str,
+    int,
+    tuple[tuple[str, str], ...],
+    int,
+    str | None,
+]:
     if not source:
         raise DataLoadError("empty_file", "The data file is empty.")
     try:
@@ -101,13 +165,19 @@ def _read_text_table(source: bytes) -> tuple[pd.DataFrame, str, int]:
         raise DataLoadError("table_parse_error", f"The delimited table is invalid: {exc}") from exc
     if not rows:
         raise DataLoadError("empty_file", "The data file is empty.")
-    headers = _validated_headers(list(rows[0]))
+    recognized = _gsas_header_profile(rows)
+    header_index = recognized[0] if recognized else 0
+    source_profile = recognized[1] if recognized else None
+    headers = _validated_headers(list(rows[header_index]))
+    metadata = _metadata_records(rows[:header_index])
     data: list[list[str]] = []
     ignored_empty_rows = 0
-    for row_number, row in enumerate(rows[1:], start=2):
+    for row_number, row in enumerate(rows[header_index + 1 :], start=header_index + 2):
         if not row or all(not cell.strip() for cell in row):
             ignored_empty_rows += 1
             continue
+        if source_profile and len(row) < len(headers):
+            row = [*row, *([""] * (len(headers) - len(row)))]
         if len(row) != len(headers):
             raise DataLoadError(
                 "malformed_row",
@@ -117,7 +187,14 @@ def _read_text_table(source: bytes) -> tuple[pd.DataFrame, str, int]:
         data.append(row)
     if not data:
         raise DataLoadError("no_data_rows", "The table has no data rows.")
-    return pd.DataFrame(data, columns=headers), delimiter, ignored_empty_rows
+    return (
+        pd.DataFrame(data, columns=headers),
+        delimiter,
+        ignored_empty_rows,
+        metadata,
+        header_index + 1,
+        source_profile,
+    )
 
 
 def _frame_from_excel_matrix(matrix: pd.DataFrame) -> tuple[pd.DataFrame, int] | None:
@@ -183,8 +260,18 @@ def load_table(path: str | Path) -> LoadedTable:
 
     delimiter: str | None = None
     sheet_name: str | None = None
+    metadata: tuple[tuple[str, str], ...] = ()
+    header_row_number = 1
+    source_profile: str | None = None
     if suffix in {".csv", ".txt"}:
-        frame, delimiter, ignored_empty_rows = _read_text_table(source)
+        (
+            frame,
+            delimiter,
+            ignored_empty_rows,
+            metadata,
+            header_row_number,
+            source_profile,
+        ) = _read_text_table(source)
     else:
         engine = "openpyxl" if suffix == ".xlsx" else "xlrd"
         frame, sheet_name, ignored_empty_rows = _read_excel_table(source_path, engine=engine)
@@ -199,6 +286,9 @@ def load_table(path: str | Path) -> LoadedTable:
         columns=tuple(str(column) for column in frame.columns),
         frame=frame,
         ignored_empty_rows=ignored_empty_rows,
+        metadata=metadata,
+        header_row_number=header_row_number,
+        source_profile=source_profile,
     )
 
 

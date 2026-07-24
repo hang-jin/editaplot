@@ -123,7 +123,7 @@ def main() -> int:
         },
         "human_review": {
             "decision": "approved_for_public_source_release",
-            "reviewed_on": "2026-07-21",
+            "reviewed_on": "2026-07-24",
             "scope": (
                 "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, "
                 "metadata, and redistribution boundary"

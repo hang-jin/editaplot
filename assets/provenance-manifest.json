@@ -3,7 +3,7 @@
   "release_policy": "synthetic teaching data and original/generated assets only",
   "inventory_generator": {
     "path": "tools/build_asset_provenance.py",
-    "sha256": "ff62e9085aae81a43ea7639a272b83635ff2ce2a9a38dfa3d64883ee1ac25dc4"
+    "sha256": "1d1bc049ff6550bfff5a00ae3a67ccc5b8c6b94266a2b6a3de8d437e00e00b67"
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
@@ -11,10 +11,10 @@
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
-    "reviewed_on": "2026-07-21",
+    "reviewed_on": "2026-07-24",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, and redistribution boundary"
   },
-  "asset_count": 191,
+  "asset_count": 193,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
@@ -1897,6 +1897,22 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 23,
       "sha256": "2fc97acad5ca7127ccd68d39ddc5d7fa5dfb1d38766000a1410525ad5f9e9fd5",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/xrd/example_gsas_powder.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 719,
+      "sha256": "2c0818b967403886dc894f542568a36209481736c9be2a790030c694fe3777a0",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/xrd/example_gsas_publication.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 870,
+      "sha256": "a3d1154132903d2055d180f4611c31ff17e5d8a84383cc728f927cc26551119e",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

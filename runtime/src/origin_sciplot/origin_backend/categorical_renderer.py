@@ -16,6 +16,12 @@ import pandas as pd
 
 from origin_sciplot.logging_utils import RunLogger
 from origin_sciplot.output_manager import RunOutput, write_json
+from origin_sciplot.scientific_visual import (
+    AdaptiveOriginStyle,
+    interpolate_hex_colors,
+    palette_colors,
+    signed_effect_colors,
+)
 from origin_sciplot.scientific_workflow import ScientificPreparation, prepare_scientific
 from origin_sciplot.template_registry import TemplateManifest
 
@@ -28,21 +34,17 @@ from .scientific_renderer import (
     _apply_page_layer,
     _bind_category_labels,
     _clean_numeric_x_axis,
+    _figure_style,
+    _origin_font_code,
+    _position_axis_titles_on_page,
     _position_x_title,
     _read_axis_state,
     _set_axis_titles,
+    _set_borderless_legend,
     _style_axes,
     _style_label,
     _style_legend,
     _title_geometry,
-    _figure_style,
-    _origin_font_code,
-)
-from origin_sciplot.scientific_visual import (
-    AdaptiveOriginStyle,
-    interpolate_hex_colors,
-    palette_colors,
-    signed_effect_colors,
 )
 from .session import OriginSession
 from .verify_utils import (
@@ -52,7 +54,6 @@ from .verify_utils import (
     verify_text_fonts,
     verify_text_sizes,
 )
-
 
 _PLOTXY_CONTRACT = {
     "horizontal_bar": (215, "BAR"),
@@ -177,10 +178,12 @@ def _selected_plot_frame(
 ) -> tuple[pd.DataFrame, tuple[str, ...]]:
     spec = preparation.plot_spec
     if spec.plot_kind == "sankey":
-        assert spec.source_column and spec.target_column
+        if not spec.source_column or not spec.target_column:
+            raise OriginDrawError("Sankey source and target columns are missing.")
         columns = [spec.source_column, spec.target_column, spec.series[0].source_column]
         return frame.loc[:, columns].copy(deep=True), ()
-    assert spec.category_column is not None
+    if spec.category_column is None:
+        raise OriginDrawError("Categorical plot column is missing.")
     columns = [spec.category_column, *(item.source_column for item in spec.series)]
     error_columns = [item.error_column for item in spec.series if item.error_column]
     if spec.aggregate_error_column:
@@ -280,6 +283,7 @@ def _style_special_legend(
         "legend.color=color(black);legend.bold=0;"
     )
     legend.set_int("font", _origin_font_code(op, style.font_family))
+    _set_borderless_legend(legend)
     return legend
 
 
@@ -399,6 +403,7 @@ def _position_horizontal_value_title(op: Any, layer: Any, label: Any) -> None:
     """Keep the transposed BAR value title horizontal and inside the page."""
     if label is None:
         raise OriginDrawError("Origin horizontal value-axis title is missing.")
+    label.set_int("attach", 1)
     label.set_float("rotate", 0.0)
     op.lt_exec("doc -uw;")
     page_width = float(op.lt_float("page.width"))
@@ -726,6 +731,8 @@ def _build_bar_graph(
         else {}
     )
     op.lt_exec("doc -uw;")
+    _position_axis_titles_on_page(op, layer, title_labels)
+    op.lt_exec("doc -uw;")
     if spec.plot_kind == "horizontal_bar":
         # The category names already identify the categorical axis.  Hiding
         # the redundant generic title preserves room for long 24 pt labels.
@@ -768,6 +775,9 @@ def _build_bar_graph(
             **font_state,
             "external_legend": external_legend_state,
             "data_labels": data_label_state,
+            "legend.showframe": (
+                int(legend.get_int("showframe")) if legend is not None else None
+            ),
             **(
                 _raw_title_geometry(op, title_labels)
                 if spec.plot_kind == "horizontal_bar"
@@ -866,6 +876,7 @@ def _build_pie_graph(
                 "legend.top": legend.get_float("top"),
                 "legend.width": legend.get_float("width"),
                 "legend.height": legend.get_float("height"),
+                "legend.showframe": int(legend.get_int("showframe")),
             }
         )
     return graph, {
@@ -1059,6 +1070,7 @@ def _build_radar_graph(
             text_state.update(
                 verify_text_fonts(op, {"legend": legend}, style.font_family)
             )
+            text_state["legend.showframe"] = int(legend.get_int("showframe"))
     except RuntimeError as exc:
         raise OriginDrawError(str(exc)) from exc
     axis_state = {
@@ -1436,8 +1448,7 @@ def run_categorical_template(
             output.environment_report,
             {
                 "backend": "Origin",
-                "origin_version": session.environment.origin_version,
-                "originpro_version": session.environment.originpro_version,
+                **session.environment.to_dict(),
             },
         )
         logger.write("Categorical Origin graph verified and exported")

@@ -29,7 +29,7 @@ except ImportError:  # pragma: no cover - supported runtime is CPython 3.10-3.12
         importlib_metadata = None  # type: ignore[assignment]
 
 
-PLAN_VERSION = "1.1"
+PLAN_VERSION = "1.3"
 MEDICAL_PANEL_PLAN_VERSION = "1.0"
 AUTO_SCORE_THRESHOLD = 0.84
 AUTO_MARGIN_THRESHOLD = 0.13
@@ -48,6 +48,7 @@ RUNTIME_DEPENDENCIES = (
     ("jsonschema", "jsonschema==4.26.0"),
     ("matplotlib", "matplotlib==3.10.9"),
     ("originpro", "originpro==1.1.15"),
+    ("OriginExt", "OriginExt==1.2.5"),
     ("openpyxl", "openpyxl==3.1.5"),
     ("xlrd", "xlrd==2.0.2"),
     ("PIL", "pillow==12.3.0"),
@@ -590,6 +591,13 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
             "format": loaded.source_format,
             "delimiter": loaded.delimiter,
             "sheet": loaded.sheet_name,
+            "profile": loaded.source_profile,
+            "header_row_number": loaded.header_row_number,
+            "metadata_record_count": len(loaded.metadata),
+            "metadata": [
+                {"key": key, "value": value}
+                for key, value in loaded.metadata
+            ],
         },
         "table": {
             "row_count": len(loaded.frame),
@@ -1069,6 +1077,323 @@ def _beginner_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _prepare_template_for_understanding(
+    path: str | Path,
+    *,
+    template_id: str,
+    mapping: dict[str, Any] | None,
+    engine_home: str | Path | None,
+) -> tuple[Any, Any, Path]:
+    """Prepare one route without previewing, rendering, or calling Origin."""
+
+    root = bootstrap_engine(engine_home)
+    try:
+        from origin_sciplot.template_service import TemplateServiceError, TemplateServiceRegistry
+    except Exception as exc:  # noqa: BLE001
+        raise EditaPlotError("engine_import_failed", f"Could not import template services: {exc}") from exc
+
+    registry = TemplateServiceRegistry()
+    try:
+        service = registry.get(template_id)
+        prepared = service.prepare(path)
+        if mapping is not None:
+            assignments = mapping.get("assignments")
+            if not isinstance(assignments, dict):
+                raise EditaPlotError("mapping_invalid", "Mapping JSON needs an assignments object.")
+            context = str(mapping.get("energy_kind") or mapping.get("plot_mode") or "")
+            prepared = service.confirm_mapping(
+                prepared,
+                assignments={str(key): str(value) for key, value in assignments.items()},
+                energy_kind=context,
+            )
+    except TemplateServiceError as exc:
+        raise EditaPlotError(exc.code, str(exc)) from exc
+    return service, prepared, root
+
+
+def _proposal_for_prepared(
+    prepared: Any,
+    *,
+    template_id: str,
+    source_path: str | Path,
+) -> Any:
+    """Select a domain adapter, falling back to the generic prepared-route bridge."""
+
+    try:
+        if template_id == "xrd":
+            payload = getattr(prepared, "payload", None)
+            if bool(getattr(payload, "mapping_confirmed", False)):
+                # A corrected XRD mapping is the user's scientific decision.
+                # Project that frozen preparation instead of re-running the
+                # raw header detector and reintroducing the ambiguity that the
+                # user has just resolved.
+                from origin_sciplot.semantic_analysis import propose_prepared_semantics
+
+                return propose_prepared_semantics(prepared)
+            from origin_sciplot.data_loader import load_table
+            from origin_sciplot.xrd_semantics import propose_xrd_semantics
+
+            return propose_xrd_semantics(load_table(source_path))
+        from origin_sciplot.semantic_analysis import propose_prepared_semantics
+
+        return propose_prepared_semantics(prepared)
+    except Exception as exc:  # noqa: BLE001 - normalized to the public Skill error envelope
+        code = getattr(exc, "code", "semantic_understanding_failed")
+        raise EditaPlotError(code, str(exc)) from exc
+
+
+def _semantic_confirmation_template(proposal: Any) -> dict[str, Any]:
+    proposal_payload = proposal.to_dict()
+    return {
+        "proposal_hash": proposal.proposal_hash,
+        "confirmed": True,
+        "approved_derived_item_ids": [
+            item["item_id"] for item in proposal_payload["derived_items"]
+        ],
+        "resolved_ambiguities": {
+            item["ambiguity_id"]: (
+                item["options"][0] if item["options"] else "<请填写确认结论>"
+            )
+            for item in proposal_payload["ambiguities"]
+            if item["blocking"]
+        },
+    }
+
+
+def _semantic_decision_zh(disposition: str) -> str:
+    return {
+        "render_primary": "主要图形元素：默认绘制",
+        "render_secondary": "辅助图形元素：按合同绘制",
+        "support_only": "仅用于计算、筛选或验证：不画成曲线",
+        "retain_not_render": "保留在数据/工作簿中：不在图上呈现",
+        "uncertain": "含义不确定：必须先确认或修正映射",
+    }.get(disposition, "需要确认")
+
+
+def understand_data(
+    path: str | Path,
+    *,
+    template_id: str,
+    mapping: dict[str, Any] | None = None,
+    engine_home: str | Path | None = None,
+) -> dict[str, Any]:
+    """Explain every source column and intended figure element before planning.
+
+    The result is a read-only proposal.  It is deliberately not executable
+    until the caller sends the exact proposal hash and explicit confirmation
+    back to :func:`build_plan`.
+    """
+
+    source_path = Path(path).expanduser()
+    before_sha256 = _sha256(source_path)
+    service, prepared, _root = _prepare_template_for_understanding(
+        source_path,
+        template_id=template_id,
+        mapping=mapping,
+        engine_home=engine_home,
+    )
+    proposal = _proposal_for_prepared(
+        prepared,
+        template_id=template_id,
+        source_path=source_path,
+    )
+    proposal_payload = proposal.to_dict()
+    after_sha256 = _sha256(source_path)
+    if len({before_sha256, after_sha256, proposal.source_sha256}) != 1:
+        raise EditaPlotError(
+            "source_changed_during_understanding",
+            "The source file changed while EditaPlot was interpreting it.",
+        )
+
+    uncertain_items = [
+        item["item_id"]
+        for item in proposal_payload["data_items"]
+        if item["disposition"] == "uncertain"
+    ]
+    blocking_ambiguities = [
+        item["ambiguity_id"]
+        for item in proposal_payload["ambiguities"]
+        if item["blocking"]
+    ]
+    can_confirm = not uncertain_items
+    return {
+        "schema_version": "1.0",
+        "ok": True,
+        "state": (
+            "awaiting_semantic_confirmation"
+            if can_confirm
+            else "awaiting_column_meaning_correction"
+        ),
+        "source": {
+            "file_name": source_path.name,
+            "sha256": proposal.source_sha256,
+            "columns": list(proposal.source_columns),
+            "bytes_unchanged": True,
+        },
+        "template": {
+            "id": template_id,
+            "name": service.manifest.name,
+        },
+        "understanding": {
+            "domain": proposal_payload["domain"],
+            "proposal_hash": proposal.proposal_hash,
+            "column_decisions": [
+                {
+                    **item,
+                    "decision_zh": _semantic_decision_zh(str(item["disposition"])),
+                }
+                for item in proposal_payload["data_items"]
+            ],
+            "derived_items": proposal_payload["derived_items"],
+            "figure_elements": proposal_payload["figure_elements"],
+            "ambiguities": proposal_payload["ambiguities"],
+        },
+        "confirmation_gate": {
+            "required": True,
+            "can_confirm_now": can_confirm,
+            "uncertain_item_ids": uncertain_items,
+            "blocking_ambiguity_ids": blocking_ambiguities,
+            "message_zh": (
+                "请核对：数据类型、每列用途、需要画出的元素、只用于计算/验证的列，以及明确不画的列。"
+                "确认无误后，再把下面的确认对象交给 plan。"
+                if can_confirm
+                else "当前仍有不确定列；请先说明列含义或提供修正后的列映射，再重新生成元素清单。"
+            ),
+            "confirmation_payload_template": _semantic_confirmation_template(proposal),
+        },
+        "execution": {
+            "plan_created": False,
+            "render_started": False,
+            "origin_called": False,
+        },
+    }
+
+
+def inspect_reference(
+    path: str | Path,
+    *,
+    engine_home: str | Path | None = None,
+) -> dict[str, Any]:
+    """Validate one local reference image without OCR or model inference."""
+
+    bootstrap_engine(engine_home)
+    try:
+        from origin_sciplot.reference_figure import inspect_reference_image
+
+        metadata = inspect_reference_image(path)
+    except Exception as exc:  # noqa: BLE001 - normalized public error envelope
+        code = getattr(exc, "code", "reference_image_invalid")
+        raise EditaPlotError(code, str(exc)) from exc
+    return {
+        "schema_version": "1.0",
+        "ok": True,
+        "reference": metadata.to_dict(),
+        "next_step": {
+            "action": "describe_reference_grammar",
+            "message_zh": (
+                "请让 Codex 只提取参考图的面板、图形标记、编码关系、布局和视觉层级；"
+                "不要复制原图数值、统计结果、作者文字、Logo 或水印。"
+            ),
+        },
+    }
+
+
+def review_reference_figure(
+    image_path: str | Path,
+    spec_payload: dict[str, Any],
+    *,
+    engine_home: str | Path | None = None,
+) -> dict[str, Any]:
+    """Validate a model-described reference grammar and ask for user approval."""
+
+    bootstrap_engine(engine_home)
+    try:
+        from origin_sciplot.reference_figure import (
+            ReferenceFigureSpec,
+            inspect_reference_image,
+        )
+
+        metadata = inspect_reference_image(image_path)
+        spec = ReferenceFigureSpec.from_dict(spec_payload, image_metadata=metadata)
+    except Exception as exc:  # noqa: BLE001 - normalized public error envelope
+        code = getattr(exc, "code", "reference_spec_invalid")
+        raise EditaPlotError(code, str(exc)) from exc
+    if spec.confirmed:
+        raise EditaPlotError(
+            "reference_review_requires_draft",
+            "Reference review requires an unconfirmed draft; confirmation is a separate user action.",
+        )
+    payload = spec.to_dict()
+    return {
+        "schema_version": "1.0",
+        "ok": True,
+        "state": "awaiting_reference_confirmation",
+        "reference": metadata.to_dict(),
+        "reference_understanding": {
+            "contract_sha256": spec.contract_sha256,
+            "layout": payload["layout"],
+            "marks": payload["marks"],
+            "encodings": payload["encodings"],
+            "style": payload["style"],
+            "text_roles": payload["text_roles"],
+            "essential_features": payload["essential_features"],
+        },
+        "confirmation_gate": {
+            "required": True,
+            "message_zh": (
+                "请确认这份理解只保留了图形语法和视觉风格，而且所有必要元素都已绑定到你的数据。"
+            ),
+            "confirmation_payload_template": {
+                "reference_contract_hash": spec.contract_sha256,
+                "confirmed": True,
+            },
+        },
+        "safety_boundary": {
+            "copy_reference_values": False,
+            "copy_reference_text": False,
+            "copy_logo_or_watermark": False,
+            "execute_generated_code": False,
+            "origin_called": False,
+        },
+    }
+
+
+def _confirm_reference_spec(
+    image_path: str | Path,
+    spec_payload: dict[str, Any],
+    confirmation: dict[str, Any] | None,
+) -> Any:
+    if not isinstance(confirmation, dict) or confirmation.get("confirmed") is not True:
+        raise EditaPlotError(
+            "reference_confirmation_required",
+            "Review and explicitly confirm the reference-figure understanding before planning.",
+        )
+    try:
+        from origin_sciplot.reference_figure import (
+            ReferenceFigureSpec,
+            inspect_reference_image,
+        )
+
+        metadata = inspect_reference_image(image_path)
+        spec = ReferenceFigureSpec.from_dict(spec_payload, image_metadata=metadata)
+    except Exception as exc:  # noqa: BLE001
+        code = getattr(exc, "code", "reference_spec_invalid")
+        raise EditaPlotError(code, str(exc)) from exc
+    supplied_hash = confirmation.get("reference_contract_hash")
+    if supplied_hash != spec.contract_sha256:
+        raise EditaPlotError(
+            "reference_confirmation_hash_mismatch",
+            "The confirmed reference understanding no longer matches the current image and grammar.",
+            expected_reference_contract_hash=spec.contract_sha256,
+            supplied_reference_contract_hash=supplied_hash,
+        )
+    try:
+        return spec if spec.confirmed else spec.confirm()
+    except Exception as exc:  # noqa: BLE001
+        code = getattr(exc, "code", "reference_confirmation_invalid")
+        raise EditaPlotError(code, str(exc)) from exc
+
+
 def start_session(
     path: str | Path,
     *,
@@ -1224,6 +1549,40 @@ def start_session(
             }
         )
 
+    semantic_understanding: dict[str, Any] | None = None
+    if selected_template_id is not None:
+        try:
+            semantic_understanding = understand_data(
+                source_path,
+                template_id=selected_template_id,
+                engine_home=engine_home,
+            )
+        except EditaPlotError as exc:
+            if exc.code.startswith("source_changed"):
+                raise
+            semantic_understanding = {
+                "ok": False,
+                "state": "awaiting_column_meaning_correction",
+                "error": exc.to_dict()["error"],
+                "message_zh": "候选模板已找到，但需要先补充列含义或修正映射，才能生成可靠的元素清单。",
+            }
+        else:
+            if semantic_understanding["source"]["sha256"] != before_sha256:
+                raise EditaPlotError(
+                    "source_changed_during_start",
+                    "The source file changed while EditaPlot was interpreting it.",
+                )
+            confirmation_questions.append(
+                {
+                    "id": "semantic_element_checklist",
+                    "required": True,
+                    "question_zh": (
+                        "请核对元素清单：每列的用途、哪些元素需要绘制、哪些列只用于计算或验证、"
+                        "哪些列保留但不显示；确认正确后才能冻结绘图方案。"
+                    ),
+                }
+            )
+
     return {
         "schema_version": "1.0",
         "session_type": "beginner_start",
@@ -1255,6 +1614,7 @@ def start_session(
         },
         "requires_scientific_confirmation": True,
         "confirmation_questions": confirmation_questions,
+        "semantic_understanding": semantic_understanding,
         "professional_precomputed_notice": professional_notice,
         "safe_defaults": {
             "source_data": "只读检查；不修改、不补列、不覆盖原始文件。",
@@ -1290,6 +1650,58 @@ def _serialize(value: Any) -> Any:
     return value
 
 
+def _confirm_semantic_proposal(
+    proposal: Any,
+    confirmation: dict[str, Any] | None,
+) -> Any:
+    if not isinstance(confirmation, dict):
+        raise EditaPlotError(
+            "semantic_confirmation_required",
+            "Review the data-understanding proposal and explicitly confirm it before planning.",
+            proposal_hash=proposal.proposal_hash,
+            confirmation_payload_template=_semantic_confirmation_template(proposal),
+        )
+    if confirmation.get("confirmed") is not True:
+        raise EditaPlotError(
+            "semantic_confirmation_required",
+            "The semantic confirmation must explicitly set confirmed=true.",
+            proposal_hash=proposal.proposal_hash,
+        )
+    supplied_hash = confirmation.get("proposal_hash")
+    if supplied_hash != proposal.proposal_hash:
+        raise EditaPlotError(
+            "semantic_proposal_hash_mismatch",
+            "The confirmed data understanding no longer matches the current source and mapping.",
+            expected_proposal_hash=proposal.proposal_hash,
+            supplied_proposal_hash=supplied_hash,
+        )
+    approved = confirmation.get("approved_derived_item_ids", [])
+    resolutions = confirmation.get("resolved_ambiguities", {})
+    if not isinstance(approved, list) or not all(isinstance(item, str) for item in approved):
+        raise EditaPlotError(
+            "semantic_confirmation_invalid",
+            "approved_derived_item_ids must be a JSON array of item IDs.",
+        )
+    if not isinstance(resolutions, dict) or not all(
+        isinstance(key, str) and isinstance(value, str)
+        for key, value in resolutions.items()
+    ):
+        raise EditaPlotError(
+            "semantic_confirmation_invalid",
+            "resolved_ambiguities must be a JSON object of ambiguity IDs and selected answers.",
+        )
+    try:
+        return proposal.confirm(
+            user_confirmed=True,
+            approved_derived_item_ids=approved,
+            resolved_ambiguities=resolutions,
+        )
+    except Exception as exc:  # noqa: BLE001 - normalized semantic contract error
+        code = getattr(exc, "code", "semantic_confirmation_invalid")
+        details = getattr(exc, "details", {})
+        raise EditaPlotError(code, str(exc), **details) from exc
+
+
 def build_plan(
     path: str | Path,
     *,
@@ -1302,6 +1714,12 @@ def build_plan(
     y_title: str | None = None,
     palette_id: str | None = None,
     mapping: dict[str, Any] | None = None,
+    semantic_confirmation: dict[str, Any] | None = None,
+    reference_image: str | Path | None = None,
+    reference_spec: dict[str, Any] | None = None,
+    reference_confirmation: dict[str, Any] | None = None,
+    reference_route: str = "template_adaptation",
+    reference_bindings: dict[str, str] | None = None,
     engine_home: str | Path | None = None,
 ) -> dict[str, Any]:
     """Freeze a selected template preparation into a source-bound render plan."""
@@ -1309,6 +1727,10 @@ def build_plan(
         raise EditaPlotError("claim_required", "A one-sentence figure claim is required.")
     root = bootstrap_engine(engine_home)
     try:
+        from origin_sciplot.origin_backend.template_capabilities import (
+            OriginCapability,
+            get_template_capability_profile,
+        )
         from origin_sciplot.palette_catalog import get_palette, palette_to_dict
         from origin_sciplot.scientific_workflow import (
             apply_scientific_palette_override,
@@ -1335,6 +1757,11 @@ def build_plan(
     except TemplateServiceError as exc:
         raise EditaPlotError(exc.code, str(exc)) from exc
 
+    semantic_proposal = _proposal_for_prepared(
+        prepared,
+        template_id=template_id,
+        source_path=path,
+    )
     worker_mapping = service.worker_mapping(prepared)
     frozen_payload = prepared.payload
     axis_title_overrides = {
@@ -1375,6 +1802,33 @@ def build_plan(
     display_transform = getattr(plot_spec, "display_transform", "identity") if plot_spec else "identity"
     if hasattr(plot_spec, "visual_profile"):
         display_transform = plot_spec.visual_profile
+    capability_profile = get_template_capability_profile(template_id)
+    route_capabilities: set[OriginCapability] = set()
+    if plot_spec is not None:
+        if getattr(plot_spec, "aggregate_error_column", None) or any(
+            getattr(series, "error_column", None)
+            for series in getattr(plot_spec, "series", ())
+        ):
+            route_capabilities.add(OriginCapability.ERROR_BARS)
+        if getattr(plot_spec, "inset_series", ()):
+            route_capabilities.add(OriginCapability.INSET_LAYER)
+        if any(
+            getattr(plot_spec, axis_name, None) == "log10"
+            for axis_name in ("x_scale", "y_scale")
+        ):
+            route_capabilities.add(OriginCapability.LOG_AXIS)
+    invalid_route_capabilities = route_capabilities - (
+        capability_profile.required | capability_profile.optional
+    )
+    if invalid_route_capabilities:
+        invalid_names = ", ".join(
+            sorted(capability.value for capability in invalid_route_capabilities)
+        )
+        raise EditaPlotError(
+            "origin_capability_profile_invalid",
+            f"The template capability profile does not allow: {invalid_names}.",
+        )
+    activated_optional_capabilities = route_capabilities & capability_profile.optional
 
     summary_facts = [list(item) for item in prepared.summary.facts]
     if plot_spec is not None and axis_title_overrides:
@@ -1384,6 +1838,97 @@ def build_plan(
             elif fact[0] == "Y 轴":
                 fact[1] = plot_spec.y_title
 
+    semantic_contract = _confirm_semantic_proposal(
+        semantic_proposal,
+        semantic_confirmation,
+    )
+    reference_values = (reference_image, reference_spec, reference_confirmation)
+    reference_requested = any(value is not None for value in reference_values)
+    if reference_requested and not all(value is not None for value in reference_values):
+        raise EditaPlotError(
+            "reference_inputs_incomplete",
+            "Reference adaptation needs an image, a reviewed spec, and explicit confirmation.",
+        )
+    reference_adaptation: dict[str, Any] | None = None
+    reference_style_report: dict[str, Any] | None = None
+    reference_renderer_ready = True
+    reference_blocked_reasons: list[str] = []
+    if reference_requested:
+        if (
+            reference_image is None
+            or reference_spec is None
+            or reference_confirmation is None
+        ):
+            raise EditaPlotError(
+                "reference_inputs_incomplete",
+                "Reference adaptation needs an image, a reviewed spec, and explicit confirmation.",
+            )
+        if template_id == "xps":
+            raise EditaPlotError(
+                "reference_style_xps_unsupported",
+                "XPS keeps its verified component and fill style contract.",
+            )
+        confirmed_reference = _confirm_reference_spec(
+            reference_image,
+            reference_spec,
+            reference_confirmation,
+        )
+        try:
+            from origin_sciplot.reference_adaptation import (
+                build_reference_adaptation_plan,
+            )
+
+            adaptation = build_reference_adaptation_plan(
+                semantic_contract,
+                confirmed_reference,
+                route=reference_route,
+                template_id=template_id if reference_route == "template_adaptation" else None,
+                semantic_bindings=reference_bindings,
+            )
+        except Exception as exc:  # noqa: BLE001
+            code = getattr(exc, "code", "reference_adaptation_invalid")
+            raise EditaPlotError(code, str(exc)) from exc
+        reference_adaptation = adaptation.to_dict()
+        required_reference_capabilities = set(
+            reference_adaptation["origin_capability_gate"][
+                "additional_required_capabilities"
+            ]
+        )
+        allowed_reference_capabilities = {
+            capability.value
+            for capability in (
+                capability_profile.required | capability_profile.optional
+            )
+        }
+        unavailable = sorted(
+            required_reference_capabilities - allowed_reference_capabilities
+        )
+        if unavailable:
+            raise EditaPlotError(
+                "reference_capability_unavailable",
+                "The selected Origin template cannot reproduce all essential reference primitives.",
+                unavailable_capabilities=unavailable,
+            )
+        try:
+            from origin_sciplot.reference_style import apply_reference_style
+
+            style_application = apply_reference_style(
+                frozen_payload,
+                reference_adaptation,
+                locked_palette_id=palette_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            code = getattr(exc, "code", "reference_style_invalid")
+            raise EditaPlotError(code, str(exc)) from exc
+        frozen_payload = style_application.preparation
+        reference_style_report = style_application.report
+        reference_renderer_ready = bool(
+            reference_style_report["execution_allowed"]
+        )
+        reference_blocked_reasons.extend(
+            str(item)
+            for item in reference_style_report.get("blocking_reasons", [])
+        )
     plan: dict[str, Any] = {
         "plan_version": PLAN_VERSION,
         "product": "EditaPlot",
@@ -1405,6 +1950,9 @@ def build_plan(
             "axis_title_overrides": axis_title_overrides,
             "palette": palette_contract,
         },
+        "data_understanding": semantic_contract.to_dict(),
+        "reference_adaptation": reference_adaptation,
+        "reference_style": reference_style_report,
         "template": {
             "id": template_id,
             "name": service.manifest.name,
@@ -1421,6 +1969,10 @@ def build_plan(
             },
             "display_transform_or_profile": display_transform,
             "worker_mapping": _serialize(worker_mapping),
+            "origin_capability_profile": capability_profile.to_dict(),
+            "activated_optional_capabilities": sorted(
+                capability.value for capability in activated_optional_capabilities
+            ),
         },
         "execution": {
             "engine_home": str(root),
@@ -1431,13 +1983,57 @@ def build_plan(
             "render_plan_copy": "render-plan.json",
             "required_outputs": ["opju", "png", "pdf", "tif", "origin_verify_report"],
         },
-        "can_render": bool(template_id in VERIFIED_TEMPLATE_IDS and not prepared.requires_confirmation),
+        "can_render": bool(
+            template_id in VERIFIED_TEMPLATE_IDS
+            and not prepared.requires_confirmation
+            and reference_renderer_ready
+        ),
         "blocked_reasons": (
-            ["column_mapping_confirmation_required"] if prepared.requires_confirmation else []
+            (
+                ["column_mapping_confirmation_required"]
+                if prepared.requires_confirmation
+                else []
+            )
+            + reference_blocked_reasons
         ),
     }
     plan["plan_hash"] = _json_hash(plan)
     return plan
+
+
+def _validate_frozen_semantic_contract(
+    payload: Any,
+    *,
+    source_sha256: str,
+) -> None:
+    if not isinstance(payload, dict):
+        raise EditaPlotError(
+            "semantic_contract_missing",
+            "The render plan has no confirmed data-understanding contract.",
+        )
+    try:
+        from origin_sciplot.semantic_contract import (
+            SemanticContractError,
+            parse_confirmed_semantic_contract,
+        )
+
+        contract = parse_confirmed_semantic_contract(payload)
+    except ImportError as exc:
+        raise EditaPlotError(
+            "semantic_contract_parser_unavailable",
+            "The rendering engine cannot validate the frozen data-understanding contract.",
+        ) from exc
+    except SemanticContractError as exc:
+        raise EditaPlotError(
+            getattr(exc, "code", "semantic_contract_invalid"),
+            str(exc),
+            **getattr(exc, "details", {}),
+        ) from exc
+    if contract.proposal.source_sha256 != source_sha256:
+        raise EditaPlotError(
+            "semantic_contract_source_mismatch",
+            "The data-understanding contract belongs to a different source snapshot.",
+        )
 
 
 def validate_plan(plan: dict[str, Any]) -> None:
@@ -1448,6 +2044,38 @@ def validate_plan(plan: dict[str, Any]) -> None:
     payload.pop("plan_hash", None)
     if not isinstance(expected_hash, str) or expected_hash != _json_hash(payload):
         raise EditaPlotError("plan_hash_mismatch", "The render plan was modified after creation.")
+    source_payload = plan.get("source")
+    if not isinstance(source_payload, dict) or not isinstance(source_payload.get("sha256"), str):
+        raise EditaPlotError("source_contract_missing", "The render plan has no source contract.")
+    _validate_frozen_semantic_contract(
+        plan.get("data_understanding"),
+        source_sha256=str(source_payload["sha256"]),
+    )
+    reference_adaptation = plan.get("reference_adaptation")
+    reference_style = plan.get("reference_style")
+    if reference_adaptation is not None:
+        if not isinstance(reference_adaptation, dict) or not isinstance(
+            reference_style,
+            dict,
+        ):
+            raise EditaPlotError(
+                "reference_style_report_missing",
+                "The render plan has no frozen reference-style report.",
+            )
+        reference_report_payload = dict(reference_style)
+        reference_report_hash = reference_report_payload.pop("report_hash", None)
+        if (
+            not isinstance(reference_report_hash, str)
+            or reference_report_hash != _json_hash(reference_report_payload)
+            or reference_style.get("reference_plan_hash")
+            != reference_adaptation.get("plan_hash")
+            or reference_style.get("output_plan_digest")
+            != plan.get("template", {}).get("plan_digest")
+        ):
+            raise EditaPlotError(
+                "reference_style_report_mismatch",
+                "The frozen reference-style report does not match the render plan.",
+            )
     if not plan.get("can_render"):
         raise EditaPlotError(
             "plan_blocked",
@@ -1470,8 +2098,12 @@ def build_worker_command(
     output_dir: str | Path | None = None,
     close_origin: bool = False,
 ) -> tuple[list[str], dict[str, str], Path]:
+    execution = plan.get("execution")
+    planned_engine_home = (
+        execution.get("engine_home") if isinstance(execution, dict) else None
+    )
+    root = bootstrap_engine(engine_home or planned_engine_home)
     validate_plan(plan)
-    root = bootstrap_engine(engine_home or plan["execution"].get("engine_home"))
     python = str(python_executable or os.environ.get("EDITAPLOT_PYTHON") or sys.executable)
     command = [
         python,
@@ -1498,9 +2130,68 @@ def build_worker_command(
     palette = plan.get("figure_contract", {}).get("palette")
     if isinstance(palette, dict) and palette.get("palette_id"):
         command.extend(("--palette-id", str(palette["palette_id"])))
+    reference_adaptation = plan.get("reference_adaptation")
+    reference_style = plan.get("reference_style")
+    if isinstance(reference_adaptation, dict):
+        if not isinstance(reference_style, dict) or not isinstance(
+            reference_style.get("report_hash"),
+            str,
+        ):
+            raise EditaPlotError(
+                "reference_style_report_missing",
+                "The render plan has no frozen reference-style report.",
+            )
+        command.extend(
+            (
+                "--reference-style-json",
+                json.dumps(
+                    {
+                        "adaptation": reference_adaptation,
+                        "expected_report_hash": reference_style["report_hash"],
+                        "locked_palette_id": (
+                            str(palette["palette_id"])
+                            if isinstance(palette, dict)
+                            and palette.get("palette_id")
+                            else None
+                        ),
+                    },
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+            )
+        )
     env = dict(os.environ)
     source_path = str(root / "src")
     env["PYTHONPATH"] = source_path + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+    env["PYTHONIOENCODING"] = "utf-8"
+    return command, env, root
+
+
+def build_origin_smoke_command(
+    *,
+    output_dir: str | Path,
+    engine_home: str | Path | None = None,
+    python_executable: str | Path | None = None,
+    keep_origin_open: bool = False,
+) -> tuple[list[str], dict[str, str], Path]:
+    """Build a safe subprocess command for an isolated Origin smoke test."""
+
+    root = bootstrap_engine(engine_home)
+    target = Path(output_dir).expanduser().resolve()
+    python = str(python_executable or os.environ.get("EDITAPLOT_PYTHON") or sys.executable)
+    command = [
+        python,
+        "-m",
+        "origin_sciplot.workers.origin_smoke_worker",
+        "--output-dir",
+        str(target),
+        "--keep-origin-open" if keep_origin_open else "--close-origin",
+    ]
+    env = dict(os.environ)
+    source_path = str(root / "src")
+    env["PYTHONPATH"] = source_path + (
+        os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
+    )
     env["PYTHONIOENCODING"] = "utf-8"
     return command, env, root
 
@@ -2294,16 +2985,287 @@ def _origin_executable_from_command(command: str) -> Path | None:
     return resolved if resolved.is_file() else None
 
 
-def discover_origin_application() -> dict[str, Any]:
-    """Locate a local Origin64.exe Automation registration without launching it."""
+def _origin_registry_views(winreg: Any) -> tuple[tuple[int, str], ...]:
+    candidates = (
+        (0, "default registry view"),
+        (getattr(winreg, "KEY_WOW64_32KEY", 0), "32-bit registry view"),
+        (getattr(winreg, "KEY_WOW64_64KEY", 0), "64-bit registry view"),
+    )
+    views: list[tuple[int, str]] = []
+    seen: set[int] = set()
+    for flag, label in candidates:
+        if flag in seen:
+            continue
+        seen.add(flag)
+        views.append((flag, label))
+    return tuple(views)
 
+
+def _origin_registry_value(
+    winreg: Any,
+    hive: Any,
+    subkey: str,
+    view: int,
+    name: str | None = None,
+) -> str | None:
+    try:
+        with winreg.OpenKey(
+            hive,
+            subkey,
+            0,
+            winreg.KEY_READ | view,
+        ) as key:
+            value, _kind = winreg.QueryValueEx(key, name)
+    except (AttributeError, OSError):
+        return None
+    return str(value).strip() if value is not None and str(value).strip() else None
+
+
+def _empty_origin_registration(
+    progid: str,
+    role: str,
+    *,
+    reason: str = "origin_com_progid_not_registered",
+) -> dict[str, Any]:
+    return {
+        "role": role,
+        "progid": progid,
+        "registration_detected": False,
+        "path": None,
+        "clsid": None,
+        "registry_view": None,
+        "reason": reason,
+        "callability_status": "not_detected",
+    }
+
+
+def _discover_origin_com_registration(
+    winreg: Any,
+    *,
+    progid: str,
+    role: str,
+) -> dict[str, Any]:
+    result = _empty_origin_registration(progid, role)
+    views = _origin_registry_views(winreg)
+    clsids: list[tuple[str, int, str]] = []
+    seen_clsids: set[str] = set()
+    for view, label in views:
+        clsid = _origin_registry_value(
+            winreg,
+            winreg.HKEY_CLASSES_ROOT,
+            rf"{progid}\CLSID",
+            view,
+        )
+        if not clsid:
+            continue
+        if result["clsid"] is None:
+            result["clsid"] = clsid
+            result["registry_view"] = label
+        normalized = clsid.casefold()
+        if normalized in seen_clsids:
+            continue
+        seen_clsids.add(normalized)
+        clsids.append((clsid, view, label))
+
+    if not clsids:
+        return result
+
+    for clsid, progid_view, progid_label in clsids:
+        searches = [
+            (rf"CLSID\{clsid}\LocalServer32", progid_view, progid_label),
+            *[
+                (rf"CLSID\{clsid}\LocalServer32", view, label)
+                for view, label in views
+                if view != progid_view
+            ],
+            (rf"WOW6432Node\CLSID\{clsid}\LocalServer32", 0, "WOW6432Node"),
+        ]
+        seen_searches: set[tuple[str, int]] = set()
+        for subkey, view, label in searches:
+            search_key = (subkey.casefold(), view)
+            if search_key in seen_searches:
+                continue
+            seen_searches.add(search_key)
+            command = _origin_registry_value(
+                winreg,
+                winreg.HKEY_CLASSES_ROOT,
+                subkey,
+                view,
+            )
+            if not command:
+                continue
+            executable = _origin_executable_from_command(command)
+            if executable is not None:
+                return {
+                    **result,
+                    "registration_detected": True,
+                    "path": str(executable),
+                    "clsid": clsid,
+                    "registry_view": label,
+                    "reason": "registered_origin64_executable_found",
+                    "callability_status": "registration_detected",
+                }
+    return {
+        **result,
+        "reason": "registered_origin64_executable_missing",
+    }
+
+
+def _origin_executable_from_install_record(
+    *,
+    display_icon: str | None,
+    install_location: str | None,
+) -> Path | None:
+    if display_icon:
+        executable = _origin_executable_from_command(display_icon)
+        if executable is not None:
+            return executable
+    if install_location:
+        location = Path(os.path.expandvars(install_location.strip().strip('"'))).expanduser()
+        command = f'"{location / "Origin64.exe"}"'
+        executable = _origin_executable_from_command(command)
+        if executable is not None:
+            return executable
+    return None
+
+
+def _same_origin_executable(first: str | Path, second: str | Path) -> bool:
+    try:
+        return os.path.samefile(first, second)
+    except OSError:
+        first_key = os.path.normcase(os.path.abspath(os.fspath(first)))
+        second_key = os.path.normcase(os.path.abspath(os.fspath(second)))
+        return first_key == second_key
+
+
+def _discover_installed_origin_candidates(winreg: Any) -> list[dict[str, Any]]:
+    query_info = getattr(winreg, "QueryInfoKey", None)
+    enum_key = getattr(winreg, "EnumKey", None)
+    if query_info is None or enum_key is None:
+        return []
+
+    uninstall_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+    hives = [
+        ("HKLM", getattr(winreg, "HKEY_LOCAL_MACHINE", None)),
+        ("HKCU", getattr(winreg, "HKEY_CURRENT_USER", None)),
+    ]
+    candidates: list[dict[str, Any]] = []
+    for hive_label, hive in hives:
+        if hive is None:
+            continue
+        for view, view_label in _origin_registry_views(winreg):
+            try:
+                with winreg.OpenKey(
+                    hive,
+                    uninstall_key,
+                    0,
+                    winreg.KEY_READ | view,
+                ) as key:
+                    count = int(query_info(key)[0])
+                    subkeys = []
+                    for index in range(count):
+                        try:
+                            subkeys.append(str(enum_key(key, index)))
+                        except OSError:
+                            continue
+            except (AttributeError, OSError, TypeError, ValueError):
+                continue
+
+            for child in subkeys:
+                product_key = rf"{uninstall_key}\{child}"
+                display_name = _origin_registry_value(
+                    winreg,
+                    hive,
+                    product_key,
+                    view,
+                    "DisplayName",
+                )
+                if not display_name or not re.match(
+                    r"^Origin(?:Pro)?(?:\s+|(?=\d))",
+                    display_name,
+                    flags=re.IGNORECASE,
+                ):
+                    continue
+                display_version = _origin_registry_value(
+                    winreg,
+                    hive,
+                    product_key,
+                    view,
+                    "DisplayVersion",
+                )
+                display_icon = _origin_registry_value(
+                    winreg,
+                    hive,
+                    product_key,
+                    view,
+                    "DisplayIcon",
+                )
+                install_location = _origin_registry_value(
+                    winreg,
+                    hive,
+                    product_key,
+                    view,
+                    "InstallLocation",
+                )
+                executable = _origin_executable_from_install_record(
+                    display_icon=display_icon,
+                    install_location=install_location,
+                )
+                if executable is None:
+                    continue
+                existing = next(
+                    (
+                        item
+                        for item in candidates
+                        if _same_origin_executable(str(item["path"]), executable)
+                    ),
+                    None,
+                )
+                if existing is not None:
+                    if not existing.get("display_version") and display_version:
+                        existing["display_version"] = display_version
+                    continue
+                candidates.append(
+                    {
+                        "display_name": display_name,
+                        "display_version": display_version,
+                        "path": str(executable),
+                        "registry_hive": hive_label,
+                        "registry_view": view_label,
+                        "active_registration": False,
+                        "active_registration_roles": [],
+                    }
+                )
+    return candidates
+
+
+def discover_origin_application() -> dict[str, Any]:
+    """Discover Origin Automation registrations without launching or modifying Origin."""
+
+    launch = _empty_origin_registration(
+        "Origin.Application",
+        "launch_isolated",
+    )
+    attach = _empty_origin_registration(
+        "Origin.ApplicationSI",
+        "attach_existing",
+    )
     result: dict[str, Any] = {
         "application_present": False,
         "path": None,
-        "progid": "Origin.ApplicationSI",
+        "progid": launch["progid"],
         "clsid": None,
         "registry_view": None,
         "callability_status": "not_detected",
+        "registration_detected": False,
+        "launch_registration_detected": False,
+        "attach_registration_detected": False,
+        "preferred_connection_mode": "launch_isolated",
+        "registrations": [launch, attach],
+        "multiple_installations_detected": False,
+        "installed_candidates": [],
+        "live_connection_tested": False,
+        "live_connection_status": "not_tested",
     }
     if platform.system() != "Windows":
         return {**result, "reason": "windows_required"}
@@ -2312,51 +3274,63 @@ def discover_origin_application() -> dict[str, Any]:
     except ImportError:  # pragma: no cover - winreg exists on supported Windows CPython
         return {**result, "reason": "winreg_unavailable"}
 
-    def query_default(subkey: str, view: int) -> str | None:
-        try:
-            with winreg.OpenKey(
-                winreg.HKEY_CLASSES_ROOT,
-                subkey,
-                0,
-                winreg.KEY_READ | view,
-            ) as key:
-                value, _kind = winreg.QueryValueEx(key, None)
-        except OSError:
-            return None
-        return str(value).strip() if value else None
+    launch = _discover_origin_com_registration(
+        winreg,
+        progid="Origin.Application",
+        role="launch_isolated",
+    )
+    attach = _discover_origin_com_registration(
+        winreg,
+        progid="Origin.ApplicationSI",
+        role="attach_existing",
+    )
+    registrations = [launch, attach]
+    installed_candidates = _discover_installed_origin_candidates(winreg)
+    for candidate in installed_candidates:
+        roles = [
+            str(registration["role"])
+            for registration in registrations
+            if registration["registration_detected"]
+            and registration["path"]
+            and _same_origin_executable(str(registration["path"]), str(candidate["path"]))
+        ]
+        candidate["active_registration_roles"] = roles
+        candidate["active_registration"] = bool(roles)
+    installed_candidates.sort(
+        key=lambda item: (
+            not bool(item["active_registration"]),
+            str(item["display_name"]).casefold(),
+            str(item["path"]).casefold(),
+        )
+    )
 
-    view_32 = getattr(winreg, "KEY_WOW64_32KEY", 0)
-    view_64 = getattr(winreg, "KEY_WOW64_64KEY", 0)
-    clsid = None
-    for view in dict.fromkeys((0, view_32, view_64)):
-        clsid = query_default(r"Origin.ApplicationSI\CLSID", view)
-        if clsid:
-            break
-    if not clsid:
-        return {**result, "reason": "origin_com_progid_not_registered"}
-    result["clsid"] = clsid
-
-    searches = [
-        (rf"CLSID\{clsid}\LocalServer32", view_32, "32-bit registry view"),
-        (rf"WOW6432Node\CLSID\{clsid}\LocalServer32", 0, "WOW6432Node"),
-        (rf"CLSID\{clsid}\LocalServer32", 0, "default registry view"),
-        (rf"CLSID\{clsid}\LocalServer32", view_64, "64-bit registry view"),
-    ]
-    for subkey, view, label in searches:
-        command = query_default(subkey, view)
-        if not command:
-            continue
-        executable = _origin_executable_from_command(command)
-        if executable is not None:
-            return {
-                **result,
-                "application_present": True,
-                "path": str(executable),
-                "registry_view": label,
-                "reason": "registered_origin64_executable_found",
-                "callability_status": "ready_to_attempt",
-            }
-    return {**result, "reason": "registered_origin64_executable_missing"}
+    launch_detected = bool(launch["registration_detected"])
+    attach_detected = bool(attach["registration_detected"])
+    any_detected = launch_detected or attach_detected
+    if launch_detected:
+        reason = "registered_origin64_executable_found"
+    elif attach_detected:
+        reason = "origin_isolated_registration_missing"
+    else:
+        reason = str(launch["reason"])
+    return {
+        **result,
+        "application_present": launch_detected,
+        "path": launch["path"],
+        "progid": launch["progid"],
+        "clsid": launch["clsid"],
+        "registry_view": launch["registry_view"],
+        "callability_status": (
+            "registration_detected" if launch_detected else "not_detected"
+        ),
+        "reason": reason,
+        "registration_detected": any_detected,
+        "launch_registration_detected": launch_detected,
+        "attach_registration_detected": attach_detected,
+        "registrations": registrations,
+        "multiple_installations_detected": len(installed_candidates) > 1,
+        "installed_candidates": installed_candidates,
+    }
 
 
 def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
@@ -2394,13 +3368,33 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
         }
     )
     origin_application = discover_origin_application()
+    launch_registration_detected = bool(
+        origin_application.get(
+            "launch_registration_detected",
+            origin_application.get("application_present", False),
+        )
+    )
+    attach_registration_detected = bool(
+        origin_application.get("attach_registration_detected", False)
+    )
     checks.append(
         {
             "name": "origin_application",
-            "ok": origin_application["application_present"],
+            "ok": launch_registration_detected,
             "value": origin_application["path"],
-            "required": "local Origin64.exe registered for Automation",
+            "required": "local Origin64.exe registered as Origin.Application",
             "callability_status": origin_application["callability_status"],
+            "registration_detected": bool(
+                origin_application.get(
+                    "registration_detected",
+                    origin_application.get("application_present", False),
+                )
+            ),
+            "launch_registration_detected": launch_registration_detected,
+            "attach_registration_detected": attach_registration_detected,
+            "live_connection_tested": bool(
+                origin_application.get("live_connection_tested", False)
+            ),
         }
     )
     try:
@@ -2435,12 +3429,15 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
         )
 
     ready_analysis = python_ok and windows and engine_ok and all(
-        dependency_state[name] for name in dependencies if name != "originpro"
+        dependency_state[name]
+        for name in dependencies
+        if name not in {"originpro", "OriginExt"}
     )
     ready_render = (
         ready_analysis
         and dependency_state["originpro"]
-        and origin_application["application_present"]
+        and dependency_state["OriginExt"]
+        and launch_registration_detected
     )
     missing_dependencies = [name for name in dependencies if not dependency_state[name]]
     checks.append(
@@ -2459,15 +3456,37 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
         manual_blockers.extend(host["reasons"] or ["use_supported_windows_host"])
     if not engine_ok:
         manual_blockers.append("provide_editaplot_engine_home")
-    if windows and not origin_application["application_present"]:
-        manual_blockers.append("origin_automation_application_not_detected")
+    if windows and not launch_registration_detected:
+        if attach_registration_detected:
+            manual_blockers.append("origin_isolated_registration_missing")
+        else:
+            manual_blockers.append("origin_automation_application_not_detected")
     if missing_dependencies and not python_ok:
         manual_blockers.append("automatic_repair_requires_verified_python")
     if not dependency_state.get("originpro", False):
         manual_blockers.append("python_originpro_package_missing")
+    if not dependency_state.get("OriginExt", False):
+        manual_blockers.append("python_originext_package_missing")
+    if ready_render:
+        summary_zh = (
+            "环境已具备绘图前提；真正的 Origin 连接会在绘图或独立 smoke test 时完成。"
+        )
+        next_step_zh = "直接提交数据即可，EditaPlot 会自动启动一个专用 Origin 实例。"
+    elif ready_analysis:
+        summary_zh = "数据分析环境可用，但 Origin 绘图前提尚未全部满足。"
+        next_step_zh = (
+            "可自动修复 Python 依赖。"
+            if repairable
+            else "请根据 manual_blockers 修复技术环境后重新运行 Doctor。"
+        )
+    else:
+        summary_zh = "当前环境尚未达到 EditaPlot 的基础运行要求。"
+        next_step_zh = "请先处理 manual_blockers 中的基础环境问题。"
     return {
         "schema_version": "1.0",
         "ok": ready_analysis,
+        "summary_zh": summary_zh,
+        "next_step_zh": next_step_zh,
         "ready_for_analysis": ready_analysis,
         "ready_for_render": ready_render,
         "origin_application": origin_application,
@@ -2489,11 +3508,15 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
 def catalog(*, engine_home: str | Path | None = None) -> dict[str, Any]:
     root = bootstrap_engine(engine_home)
     try:
+        from origin_sciplot.origin_backend.template_capabilities import (
+            get_template_capability_profile,
+        )
         from origin_sciplot.template_registry import TemplateRegistry
     except Exception as exc:  # noqa: BLE001
         raise EditaPlotError("engine_import_failed", f"Could not import template registry: {exc}") from exc
     templates = []
     for manifest in TemplateRegistry().implemented():
+        capability_profile = get_template_capability_profile(manifest.id)
         templates.append(
             {
                 "id": manifest.id,
@@ -2504,6 +3527,7 @@ def catalog(*, engine_home: str | Path | None = None) -> dict[str, Any]:
                 "required_columns": list(manifest.data_guide.required_columns),
                 "optional_columns": list(manifest.data_guide.optional_columns),
                 "accepted_layouts": list(manifest.data_guide.accepted_layouts),
+                "origin_capabilities": capability_profile.to_dict(),
                 "examples": [
                     {"id": item.id, "name": item.name, "description": item.description}
                     for item in manifest.examples
@@ -2687,6 +3711,7 @@ __all__ = [
     "bootstrap_engine",
     "build_plan",
     "build_medical_panel_plan",
+    "build_origin_smoke_command",
     "build_worker_command",
     "catalog",
     "doctor",

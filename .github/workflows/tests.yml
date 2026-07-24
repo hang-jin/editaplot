@@ -38,6 +38,15 @@ jobs:
         run: >-
           python -m ruff check --no-cache
           skill/editaplot/scripts
+          runtime/src/origin_sciplot/origin_backend/capabilities.py
+          runtime/src/origin_sciplot/origin_backend/safe_errors.py
+          runtime/src/origin_sciplot/origin_backend/session.py
+          runtime/src/origin_sciplot/origin_backend/smoke_test.py
+          runtime/src/origin_sciplot/origin_backend/template_capabilities.py
+          runtime/src/origin_sciplot/workers/origin_smoke_worker.py
+          runtime/src/origin_sciplot/workers/run_template_worker.py
+          runtime/templates/xps_adaptive/runner.py
+          runtime/templates/xps_c1s_fit/runner.py
           tests
           tools/build_asset_provenance.py
           tools/build_palette_assets.py

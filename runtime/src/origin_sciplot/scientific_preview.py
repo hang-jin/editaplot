@@ -72,6 +72,19 @@ ORIGIN_PIE_PALETTE = (
 
 PREVIEW_WIDTH_IN = 7.2
 
+RIETVELD_ROLE_STYLES: dict[str, tuple[str, str]] = {
+    "observed": ("marker", "#252B31"),
+    "calculated": ("line", "#C64E59"),
+    "background": ("secondary_line", "#7B8783"),
+    "difference": ("line", "#3E718C"),
+}
+RIETVELD_PHASE_COLORS = (
+    "#5B6F9D",
+    "#8A6A9B",
+    "#4F8073",
+    "#9A7048",
+)
+
 
 @dataclass(frozen=True)
 class _PreviewStyle:
@@ -81,9 +94,12 @@ class _PreviewStyle:
     legend_pt: float
     plot_line_pt: float
     frame_line_pt: float
+    error_bar_pt: float
+    bar_border_pt: float
     major_tick_pt: float
     minor_tick_pt: float
     marker_pt: float
+    fill_transparency_percent: float
     colors: tuple[str, ...]
 
 
@@ -104,11 +120,19 @@ def _resolved_preview_style(style: AdaptiveOriginStyle, marker_size_pt: float) -
         legend_pt=style.legend_size_pt * scale,
         plot_line_pt=style.plot_line_width_pt * scale,
         frame_line_pt=style.frame_line_width_pt * scale,
+        error_bar_pt=style.error_bar_width_pt * scale,
+        bar_border_pt=style.bar_border_width_pt * scale,
         major_tick_pt=style.major_tick_length_pt * scale,
         minor_tick_pt=style.minor_tick_length_pt * scale,
         marker_pt=marker_size_pt * scale,
+        fill_transparency_percent=style.fill_transparency_percent,
         colors=palette_colors(style.palette_name),
     )
+
+
+def _fill_alpha(style: _PreviewStyle) -> float:
+    """Translate Origin percent transparency into Matplotlib opacity."""
+    return max(0.0, min(1.0, 1.0 - style.fill_transparency_percent / 100.0))
 
 
 class ScientificPreviewError(ValueError):
@@ -362,9 +386,9 @@ def _draw_line_profiles(axis: Any, frame: Any, preparation: ScientificPreparatio
                 yerr=_error_values(frame, series),
                 color=color,
                 linewidth=style.plot_line_pt,
-                elinewidth=style.frame_line_pt,
+                elinewidth=style.error_bar_pt,
                 capsize=style.marker_pt * 0.65,
-                capthick=style.frame_line_pt,
+                capthick=style.error_bar_pt,
                 marker="o",
                 markersize=marker_size,
                 markerfacecolor="white",
@@ -405,6 +429,101 @@ def _draw_line_profiles(axis: Any, frame: Any, preparation: ScientificPreparatio
     return right_axis
 
 
+def _draw_rietveld_refinement(
+    axis: Any,
+    frame: Any,
+    preparation: ScientificPreparation,
+) -> None:
+    """Draw the confirmed GSAS/Rietveld grammar without altering source values."""
+    spec = preparation.plot_spec
+    style = _preview_style(axis.figure)
+    if spec.x_column is None:
+        raise ScientificPreviewError(
+            "rietveld_x_missing",
+            "Rietveld preview needs the confirmed diffraction-angle column.",
+        )
+    if spec.display_transform != "identity":
+        raise ScientificPreviewError(
+            "rietveld_display_transform_invalid",
+            "Rietveld profiles must use their source values directly.",
+        )
+    x = frame[spec.x_column].to_numpy(dtype=float, copy=True)
+    for series in spec.series:
+        if series.series_role not in RIETVELD_ROLE_STYLES:
+            raise ScientificPreviewError(
+                "rietveld_role_invalid",
+                f"Unsupported Rietveld profile role: {series.series_role}",
+            )
+        if series.transform != "identity":
+            raise ScientificPreviewError(
+                "rietveld_series_transform_invalid",
+                f"Rietveld {series.series_role} values must be plotted directly.",
+            )
+        mark_kind, color = RIETVELD_ROLE_STYLES[series.series_role]
+        y = frame[series.source_column].to_numpy(dtype=float, copy=True)
+        if mark_kind == "marker":
+            axis.plot(
+                x,
+                y,
+                linestyle="none",
+                marker="o",
+                markersize=max(2.4, style.marker_pt * 0.72),
+                markerfacecolor="white",
+                markeredgecolor=color,
+                markeredgewidth=max(0.65, style.frame_line_pt * 0.50),
+                label=_series_label(series),
+                zorder=4,
+            )
+        else:
+            axis.plot(
+                x,
+                y,
+                color=color,
+                linewidth=(
+                    style.plot_line_pt
+                    if series.series_role == "calculated"
+                    else style.plot_line_pt * 0.78
+                ),
+                linestyle="--" if mark_kind == "secondary_line" else "-",
+                label=_series_label(series),
+                zorder=3 if series.series_role == "calculated" else 2,
+            )
+
+    phase_tick_columns = tuple(getattr(spec, "phase_tick_columns", ()))
+    y_span = float(spec.axis_plan.y_to - spec.axis_plan.y_from)
+    if phase_tick_columns and (not math.isfinite(y_span) or y_span <= 0.0):
+        raise ScientificPreviewError(
+            "rietveld_phase_lane_invalid",
+            "Rietveld phase lanes need a finite positive Y range.",
+        )
+    phase_step = min(
+        0.010,
+        0.034 / max(1, len(phase_tick_columns) - 1),
+    )
+    for index, phase_column in enumerate(phase_tick_columns):
+        if phase_column not in frame.columns:
+            raise ScientificPreviewError(
+                "rietveld_phase_column_missing",
+                f"Rietveld phase-tick column is missing: {phase_column}",
+            )
+        phase_x = frame[phase_column].to_numpy(dtype=float, copy=True)
+        finite_x = phase_x[np.isfinite(phase_x)]
+        if not finite_x.size:
+            continue
+        lane_y = float(spec.axis_plan.y_from + y_span * (0.010 + index * phase_step))
+        axis.plot(
+            finite_x,
+            np.full(finite_x.shape, lane_y, dtype=float),
+            linestyle="none",
+            marker="|",
+            markersize=max(5.0, style.marker_pt * 1.10),
+            markeredgewidth=max(1.0, style.frame_line_pt * 0.72),
+            color=RIETVELD_PHASE_COLORS[index % len(RIETVELD_PHASE_COLORS)],
+            label=str(phase_column),
+            zorder=5,
+        )
+
+
 def _draw_calibration_distribution(
     axis: Any,
     frame: Any,
@@ -436,8 +555,8 @@ def _draw_calibration_distribution(
         width=width,
         color="#A9CBE8",
         edgecolor="#7398B8",
-        linewidth=_preview_style(axis.figure).frame_line_pt * 0.65,
-        alpha=0.32,
+        linewidth=_preview_style(axis.figure).bar_border_pt,
+        alpha=_fill_alpha(_preview_style(axis.figure)),
         zorder=0,
     )
 
@@ -504,9 +623,18 @@ def _draw_grouped_box(axis: Any, frame: Any, preparation: ScientificPreparation)
             patch_artist=True,
             showfliers=False,
             whis=1.5,
-            boxprops={"facecolor": color, "edgecolor": color, "alpha": 0.68, "linewidth": style.frame_line_pt},
-            whiskerprops={"color": color, "linewidth": style.frame_line_pt, "linestyle": "--"},
-            capprops={"color": color, "linewidth": style.frame_line_pt},
+            boxprops={
+                "facecolor": color,
+                "edgecolor": color,
+                "alpha": _fill_alpha(style),
+                "linewidth": style.bar_border_pt,
+            },
+            whiskerprops={
+                "color": color,
+                "linewidth": style.plot_line_pt,
+                "linestyle": "--",
+            },
+            capprops={"color": color, "linewidth": style.plot_line_pt},
             medianprops={"color": "#353B40", "linewidth": style.plot_line_pt},
         )
         _ = result
@@ -518,7 +646,7 @@ def _draw_grouped_box(axis: Any, frame: Any, preparation: ScientificPreparation)
             color="#1F252A",
             edgecolors="white",
             linewidths=max(0.45, style.frame_line_pt * 0.35),
-            alpha=0.82,
+            alpha=_fill_alpha(style),
             zorder=4,
         )
         axis.text(
@@ -542,7 +670,14 @@ def _draw_grouped_box(axis: Any, frame: Any, preparation: ScientificPreparation)
     axis.set_xticks(category_positions, spec.category_order)
     axis.set_xlim(0.4, len(spec.series) + 0.6)
     handles = [
-        Rectangle((0, 0), 1, 1, facecolor=group_colors[group], edgecolor=group_colors[group], alpha=0.68)
+        Rectangle(
+            (0, 0),
+            1,
+            1,
+            facecolor=group_colors[group],
+            edgecolor=group_colors[group],
+            alpha=_fill_alpha(style),
+        )
         for group in spec.group_order
     ]
     axis.legend(
@@ -648,12 +783,12 @@ def _draw_bars(axis: Any, frame: Any, preparation: ScientificPreparation) -> Non
             width=width,
             yerr=_error_values(frame, series),
             color=style.colors[index % len(style.colors)],
-            alpha=0.86,
+            alpha=_fill_alpha(style),
             edgecolor="#111111",
-            linewidth=style.frame_line_pt * 0.65,
+            linewidth=style.bar_border_pt,
             error_kw={
-                "elinewidth": style.frame_line_pt,
-                "capthick": style.frame_line_pt,
+                "elinewidth": style.error_bar_pt,
+                "capthick": style.error_bar_pt,
                 "capsize": style.marker_pt * 0.60,
             },
             label=_series_label(series),
@@ -695,12 +830,12 @@ def _draw_horizontal_bars(axis: Any, frame: Any, preparation: ScientificPreparat
             xerr=_error_values(frame, series),
             height=height,
             color=(ablation_colors if ablation_colors else style.colors[index % len(style.colors)]),
-            alpha=0.84,
+            alpha=_fill_alpha(style),
             edgecolor="#111111",
-            linewidth=style.frame_line_pt * 0.65,
+            linewidth=style.bar_border_pt,
             error_kw={
-                "elinewidth": style.frame_line_pt,
-                "capthick": style.frame_line_pt,
+                "elinewidth": style.error_bar_pt,
+                "capthick": style.error_bar_pt,
                 "capsize": style.marker_pt * 0.60,
             },
             label=_series_label(series),
@@ -735,9 +870,9 @@ def _draw_stacked_bars(axis: Any, frame: Any, preparation: ScientificPreparation
             bottom=bottom,
             width=spec.display_plan.bar_inner_width,
             color=style.colors[index % len(style.colors)],
-            alpha=0.95,
+            alpha=_fill_alpha(style),
             edgecolor="#111111",
-            linewidth=style.frame_line_pt * 0.65,
+            linewidth=style.bar_border_pt,
             label=series.label,
             zorder=3,
         )
@@ -750,8 +885,8 @@ def _draw_stacked_bars(axis: Any, frame: Any, preparation: ScientificPreparation
             yerr=errors,
             fmt="none",
             ecolor="#202020",
-            elinewidth=style.frame_line_pt,
-            capthick=style.frame_line_pt,
+            elinewidth=style.error_bar_pt,
+            capthick=style.error_bar_pt,
             capsize=style.marker_pt * 0.60,
             zorder=5,
         )
@@ -785,7 +920,7 @@ def _draw_raw_summary(axis: Any, frame: Any, preparation: ScientificPreparation)
             color=color,
             edgecolors="white",
             linewidths=max(0.35, style.frame_line_pt * 0.42),
-            alpha=0.86,
+            alpha=_fill_alpha(style),
             zorder=3,
         )
         axis.hlines(
@@ -823,8 +958,8 @@ def _draw_violin(axis: Any, frame: Any, preparation: ScientificPreparation) -> N
         color = style.colors[index % len(style.colors)]
         body.set_facecolor(color)
         body.set_edgecolor(color)
-        body.set_linewidth(style.frame_line_pt * 0.75)
-        body.set_alpha(0.30)
+        body.set_linewidth(style.bar_border_pt)
+        body.set_alpha(_fill_alpha(style))
     boxes = axis.boxplot(
         datasets,
         positions=positions,
@@ -838,8 +973,8 @@ def _draw_violin(axis: Any, frame: Any, preparation: ScientificPreparation) -> N
     for index, box in enumerate(boxes["boxes"]):
         box.set_facecolor(style.colors[index % len(style.colors)])
         box.set_edgecolor("#39424E")
-        box.set_linewidth(style.frame_line_pt * 0.8)
-        box.set_alpha(0.76)
+        box.set_linewidth(style.bar_border_pt)
+        box.set_alpha(_fill_alpha(style))
     axis.set_xlim(0.5, len(datasets) + 0.5)
     axis.set_ylim(spec.axis_plan.y_from, spec.axis_plan.y_to)
     axis.set_xticks(positions, [series.label for series in spec.series])
@@ -870,8 +1005,8 @@ def _draw_raincloud(axis: Any, frame: Any, preparation: ScientificPreparation) -
             vertices[:, 0] = np.maximum(vertices[:, 0], position)
         body.set_facecolor(color)
         body.set_edgecolor(color)
-        body.set_linewidth(style.frame_line_pt * 0.75)
-        body.set_alpha(0.34)
+        body.set_linewidth(style.bar_border_pt)
+        body.set_alpha(_fill_alpha(style))
 
     for index, (position, values) in enumerate(zip(positions, datasets)):
         color = style.colors[index % len(style.colors)]
@@ -884,7 +1019,7 @@ def _draw_raincloud(axis: Any, frame: Any, preparation: ScientificPreparation) -
             color=color,
             edgecolors="white",
             linewidths=max(0.35, style.frame_line_pt * 0.40),
-            alpha=0.76,
+            alpha=_fill_alpha(style),
             zorder=3,
         )
         mean = float(np.mean(values))
@@ -1003,7 +1138,7 @@ def _draw_histogram(axis: Any, frame: Any, preparation: ScientificPreparation) -
             color=color,
             edgecolor=color,
             linewidth=style.frame_line_pt,
-            alpha=0.36 if len(spec.series) > 1 else 0.62,
+            alpha=_fill_alpha(style),
             label=series.label,
         )
     axis.set_xlim(spec.axis_plan.x_from, spec.axis_plan.x_to)
@@ -1083,7 +1218,7 @@ def _draw_bubble(axis: Any, frame: Any, preparation: ScientificPreparation) -> N
         color=color,
         edgecolors="#FFFFFF",
         linewidths=max(0.45, style.frame_line_pt * 0.48),
-        alpha=0.72,
+        alpha=_fill_alpha(style),
     )
     axis.set_xlim(spec.axis_plan.x_from, spec.axis_plan.x_to)
     axis.set_ylim(spec.axis_plan.y_from, spec.axis_plan.y_to)
@@ -1112,10 +1247,10 @@ def _draw_pie(figure: Figure, frame: Any, preparation: ScientificPreparation) ->
     axis = figure.add_axes([0.05, 0.08, 0.62, 0.84], facecolor="white")
     categories = [str(item) for item in frame[spec.category_column].tolist()]
     values = series_values(frame, spec.series[0])
-    colors = palette_colors("composition_teal")
+    colors = interpolate_hex_colors(style.colors[0], style.colors[-1], len(values))
     wedges, _, _ = axis.pie(
         values,
-        colors=[colors[index % len(colors)] for index in range(len(values))],
+        colors=colors,
         startangle=90,
         counterclock=False,
         autopct=lambda pct: f"{pct:.0f}%" if pct >= 4.0 else "",
@@ -1612,6 +1747,9 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         right_axis = None
     elif spec.plot_kind in {"stacked_bar", "percent_stacked_bar"}:
         _draw_stacked_bars(axis, frame, preparation)
+        right_axis = None
+    elif spec.plot_kind == "rietveld_refinement":
+        _draw_rietveld_refinement(axis, frame, preparation)
         right_axis = None
     else:
         _draw_calibration_distribution(axis, frame, preparation)

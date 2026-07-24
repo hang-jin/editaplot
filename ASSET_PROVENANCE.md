@@ -3,13 +3,15 @@
 This open-source release contains only project-created teaching/verification fixtures and original
 project assets.
 
-The 2026-07-21 public-release review covered every listed CSV and PNG, including synthetic/generated
+The 2026-07-24 public-release review covered every listed CSV and PNG, including synthetic/generated
 status, patient/clinical identifiers, labels, embedded PNG text/EXIF, and redistribution boundaries.
 The manifest also binds the inventory builder and gallery fixture generator by SHA-256; changing
 either script requires regenerating and manually reviewing the manifest.
 
 - Every distributed CSV is synthetic. It is not experimental, patient, clinical, or production
   data and must not be interpreted as a scientific result.
+- The two GSAS/GSAS-II XRD fixtures are project-authored teaching tables. They contain no patient,
+  clinical, instrument-account, or third-party experimental records.
 - Gallery PNG files were exported by the verified local editable-figure workflow from those
   synthetic fixtures. The repository does not include the corresponding local logs, plans, OPJU,
   PDF, or TIF evidence.

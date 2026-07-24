@@ -46,6 +46,7 @@ from editaplot_core import (  # noqa: E402
     recommend_charts,
     repair_environment,
     start_session,
+    understand_data,
     validate_plan,
     verify_output,
     windows_host_compatibility,
@@ -56,6 +57,22 @@ pytestmark = pytest.mark.skipif(not ENGINE.is_dir(), reason="EditaPlot runtime i
 ONE_PIXEL_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 )
+
+
+def _semantic_confirmation(
+    source: str | Path,
+    template_id: str,
+    *,
+    mapping: dict[str, object] | None = None,
+) -> dict[str, object]:
+    result = understand_data(
+        source,
+        template_id=template_id,
+        mapping=mapping,
+        engine_home=ENGINE,
+    )
+    assert result["confirmation_gate"]["can_confirm_now"] is True
+    return result["confirmation_gate"]["confirmation_payload_template"]
 
 
 @pytest.mark.parametrize(
@@ -392,6 +409,8 @@ def test_data_commands_refuse_to_replace_the_source_file(
                 "scatter",
                 "--claim",
                 "X and Y are related in this teaching dataset.",
+                "--semantic-confirmation-json",
+                str(source),
                 "--output",
                 str(source),
             ]
@@ -452,6 +471,8 @@ def test_plan_refuses_to_replace_its_mapping_file(
             "X and Y are related in this teaching dataset.",
             "--mapping-json",
             str(mapping),
+            "--semantic-confirmation-json",
+            str(source),
             "--output",
             str(mapping),
         ]
@@ -539,6 +560,7 @@ def test_plan_is_hash_bound_and_builds_safe_worker_command(tmp_path: Path) -> No
         claim="The teaching patterns differ across the measured angle range.",
         evidence_role="comparison",
         intent="XRD diffraction",
+        semantic_confirmation=_semantic_confirmation(source, "xrd"),
         engine_home=ENGINE,
     )
 
@@ -559,6 +581,9 @@ def test_plan_is_hash_bound_and_builds_safe_worker_command(tmp_path: Path) -> No
     )
     assert plan["execution"]["render_plan_copy"] == "render-plan.json"
     assert "requires_manual_origin_start_confirmation" not in plan["execution"]
+    assert plan["template"]["origin_capability_profile"]["template_id"] == "xrd"
+    assert "core_2d" in plan["template"]["origin_capability_profile"]["required"]
+    assert plan["template"]["activated_optional_capabilities"] == []
     assert command[:3] == [sys.executable, "-m", "origin_sciplot.workers.run_template_worker"]
     assert "--expected-plan-digest" in command
     assert command[command.index("--render-plan-file") + 1] == str(plan_file.resolve())
@@ -591,6 +616,7 @@ def test_changed_source_blocks_plan(tmp_path: Path) -> None:
         template_id="scatter",
         claim="Y increases with X in the teaching observations.",
         evidence_role="relationship",
+        semantic_confirmation=_semantic_confirmation(source, "scatter"),
         engine_home=ENGINE,
     )
     source.write_text(source.read_text(encoding="utf-8") + "10,11\n", encoding="utf-8")
@@ -607,6 +633,10 @@ def test_previous_render_plan_schema_is_rejected() -> None:
         template_id="xrd",
         claim="The teaching patterns differ across the measured angle range.",
         evidence_role="comparison",
+        semantic_confirmation=_semantic_confirmation(
+            ENGINE / "templates" / "xrd" / "example_standard.csv",
+            "xrd",
+        ),
         engine_home=ENGINE,
     )
     plan["plan_version"] = "1.0"
@@ -1196,7 +1226,7 @@ def test_origin_discovery_uses_registered_clsid_and_existing_origin64(
         return FakeKey(subkey, access)
 
     def query_value(key: FakeKey, _name: object) -> tuple[str, int]:
-        if key.subkey == r"Origin.ApplicationSI\CLSID":
+        if key.subkey == r"Origin.Application\CLSID":
             return clsid, 1
         if key.subkey == rf"CLSID\{clsid}\LocalServer32" and key.view & 2:
             return f'"{executable}" /Automation', 1
@@ -1211,7 +1241,8 @@ def test_origin_discovery_uses_registered_clsid_and_existing_origin64(
 
     assert result["application_present"] is True
     assert Path(result["path"]) == executable.resolve()
-    assert result["callability_status"] == "ready_to_attempt"
+    assert result["callability_status"] == "registration_detected"
+    assert result["live_connection_tested"] is False
     assert "license_confirmed" not in result
     assert "manual_startup_confirmation" not in result
 
@@ -2167,6 +2198,7 @@ def test_plan_freezes_palette_and_passes_it_to_worker() -> None:
         template_id="line_error",
         claim="Two series have distinct response trajectories.",
         evidence_role="comparison",
+        semantic_confirmation=_semantic_confirmation(source, "line_error"),
         engine_home=ENGINE,
     )
     plan = build_plan(
@@ -2175,6 +2207,7 @@ def test_plan_freezes_palette_and_passes_it_to_worker() -> None:
         claim="Two series have distinct response trajectories.",
         evidence_role="comparison",
         palette_id="ocean_coral",
+        semantic_confirmation=_semantic_confirmation(source, "line_error"),
         engine_home=ENGINE,
     )
 
@@ -2193,6 +2226,7 @@ def test_palette_override_does_not_weaken_xps_contract() -> None:
             claim="XPS component evidence remains editable.",
             evidence_role="spectral decomposition",
             palette_id="ocean_coral",
+            semantic_confirmation=_semantic_confirmation(EXAMPLES / "xps_fit.csv", "xps"),
             engine_home=ENGINE,
         )
 
@@ -2204,6 +2238,10 @@ def test_public_bar_showcase_uses_few_series_and_explicit_sd() -> None:
         claim="Three teaching groups differ across four conditions with explicit SD uncertainty.",
         evidence_role="comparison",
         intent="grouped bar with SD error bars",
+        semantic_confirmation=_semantic_confirmation(
+            PRODUCT_ROOT / "examples" / "gallery" / "bar_grouped_error.csv",
+            "bar",
+        ),
         engine_home=ENGINE,
     )
 
@@ -2221,6 +2259,7 @@ def test_grouped_box_plan_freezes_exact_axis_wording_and_worker_arguments() -> N
         template_id="grouped_box",
         claim="Raw observations remain visible in every group.",
         evidence_role="distribution comparison",
+        semantic_confirmation=_semantic_confirmation(source, "grouped_box"),
         engine_home=ENGINE,
     )
     plan = build_plan(
@@ -2230,6 +2269,7 @@ def test_grouped_box_plan_freezes_exact_axis_wording_and_worker_arguments() -> N
         evidence_role="distribution comparison",
         x_title="处理条件",
         y_title="归一化器官重量比",
+        semantic_confirmation=_semantic_confirmation(source, "grouped_box"),
         engine_home=ENGINE,
     )
 

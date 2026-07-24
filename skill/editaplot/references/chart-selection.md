@@ -1,13 +1,17 @@
 # Chart selection and support levels
 
 Select from the scientific question first, then check that the data layout supports the choice.
+The route list below records template verification on the fully verified Origin 2024b / 10.15
+baseline. It is separate from compatibility with the user's current Origin host. After the live
+smoke, require the template capability decision for that host; a connected 2021+ installation does
+not automatically support every route.
 
 ## Verified V1 routes
 
 | Question/evidence | Candidate | Required shape | Cautions |
 |---|---|---|---|
 | XPS scan or peak fit | `xps` | energy + raw; optional background/envelope/components/residual | Do not invent peaks |
-| Diffraction pattern | `xrd` | 2theta + intensity series | Do not add phase peaks |
+| Diffraction pattern or Rietveld refinement | `xrd` | ordinary: 2theta + intensity series; refinement: X + Obs + Calc, optional Bkg/Diff/explicit Phase positions | Do not add phases or peaks; GSAS Publication Diff is already positioned and must not be offset twice |
 | Absorption spectrum | `xas` | energy + absorption series | Do not auto-normalize |
 | Impedance response | `eis` | Z real/imag or frequency/magnitude/phase | Confirm Nyquist/Bode and signs |
 | Cyclic/linear sweep | `cv`, `lsv` | potential + current series | Preserve acquisition order |
@@ -41,6 +45,9 @@ Select from the scientific question first, then check that the data layout suppo
 ## Ranking signals
 
 - Strong domain headers and units outrank generic positional matches.
+- `Obs/Calc` or `y_obs/y_calc` plus X/2theta strongly favors XRD Rietveld mode. `weight`,
+  `Q`, `Used`, `diff/sigma`, and axis-control columns are not intensity series. Unknown numeric
+  refinement columns require a corrected mapping before planning.
 - Explicit user intent can disambiguate compatible layouts but cannot make invalid data valid.
 - Long category labels favor horizontal bars.
 - Multiple nonnegative components plus a composition intent favor stacked or percent stacked.

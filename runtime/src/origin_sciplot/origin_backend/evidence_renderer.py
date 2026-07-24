@@ -10,6 +10,7 @@ written; display helpers exist only inside the OPJU workbook.
 from __future__ import annotations
 
 import math
+from contextlib import suppress
 from dataclasses import asdict
 from typing import Any
 
@@ -36,9 +37,10 @@ from .scientific_renderer import (
     _apply_page_layer,
     _clean_numeric_x_axis,
     _figure_style,
-    _position_x_title,
     _origin_font_code,
+    _position_x_title,
     _set_axis_titles,
+    _set_borderless_legend,
     _style_axis,
     _style_label,
     _title_geometry,
@@ -52,7 +54,6 @@ from .verify_utils import (
     verify_text_fonts,
     verify_text_sizes,
 )
-
 
 _SUPPORTED_KINDS = frozenset(
     {
@@ -98,12 +99,10 @@ def _source_sheet(op: Any, frame: pd.DataFrame, preparation: ScientificPreparati
 
 
 def _remove_label(layer: Any, name: str) -> None:
-    try:
+    with suppress(Exception):
         label = layer.label(name)
         if label is not None:
             label.remove()
-    except Exception:  # noqa: BLE001 - system templates vary in label ownership
-        pass
 
 
 def _style_evidence_axes(
@@ -175,6 +174,7 @@ def _axis_state(layer: Any) -> dict[str, float | int]:
             "label.type",
             "label.pt",
             "label.font",
+            "label.rotate",
             "thickness",
             "tickthickness",
             "atZero",
@@ -224,6 +224,10 @@ def _validate_axes(
         if int(round(float(state[f"{axis_name}.label.font"]))) != expected_font_code:
             raise OriginDrawError(
                 f"Origin {axis_name.upper()} tick labels are not {style.font_family}."
+            )
+        if abs(float(state[f"{axis_name}.label.rotate"])) > 0.05:
+            raise OriginDrawError(
+                f"Origin {axis_name.upper()} labels inherited an unwanted rotation."
             )
     return state
 
@@ -842,7 +846,8 @@ def _build_histogram_graph(
     if graph is None:
         raise OriginDrawError("Origin did not create the Histogram graph.")
     layer = graph[0]
-    assert spec.bin_begin is not None and spec.bin_end is not None and spec.bin_size is not None
+    if spec.bin_begin is None or spec.bin_end is None or spec.bin_size is None:
+        raise OriginDrawError("Histogram bin contract is incomplete.")
     for index in range(1, len(series_columns) + 1):
         layer.set_float(f"plot{index}.boxchart.binBegin", spec.bin_begin)
         layer.set_float(f"plot{index}.boxchart.binEnd", spec.bin_end)
@@ -876,7 +881,10 @@ def _build_histogram_graph(
             raise OriginDrawError("Origin Histogram bin state is invalid.")
         expected = (spec.bin_begin, spec.bin_end, spec.bin_size)
         actual = (item["begin"], item["end"], item["size"])
-        if any(abs(got - wanted) > 1e-9 for got, wanted in zip(actual, expected)):
+        if any(
+            abs(got - wanted) > 1e-9
+            for got, wanted in zip(actual, expected, strict=True)
+        ):
             raise OriginDrawError(
                 f"Origin Histogram bin readback {actual!r} does not match plan {expected!r}."
             )
@@ -891,6 +899,7 @@ def _build_histogram_graph(
         if legend is None:
             raise OriginDrawError("Origin Histogram legend is missing.")
         legend.set_int("font", _origin_font_code(op, style.font_family))
+        _set_borderless_legend(legend)
     labels, title_state, text_state = _style_titles(op, graph, layer, preparation)
     if legend is not None:
         try:
@@ -900,6 +909,7 @@ def _build_histogram_graph(
             text_state.update(
                 verify_text_fonts(op, {"legend": legend}, style.font_family)
             )
+            text_state["legend.showframe"] = int(legend.get_int("showframe"))
         except RuntimeError as exc:
             raise OriginDrawError(str(exc)) from exc
     axis_state = _validate_axes(op, layer, preparation)
@@ -933,7 +943,8 @@ def _build_bubble_graph(
     style = _figure_style(preparation)
     _source_sheet(op, frame, preparation)
     series = spec.series[0]
-    assert spec.x_column and series.size_column
+    if not spec.x_column or not series.size_column:
+        raise OriginDrawError("Bubble X or size column is missing.")
     columns = [spec.x_column, series.source_column, series.size_column]
     plot_frame = frame.loc[:, columns].copy(deep=True)
     sheet = op.new_sheet("w", "BUBBLE Plot Data")
@@ -1057,7 +1068,8 @@ def _forest_plot_frame(
     spec = preparation.plot_spec
     category = spec.category_column
     series = spec.series[0]
-    assert category and series.lower_column and series.upper_column
+    if not category or not series.lower_column or not series.upper_column:
+        raise OriginDrawError("Forest category or interval columns are missing.")
     count = len(frame)
     rows = np.arange(count, 0, -1, dtype=float)
     interval_x: list[float] = []
@@ -1234,7 +1246,8 @@ def _shap_plot_frame(
     """Create Origin-only beeswarm/color helpers without changing SHAP X values."""
     spec = preparation.plot_spec
     series = spec.series[0]
-    assert spec.category_column and series.color_column
+    if not spec.category_column or not series.color_column:
+        raise OriginDrawError("SHAP category or color column is missing.")
     features = np.asarray(
         [str(value).strip() for value in frame[spec.category_column]],
         dtype=object,
@@ -1533,8 +1546,7 @@ def run_evidence_template(
             output.environment_report,
             {
                 "backend": "Origin",
-                "origin_version": session.environment.origin_version,
-                "originpro_version": session.environment.originpro_version,
+                **session.environment.to_dict(),
             },
         )
         logger.write("Evidence-first Origin graph verified and exported")
