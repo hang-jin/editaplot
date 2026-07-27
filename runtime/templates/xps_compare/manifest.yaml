@@ -1,0 +1,33 @@
+id: xps_compare
+name: XPS 多谱线对比
+category: spectroscopy/xps
+version: 0.1.0
+description: 绘制共享结合能轴上的两条或更多独立实测 XPS 谱线，默认直接叠加且不把拟合列误当作样品谱线
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 54
+family: spectroscopy
+examples:
+  - id: multi_spectrum
+    name_zh: 三样品 XPS 实测谱线对比
+    file: example_standard.csv
+    description_zh: 原创合成的三条实测风格 XPS 谱线，共享结合能轴，不包含背景、包络、分峰或残差。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 对比共享结合能轴上的两条或更多独立实测 XPS 谱线。
+  required_columns: [Binding Energy/结合能列, 至少两个独立实测 Intensity/Counts 数值系列]
+  optional_columns: []
+  accepted_layouts: [宽表；第一条物理 X 列加两条或更多独立实测谱线]
+  aliases: [Binding Energy/结合能, Intensity/强度, Counts/计数, Experimental/实测]
+  notes_zh:
+    - 默认直接叠加源谱线；只有用户明确确认后才能采用纵向显示偏移。
+    - 结合能按 XPS 惯例由高到低显示，但源表数值和顺序保持不变。
+    - Background、Envelope/Fit、Residual、Component/Peak 等列属于拟合语义，不由本模板自动当作独立实测谱线。
+    - 不自动归一化、扣背景、平滑、拟合、分峰、识别谱区或指认化学态。

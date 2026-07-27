@@ -10,6 +10,12 @@
 
 Keep the original file read-only.
 
+The data contract is independent of the installed Origin version. Rendering starts a dedicated
+Origin instance and then checks the selected template against the detected host. Target
+Origin/OriginPro versions are 2021–2026b; 2024b / 10.15 is the only current fully verified
+baseline, so never turn a successful installation discovery into a claim that every route is
+verified on that host.
+
 ## Recognized layouts
 
 ### Numeric XY wide table
@@ -25,6 +31,10 @@ stacked bar, percent stacked, radar, heatmap, and pie when exactly one numeric s
 For radar, require at least three metric rows and two nonnegative object series; different units must
 already be made comparable or explicitly confirmed. For heatmap, require at least two row labels and
 two numeric columns. EditaPlot does not silently normalize radar values or reorder heatmap rows.
+For 30×30, 40×40, or larger dense matrices, keep every value and the original row/column order,
+hide per-cell numbers, thin only display labels while preserving both endpoints, and place the
+colorbar outside the data field. This dense layout has planning and preview test coverage but is
+not fully Origin-verified until its complete artifact and human visual gates pass.
 
 ### Error wide table
 
@@ -110,8 +120,18 @@ EditaPlot never infers method pairs, LoA, subject identity, missing visits, or i
 
 ### Domain spectroscopy/electrochemistry
 
-Use semantic headers and units, not only numerical range, to distinguish XPS, XRD, XAS, EIS,
-CV, and LSV. Ask when `Energy + Intensity` is scientifically ambiguous.
+Use semantic headers and units, not only numerical range, to distinguish XPS, XRD, XAS, FTIR/IR,
+NMR, DSC, PL, UV–Vis, EIS, CV, and LSV. Ask when `Energy + Intensity`, `Temperature + Signal`,
+or `Wavelength + Intensity` is scientifically ambiguous.
+
+XPS has separate single-spectrum fitting and multi-spectrum comparison routes. `xps_compare`
+requires one Binding Energy column and at least two independently named measured
+Intensity/Counts/Experimental series on the same sampling axis. Background/Baseline, Envelope/Fit,
+Residual, Component, and Peak columns are not independent samples: send a fit table to the XPS fit
+route, or retain those columns without rendering after confirmation. Comparison uses direct overlay
+by default; any new vertical offset requires explicit confirmation and may exist only as an
+Origin helper column. Keep the source values and row order unchanged, and display binding energy
+from high to low.
 
 XRD has two modes. Ordinary scans use one 2θ/X coordinate and one or more intensity series.
 Rietveld refinement requires X plus explicit Observed and Calculated columns; Background,
@@ -123,14 +143,30 @@ columns without drawing them as intensity curves. Publication `Diff` is already 
 exporter and must be drawn directly without another offset. Never infer phases, reflections, fit
 metrics, a missing difference, or background.
 
-PL accepts either `Wavelength` plus one or more PL intensity columns, or `Time` plus observed
-decay columns. A fit column must repeat the observed-series name and add `Fit`/`拟合`; it remains a
-user-supplied curve. TRPL uses a logarithmic Y axis and rejects nonpositive plotted values.
+FTIR/IR requires `Wavenumber` with a unit such as `cm^-1` plus one or more comparable Absorbance or
+Transmittance series. Preserve series order and show wavenumber from high to low. Do not correct
+baselines, smooth, normalize, label peaks, calculate peak areas, or infer functional groups.
 
-UV–Vis accepts `Wavelength` plus Absorbance or Transmittance series. A Tauc inset is added only
-when the table also supplies Photon energy and Tauc value. Optional Tauc fit and Band gap columns
-are drawn exactly as supplied. EditaPlot does not convert wavelength to photon energy, choose a
-Tauc exponent, fit a line, or calculate Eg.
+NMR requires `Chemical Shift (ppm)` plus one or more already processed intensity series. Preserve
+series order and show chemical shift from high to low. Do not perform Fourier transform, phase or
+baseline correction, solvent removal, integration, peak picking, coupling analysis, assignment, or
+quantitation.
+
+DSC requires `Temperature` with a unit plus one or more comparable `Heat Flow` series. Confirm the
+endothermic/exothermic up/down convention and retain the source sign. Do not infer Tg, Tm, Tc,
+onset, peak temperature, enthalpy, or crystallinity. Temperature alone does not establish DSC.
+
+PL accepts either `Wavelength` plus one or more PL intensity columns, or `Time` plus observed
+decay columns. Multi-sample and ordered multi-condition wide tables preserve source column order.
+A fit column must repeat the observed-series name and add `Fit`/`拟合`; it remains a user-supplied
+curve. TRPL uses a logarithmic Y axis and rejects nonpositive plotted values.
+
+UV–Vis accepts `Wavelength` plus one or more comparable Absorbance or Transmittance series and
+preserves their source order. Do not mix Absorbance and Transmittance on one Y axis without an
+explicit user-approved axis contract. A Tauc inset is added only when the table also supplies
+Photon energy and Tauc value. Optional Tauc fit and Band gap columns are drawn exactly as supplied.
+EditaPlot does not convert wavelength to photon energy, choose a Tauc exponent, fit a line, or
+calculate Eg.
 
 ### Verified 3D multi-condition Nyquist trajectory
 
@@ -156,6 +192,8 @@ edit the source without explicit permission. Provide a new working copy or blank
 - Sankey wide matrix: convert to source-target-value edge rows in a new copy.
 - Radar with mixed physical units: provide a user-approved normalized copy or choose small multiples.
 - Heatmap in long form: pivot to one row-label column plus numeric series in a new working copy.
+- Dense heatmap with unreadable text: keep the matrix unchanged and let the dense layout thin axis
+  labels and hide cell numbers; do not downsample or manually delete rows/columns just for display.
 - Histogram bar heights: provide the underlying raw numeric observations instead.
 - Forest table without interval limits: calculate and label the limits upstream; EditaPlot will not
   infer them.
@@ -179,6 +217,12 @@ edit the source without explicit permission. Provide a new working copy or blank
   fit columns whose names pair unambiguously with the observed series.
 - UV–Vis without complete precomputed Tauc inputs: draw the main spectrum without an inset, or add
   upstream Photon energy and Tauc value columns; add a user-supplied Tauc fit/Eg only when available.
+- XPS comparison with fit/background/residual/component columns: use the XPS fit route or confirm
+  those columns as retained without rendering; do not rename them into samples.
+- FTIR/IR or NMR with unknown numeric metadata: give those columns explicit experimental meaning
+  and units, or confirm them as retained without rendering.
+- DSC without a clear heat-flow convention: state the endothermic/exothermic direction and unit
+  before planning; do not let the drawing layer infer it from curve shape.
 - Missing SHAP values or feature values: calculate/export a complete long table upstream; the
   drawing layer will not run a model or impute explanations.
 - Raw instrument binary: export or preprocess to a supported rectangular table first.

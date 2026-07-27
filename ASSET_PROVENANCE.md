@@ -3,7 +3,7 @@
 This open-source release contains only project-created teaching/verification fixtures and original
 project assets.
 
-The 2026-07-24 public-release review covered every listed CSV and PNG, including synthetic/generated
+The 2026-07-27 public-release review covered every listed CSV and PNG, including synthetic/generated
 status, patient/clinical identifiers, labels, embedded PNG text/EXIF, and redistribution boundaries.
 The manifest also binds the inventory builder and gallery fixture generator by SHA-256; changing
 either script requires regenerating and manually reviewing the manifest.
@@ -17,6 +17,9 @@ either script requires regenerating and manually reviewing the manifest.
   PDF, or TIF evidence.
 - The PL/TRPL example uses neutral project-generated sample names and lifetimes; it does not copy
   the material labels or numeric values from the visual reference that motivated the chart family.
+- The DSC, NMR, FTIR/IR, XPS comparison, UV–Vis, PL temperature-series, 3D trajectory, and dense
+  40×40 matrix fixtures are deterministic project-authored teaching data. They do not reproduce
+  values, labels, conclusions, arrows, logos, or layouts from the supplied paper screenshots.
 - The palette cards and selectors are original layouts generated from the machine-readable palette
   catalog. Reference covers, watermarks, logos, screenshots, and journal layouts are not included.
 - The application icon is an original generic chart icon. The fixed XPS preview is generated from a

@@ -79,6 +79,11 @@ def _semantic_confirmation(
     ("relative_path", "intent", "expected"),
     [
         ("templates/xps_c1s_fit/example_standard.csv", "XPS peak fitting", "xps"),
+        (
+            "templates/xps_compare/example_standard.csv",
+            "XPS多谱线对比",
+            "xps_compare",
+        ),
         ("templates/xrd/example_standard.csv", "XRD diffraction", "xrd"),
         ("templates/bar/example_multi_group.csv", "compare groups with bars", "bar"),
         ("templates/sankey/example_standard.csv", "Sankey flow", "sankey"),
@@ -236,9 +241,7 @@ def test_beginner_start_high_confidence_is_read_only_and_still_asks_scientific_p
     assert result["recommendation"]["top_candidate"]["template_id"] == "xrd"
     assert result["recommendation"]["auto_selection_gate"]["allowed"] is True
     assert result["requires_scientific_confirmation"] is True
-    assert "scientific_purpose" in {
-        question["id"] for question in result["confirmation_questions"]
-    }
+    assert "scientific_purpose" in {question["id"] for question in result["confirmation_questions"]}
     assert result["execution"] == {
         "plan_created": False,
         "render_started": False,
@@ -576,9 +579,7 @@ def test_plan_is_hash_bound_and_builds_safe_worker_command(tmp_path: Path) -> No
     assert plan["can_render"] is True
     assert plan["execution"]["origin_callability_check"] == "performed_by_render_worker"
     assert plan["execution"]["output_directory_policy"] == "source_sibling_unique_folder"
-    assert plan["execution"]["output_folder_pattern"] == (
-        "<source_stem>_EditaPlot_YYYYMMDD_HHMMSS"
-    )
+    assert plan["execution"]["output_folder_pattern"] == ("<source_stem>_EditaPlot_YYYYMMDD_HHMMSS")
     assert plan["execution"]["render_plan_copy"] == "render-plan.json"
     assert "requires_manual_origin_start_confirmation" not in plan["execution"]
     assert plan["template"]["origin_capability_profile"]["template_id"] == "xrd"
@@ -685,6 +686,30 @@ def test_verify_refuses_incomplete_output(tmp_path: Path) -> None:
     assert result["human_visual_qa"]["status"] == "pending"
 
 
+def test_font_readback_audit_accepts_nested_trajectory3d_title_fonts() -> None:
+    audit = core._font_readback_audit(
+        {
+            "origin_axis_state": {
+                "x": {"label_font": 71},
+                "y": {"label_font": 71},
+                "z": {"label_font": 71},
+            },
+            "origin_text_state": {
+                "titles": {
+                    "xb": {"font": 71},
+                    "yl": {"font": 71},
+                    "zf": {"font": 71},
+                },
+                "font_code_expected": 71,
+            },
+        }
+    )
+
+    assert audit["ok"] is True
+    assert audit["expected_font_codes"] == [71]
+    assert len(audit["actual_font_codes"]) == 6
+
+
 @pytest.mark.parametrize(
     "artifact_name",
     [
@@ -705,9 +730,7 @@ def test_verify_json_output_cannot_replace_required_artifact(
     before = f"immutable-{artifact_name}".encode()
     artifact.write_bytes(before)
 
-    returncode = editaplot_cli.main(
-        ["verify", str(tmp_path), "--output", str(artifact)]
-    )
+    returncode = editaplot_cli.main(["verify", str(tmp_path), "--output", str(artifact)])
     payload = json.loads(capsys.readouterr().err)
 
     assert returncode == 2
@@ -1620,9 +1643,7 @@ def test_setup_final_skill_rename_failure_restores_old_target_before_repair(
     target = tmp_path / "editaplot"
     _write_transaction_test_skill(target, lock=b"old-lock", label="old")
     before = {
-        path.relative_to(target).as_posix(): path.read_bytes()
-        for path in target.rglob("*")
-        if path.is_file()
+        path.relative_to(target).as_posix(): path.read_bytes() for path in target.rglob("*") if path.is_file()
     }
     monkeypatch.setattr(bootstrap.platform, "system", lambda: "Windows")
     monkeypatch.setattr(bootstrap, "_resolve_engine", lambda _argv: (ENGINE, {}))
@@ -1658,9 +1679,7 @@ def test_setup_final_skill_rename_failure_restores_old_target_before_repair(
         bootstrap.install_skill(["--target", str(target)])
 
     after = {
-        path.relative_to(target).as_posix(): path.read_bytes()
-        for path in target.rglob("*")
-        if path.is_file()
+        path.relative_to(target).as_posix(): path.read_bytes() for path in target.rglob("*") if path.is_file()
     }
     assert after == before
     assert not bootstrap._install_journal(target).exists()
@@ -1794,9 +1813,7 @@ def test_setup_repair_failure_preserves_recognized_target_bytes(
     (scripts / "bootstrap_editaplot.py").write_bytes(b"old bootstrap\r\n")
     (target / "legacy-only.txt").write_bytes(b"must survive")
     before = {
-        path.relative_to(target).as_posix(): path.read_bytes()
-        for path in target.rglob("*")
-        if path.is_file()
+        path.relative_to(target).as_posix(): path.read_bytes() for path in target.rglob("*") if path.is_file()
     }
     monkeypatch.setattr(bootstrap.platform, "system", lambda: "Windows")
     monkeypatch.setattr(bootstrap, "_resolve_engine", lambda _argv: (ENGINE, {}))
@@ -1820,9 +1837,7 @@ def test_setup_repair_failure_preserves_recognized_target_bytes(
     returncode = bootstrap.install_skill(["--target", str(target)])
     payload = json.loads(capsys.readouterr().err)
     after = {
-        path.relative_to(target).as_posix(): path.read_bytes()
-        for path in target.rglob("*")
-        if path.is_file()
+        path.relative_to(target).as_posix(): path.read_bytes() for path in target.rglob("*") if path.is_file()
     }
 
     assert returncode == 17
@@ -2114,8 +2129,7 @@ def test_public_skill_metadata_and_legal_copies_are_self_contained() -> None:
     default_prompt = agent["interface"]["default_prompt"]
     assert "Origin Automation" in default_prompt
     assert not any(
-        token in default_prompt
-        for token in ("合法", "授权", "激活", "手动启动", "licensed", "activation")
+        token in default_prompt for token in ("合法", "授权", "激活", "手动启动", "licensed", "activation")
     )
     assert (SKILL_ROOT / "LICENSE").read_bytes() == (PRODUCT_ROOT / "LICENSE").read_bytes()
     assert (SKILL_ROOT / "NOTICE").read_bytes() == (PRODUCT_ROOT / "NOTICE").read_bytes()

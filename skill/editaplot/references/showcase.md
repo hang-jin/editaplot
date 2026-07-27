@@ -13,7 +13,11 @@ data, labels, conclusions, or private template assets.
 - Keep OPJU, PNG, PDF, TIF, plan, validation, and readback for every verified showcase entry.
 - Do not use a Python-only mock image as evidence that an Origin route works.
 
-## Verified public gallery scope
+## Current verified public gallery scope
+
+The public page currently contains 44 reviewed, metadata-sanitized PNGs. Keep that count separate
+from the number of implemented templates: a route enters this list only after its Origin artifacts,
+object readback, human visual QA, sanitized PNG, provenance record, and asset manifest all pass.
 
 1. XPS scan and multi-component fit.
 2. XRD multi-series spectrum.
@@ -35,6 +39,16 @@ data, labels, conclusions, or private template assets.
 18. CV, LSV, XAS, steady-state PL, TRPL with user-supplied fits, and UV-vis with a user-supplied Tauc inset.
 19. Medical ROC, PR, calibration, DCA, confusion matrix, Bland-Altman, paired trajectories,
     grouped box/raw observations, Raincloud, and precomputed SHAP evidence.
+
+## Newly verified materials and dense-matrix cases
+
+On the Origin 2024b baseline, DSC, NMR, FTIR/IR, XPS multi-spectrum comparison, multi-condition PL,
+multi-sample UV–Vis, and the dense 40×40 heatmap have produced editable OPJU plus PNG/PDF/TIF and
+passed programmatic readback, SHA-bound human visual QA, and the sanitized public-asset audit.
+
+The 30×30/40×40 dense heatmap keeps the full matrix, hides cell numbers, thins only axis labels,
+and detaches the colorbar. The 40×40 teaching case completed the same Origin artifact, object
+readback, and human-review gates as the rest of the public gallery.
 
 The all-in-one poster is an archived promotion asset. It is not embedded in the live bilingual
 gallery and is not required to include every newly added verified case.

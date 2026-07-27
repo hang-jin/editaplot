@@ -15,7 +15,11 @@ import pandas as pd
 
 from origin_sciplot.logging_utils import RunLogger
 from origin_sciplot.output_manager import RunOutput, write_json
-from origin_sciplot.scientific_visual import AdaptiveOriginStyle, palette_colors
+from origin_sciplot.scientific_visual import (
+    AdaptiveOriginStyle,
+    palette_colors,
+    series_palette_colors,
+)
 from origin_sciplot.scientific_workflow import (
     ScientificPreparation,
     log_decade_increment,
@@ -70,7 +74,7 @@ RIETVELD_PHASE_COLORS = (
 
 NATURE_COLORS = palette_colors("comparison_family")
 
-_ORIGIN_AXIS_FORMAT_SOURCE = r'''#include <Origin.h>
+_ORIGIN_AXIS_FORMAT_SOURCE = r"""#include <Origin.h>
 #pragma labtalk(2)
 void CleanScientificXAxisLabels()
 {
@@ -87,7 +91,7 @@ void CleanScientificXAxisLabels()
     Page page = gl.GetPage();
     page.Refresh();
 }
-'''
+"""
 
 
 @dataclass(frozen=True)
@@ -181,14 +185,12 @@ def _prepare_origin_table(
     series_plans: list[OriginSeriesPlan] = []
     spec = preparation.plot_spec
     style = _figure_style(preparation)
-    colors = palette_colors(style.palette_name)
+    colors = series_palette_colors(style.palette_name, len(spec.series))
     is_bar = spec.plot_kind == "bar_error"
     series_count = len(spec.series)
     bar_spacing = spec.display_plan.bar_group_span / series_count if is_bar else 0.0
     bar_gap_percent = (
-        round(100.0 - spec.display_plan.bar_inner_width / series_count * 100.0, 6)
-        if is_bar
-        else None
+        round(100.0 - spec.display_plan.bar_inner_width / series_count * 100.0, 6) if is_bar else None
     )
     assignment_roles = dict(preparation.assignments)
     is_rietveld = spec.plot_kind == "rietveld_refinement"
@@ -199,9 +201,7 @@ def _prepare_origin_table(
             "and normalization are not allowed."
         )
     observed_color_index = {
-        series.source_column: index
-        for index, series in enumerate(spec.series)
-        if series.series_role != "fit"
+        series.source_column: index for index, series in enumerate(spec.series) if series.series_role != "fit"
     }
     for index, series in enumerate(spec.series):
         if is_rietveld and series.series_role not in RIETVELD_ROLE_STYLES:
@@ -209,15 +209,14 @@ def _prepare_origin_table(
                 "Rietveld rendering only accepts observed, calculated, "
                 "background, and difference profile roles."
             )
-        if is_rietveld and series.transform != "identity":
+        if is_rietveld and (series.transform != "identity" or series.display_offset):
             raise OriginDrawError(
-                f"Rietveld {series.series_role} values must be plotted directly "
-                "without a display transform."
+                f"Rietveld {series.series_role} values must be plotted directly without a display transform."
             )
         plot_column = series.source_column
         x_column: str | None = None
         values = series_values(frame, series)
-        if series.transform != "identity":
+        if series.transform != "identity" or series.display_offset:
             plot_column = _safe_helper_name(series.source_column, "Plot", used)
             origin_frame[plot_column] = values
             helpers.append(plot_column)
@@ -253,9 +252,9 @@ def _prepare_origin_table(
         if spec.plot_kind == "pl_decay":
             plot_type = "l" if series.series_role == "fit" else "s"
         symbol_kind: int | None = None
-        marker_size_pt = (
-            0.0 if series.series_role == "fit" else spec.display_plan.marker_size_pt
-        )
+        marker_size_pt = 0.0 if series.series_role == "fit" else spec.display_plan.marker_size_pt
+        if marker_size_pt <= 0.0 and spec.plot_kind in {"pl_spectrum", "uv_vis"}:
+            plot_type = "l"
         if is_rietveld:
             plot_type, color, line_style = RIETVELD_ROLE_STYLES[series.series_role]
             if series.series_role == "observed":
@@ -278,9 +277,7 @@ def _prepare_origin_table(
                 is_reference=series.series_role == "fit",
                 line_style=line_style,
                 transparency_percent=(
-                    style.fill_transparency_percent
-                    if spec.plot_kind == "paired_trajectory"
-                    else 0.0
+                    style.fill_transparency_percent if spec.plot_kind == "paired_trajectory" else 0.0
                 ),
                 series_role=series.series_role,
                 symbol_kind=symbol_kind,
@@ -298,22 +295,16 @@ def _prepare_origin_table(
         )
         for index, phase_column in enumerate(phase_tick_columns):
             if phase_column not in frame.columns:
-                raise OriginDrawError(
-                    f"Rietveld phase-tick column is missing: {phase_column}"
-                )
+                raise OriginDrawError(f"Rietveld phase-tick column is missing: {phase_column}")
             if any(item.source_column == phase_column for item in spec.series):
-                raise OriginDrawError(
-                    f"Rietveld phase-tick column cannot also be a profile: {phase_column}"
-                )
+                raise OriginDrawError(f"Rietveld phase-tick column cannot also be a profile: {phase_column}")
             phase_x = pd.to_numeric(frame[phase_column], errors="coerce").to_numpy(
                 dtype=float,
                 copy=True,
             )
             helper_y = _safe_helper_name(phase_column, "PhaseLaneY", used)
             lane_y = np.full(len(origin_frame), np.nan, dtype=float)
-            lane_y[np.isfinite(phase_x)] = y_from + y_span * (
-                0.010 + index * phase_step
-            )
+            lane_y[np.isfinite(phase_x)] = y_from + y_span * (0.010 + index * phase_step)
             origin_frame[helper_y] = lane_y
             helpers.append(helper_y)
             series_plans.append(
@@ -397,11 +388,7 @@ def _prepare_origin_table(
                     if index < len(spec.reference_labels)
                     else f"Reference {index + 1}"
                 )
-                label = (
-                    f"{base_label} = {value:g}"
-                    if spec.plot_kind == "bland_altman"
-                    else base_label
-                )
+                label = f"{base_label} = {value:g}" if spec.plot_kind == "bland_altman" else base_label
                 helper_y = _safe_helper_name(base_label, "ReferenceY", used)
                 y_values = np.full(len(origin_frame), np.nan, dtype=float)
                 y_values[:2] = float(value)
@@ -416,23 +403,15 @@ def _prepare_origin_table(
                         label=label,
                         axis="left",
                         plot_type="l",
-                        color=(
-                            "#B65C67"
-                            if spec.plot_kind == "bland_altman" and index == 0
-                            else "#8A8F94"
-                        ),
+                        color=("#B65C67" if spec.plot_kind == "bland_altman" and index == 0 else "#8A8F94"),
                         bar_gap_percent=None,
                         marker_size_pt=0.0,
                         is_reference=True,
-                        line_style=(
-                            0 if spec.plot_kind == "bland_altman" and index == 0 else 1
-                        ),
+                        line_style=(0 if spec.plot_kind == "bland_altman" and index == 0 else 1),
                     )
                 )
         else:
-            raise OriginDrawError(
-                f"Unsupported reference geometry: {spec.reference_geometry}"
-            )
+            raise OriginDrawError(f"Unsupported reference geometry: {spec.reference_geometry}")
     try:
         pd.testing.assert_frame_equal(
             frame,
@@ -442,9 +421,7 @@ def _prepare_origin_table(
             check_names=True,
         )
     except AssertionError as exc:
-        raise OriginDrawError(
-            "Origin table preparation modified the validated source frame."
-        ) from exc
+        raise OriginDrawError("Origin table preparation modified the validated source frame.") from exc
     return OriginTablePlan(
         frame=origin_frame,
         x_column=spec.x_column,
@@ -602,13 +579,7 @@ def _style_axes(op: Any, layer: Any, preparation: ScientificPreparation) -> None
     dual_y = spec.y2_title is not None
     font_code = _origin_font_code(op, style.font_family)
     x_minor = (
-        0
-        if categorical
-        else 8
-        if spec.x_scale == "log10"
-        else 4
-        if preparation.template_id == "xrd"
-        else 1
+        0 if categorical else 8 if spec.x_scale == "log10" else 4 if preparation.template_id == "xrd" else 1
     )
     _style_axis(
         layer,
@@ -758,13 +729,7 @@ def _position_axis_titles_on_page(
             x_title,
             page_width * (layer_left + layer_width / 2.0) / 100.0 - width / 2.0,
             (
-                page_height
-                * (
-                    layer_top
-                    + layer_height
-                    + (100.0 - layer_top - layer_height) / 2.0
-                )
-                / 100.0
+                page_height * (layer_top + layer_height + (100.0 - layer_top - layer_height) / 2.0) / 100.0
                 - height / 2.0
             ),
         )
@@ -785,12 +750,7 @@ def _position_axis_titles_on_page(
         height = float(y2_title.get_float("height"))
         place(
             y2_title,
-            (
-                page_width
-                * (layer_right + (100.0 - layer_right) * 0.56)
-                / 100.0
-                - width / 2.0
-            ),
+            (page_width * (layer_right + (100.0 - layer_right) * 0.56) / 100.0 - width / 2.0),
             page_height * (layer_top + layer_height / 2.0) / 100.0 - height / 2.0,
         )
 
@@ -816,8 +776,7 @@ def _position_x_title(
     page_height = float(op.lt_float("page.height"))
     label.set_float(
         "top",
-        label.get_float("top")
-        - page_height * resolved.x_title_upshift_page_percent / 100.0,
+        label.get_float("top") - page_height * resolved.x_title_upshift_page_percent / 100.0,
     )
 
 
@@ -847,8 +806,7 @@ def _title_geometry(op: Any, labels: dict[str, Any]) -> dict[str, float]:
             state[f"{name}.attach"] = float(attachment)
             if attachment not in {0, 1, 2}:
                 raise OriginDrawError(
-                    f"Origin {name.replace('_', ' ')} has an unknown attachment "
-                    f"mode ({attachment})."
+                    f"Origin {name.replace('_', ' ')} has an unknown attachment mode ({attachment})."
                 )
         for prop in ("left", "top", "width", "height"):
             state[f"{name}.{prop}"] = float(label.get_float(prop))
@@ -920,9 +878,7 @@ def _set_bar_transparency(
     style: AdaptiveOriginStyle,
 ) -> dict[str, float]:
     """Set and read back the documented ``layer.plotn.transparency`` property."""
-    plot_indices = {
-        plot.lt_range(): index for index, plot in enumerate(layer.plot_list(), start=1)
-    }
+    plot_indices = {plot.lt_range(): index for index, plot in enumerate(layer.plot_list(), start=1)}
     state: dict[str, float] = {}
     for series in table.series:
         if series.plot_type != "c":
@@ -1078,10 +1034,7 @@ def _style_legend(
     legend.set_int("link", 1)
     legend.text = "\n".join(_legend_lines(entries, main_plots, layer.plot_list()))
     _style_label(legend, style.legend_size_pt, bold=False)
-    layer.obj.LT_execute(
-        f"legend.font=font({style.font_family});"
-        "legend.color=color(black);legend.bold=0;"
-    )
+    layer.obj.LT_execute(f"legend.font=font({style.font_family});legend.color=color(black);legend.bold=0;")
     legend.set_int("font", _origin_font_code(op, style.font_family))
     _set_borderless_legend(legend)
     return legend
@@ -1115,11 +1068,55 @@ def _add_bland_altman_labels(
         _style_label(label, direct_label_size_pt, bold=False)
         label.color = op.ocolor("#A54855" if "bias" in canonical else "#374151")
         labels[f"bland_label_{index + 1}"] = label
-    if not op.lt_exec(
-        f"doc -e G {{%B.font=font({style.font_family});}};doc -uw;"
-    ):
+    if not op.lt_exec(f"doc -e G {{%B.font=font({style.font_family});}};doc -uw;"):
         raise OriginDrawError("Origin could not apply the Bland-Altman direct-label font.")
     return labels
+
+
+def _verify_axis_numeric_contract(
+    state: dict[str, float | int],
+    preparation: ScientificPreparation,
+) -> None:
+    """Reject an Origin graph whose numeric axis no longer matches the frozen plan."""
+    spec = preparation.plot_spec
+    plan = spec.axis_plan
+    expected: dict[str, tuple[float | None, float | None, float | None]] = {}
+    if spec.category_column is None and spec.x_scale == "linear":
+        expected["x"] = (plan.x_from, plan.x_to, plan.x_step)
+    if spec.plot_kind != "stacked_line" and spec.y_scale == "linear":
+        expected["y"] = (plan.y_from, plan.y_to, plan.y_step)
+    if spec.y2_title and plan.y2_from is not None and plan.y2_to is not None:
+        expected["y2"] = (plan.y2_from, plan.y2_to, plan.y2_step)
+
+    for axis_name, (expected_from, expected_to, expected_inc) in expected.items():
+        if expected_from is None or expected_to is None:
+            continue
+        actual_from = float(state[f"{axis_name}.from"])
+        actual_to = float(state[f"{axis_name}.to"])
+        actual_inc = float(state[f"{axis_name}.inc"])
+        if not all(math.isfinite(value) for value in (actual_from, actual_to, actual_inc)):
+            raise OriginDrawError(f"Origin {axis_name} axis returned a non-finite numeric range.")
+        if expected_from > expected_to:
+            if actual_from <= actual_to or actual_inc >= 0.0:
+                raise OriginDrawError(f"Origin {axis_name} axis lost the required descending direction.")
+        elif expected_from < expected_to and expected_inc is not None:
+            if actual_from >= actual_to or actual_inc <= 0.0:
+                raise OriginDrawError(f"Origin {axis_name} axis lost the required ascending direction.")
+        for property_name, actual, target in (
+            ("from", actual_from, float(expected_from)),
+            ("to", actual_to, float(expected_to)),
+        ):
+            tolerance = max(0.05, abs(target) * 1e-6)
+            if abs(actual - target) > tolerance:
+                raise OriginDrawError(
+                    f"Origin {axis_name}.{property_name} is {actual:g}, expected {target:g}."
+                )
+        if expected_inc is not None:
+            increment_tolerance = max(0.01, abs(float(expected_inc)) * 1e-5)
+            if abs(actual_inc - float(expected_inc)) > increment_tolerance:
+                raise OriginDrawError(
+                    f"Origin {axis_name}.inc is {actual_inc:g}, expected {float(expected_inc):g}."
+                )
 
 
 def _read_axis_state(
@@ -1174,11 +1171,7 @@ def _read_axis_state(
     expected_font_code = _origin_font_code(op, style.font_family)
     state["font_code_expected"] = expected_font_code
     expected_y_labels = (
-        0
-        if preparation.plot_spec.plot_kind == "stacked_line"
-        else 3
-        if preparation.plot_spec.y2_title
-        else 1
+        0 if preparation.plot_spec.plot_kind == "stacked_line" else 3 if preparation.plot_spec.y2_title else 1
     )
     if int(state["x.showLabels"]) != 1 or int(state["y.showLabels"]) != expected_y_labels:
         raise OriginDrawError("Origin did not keep the expected bottom/left axis labels visible.")
@@ -1207,19 +1200,14 @@ def _read_axis_state(
         else y_axis_type not in expected_y_axis_type
     ):
         raise OriginDrawError("Origin Y scale type does not match the plot contract.")
+    _verify_axis_numeric_contract(state, preparation)
     for axis_name in ("x", "y"):
         if abs(float(state[f"{axis_name}.label.pt"]) - style.tick_label_size_pt) > 0.05:
-            raise OriginDrawError(
-                f"Origin {axis_name} tick labels are not {style.tick_label_size_pt:g} pt."
-            )
+            raise OriginDrawError(f"Origin {axis_name} tick labels are not {style.tick_label_size_pt:g} pt.")
         if abs(float(state[f"{axis_name}.thickness"]) - style.frame_line_width_pt) > 0.05:
-            raise OriginDrawError(
-                f"Origin {axis_name} frame is not {style.frame_line_width_pt:g} pt."
-            )
+            raise OriginDrawError(f"Origin {axis_name} frame is not {style.frame_line_width_pt:g} pt.")
         if int(round(float(state[f"{axis_name}.label.font"]))) != expected_font_code:
-            raise OriginDrawError(
-                f"Origin {axis_name} tick-label font does not match {style.font_family}."
-            )
+            raise OriginDrawError(f"Origin {axis_name} tick-label font does not match {style.font_family}.")
     expected_x_rotation = (
         float(preparation.plot_spec.display_plan.category_label_rotation_deg)
         if preparation.plot_spec.category_column
@@ -1264,38 +1252,24 @@ def _verify_plots(
                     f"Origin line style for {item.label} is {line_styles[item.label]:g}, "
                     f"expected {item.line_style}."
                 )
-    line_plots = {
-        item.label: main_plots[item.label]
-        for item in table.series
-        if item.plot_type in {"l", "y"}
-    }
+    line_plots = {item.label: main_plots[item.label] for item in table.series if item.plot_type in {"l", "y"}}
     scatter_plots = {
         item.label: main_plots[item.label]
         for item in table.series
         if item.plot_type in {"s", "y"} and not item.is_phase_tick
     }
-    bar_plots = {
-        item.label: main_plots[item.label]
-        for item in table.series
-        if item.plot_type == "c"
-    }
+    bar_plots = {item.label: main_plots[item.label] for item in table.series if item.plot_type == "c"}
     try:
         state: dict[str, Any] = {
             "line_widths": (
-                verify_plot_line_widths(op, line_plots, style.plot_line_width_pt)
-                if line_plots
-                else {}
+                verify_plot_line_widths(op, line_plots, style.plot_line_width_pt) if line_plots else {}
             ),
             "bar_border_widths": (
-                verify_plot_line_widths(op, bar_plots, style.bar_border_width_pt)
-                if bar_plots
-                else {}
+                verify_plot_line_widths(op, bar_plots, style.bar_border_width_pt) if bar_plots else {}
             ),
             "bar_transparency_percent": bar_transparency,
             "error_bar_widths": (
-                verify_plot_line_widths(op, error_plots, style.error_bar_width_pt)
-                if error_plots
-                else {}
+                verify_plot_line_widths(op, error_plots, style.error_bar_width_pt) if error_plots else {}
             ),
             "symbols": {
                 item.label: verify_symbol_style(
@@ -1497,9 +1471,7 @@ def _add_uv_vis_inset(
         annotation.color = op.ocolor("#27343D")
     inset.activate()
     op.lt_exec("doc -uw;")
-    geometry = {
-        key: float(inset.get_float(key)) for key in ("left", "top", "width", "height")
-    }
+    geometry = {key: float(inset.get_float(key)) for key in ("left", "top", "width", "height")}
     if geometry["left"] + geometry["width"] > 100.05 or geometry["top"] + geometry["height"] > 100.05:
         raise OriginDrawError("Origin Tauc inset extends beyond the page.")
     axis_state = {
@@ -1538,10 +1510,7 @@ def _add_uv_vis_inset(
         for key in ("x_title_pt", "y_title_pt")
     ):
         raise OriginDrawError("Origin Tauc inset title-size verification failed.")
-    if (
-        text_state["x_title_attach"] not in {0, 1, 2}
-        or text_state["y_title_attach"] not in {0, 1, 2}
-    ):
+    if text_state["x_title_attach"] not in {0, 1, 2} or text_state["y_title_attach"] not in {0, 1, 2}:
         raise OriginDrawError("Origin Tauc inset titles use an unknown attachment mode.")
     inset_labels = {"x_title": x_title, "y_title": y_title}
     if annotation is not None:
@@ -1666,9 +1635,7 @@ def _build_origin_graph(
     axis_state = _read_axis_state(op, layer, preparation)
     axis_state["x.label.rotate"] = layer.get_float("x.label.rotate")
     title_state = _title_geometry(op, title_labels)
-    expected_text = {
-        name: style.axis_title_size_pt for name in title_labels
-    }
+    expected_text = {name: style.axis_title_size_pt for name in title_labels}
     for name in bland_labels:
         expected_text[name] = float(round(style.legend_size_pt * 0.88))
     if legend is not None:
@@ -1713,14 +1680,10 @@ def _build_origin_graph(
             "axis_title_size_pt": style.axis_title_size_pt,
             "tick_label_size_pt": style.tick_label_size_pt,
             "legend_size_pt": style.legend_size_pt,
-            "plot_set_w_units": pt_to_origin_width_units(
-                style.plot_line_width_pt
-            ),
+            "plot_set_w_units": pt_to_origin_width_units(style.plot_line_width_pt),
             "frame_line_width_pt": style.frame_line_width_pt,
             "adaptive_profile": style.to_dict(),
-            "legend.showframe": (
-                int(legend.get_int("showframe")) if legend is not None else None
-            ),
+            "legend.showframe": (int(legend.get_int("showframe")) if legend is not None else None),
         },
         "origin_plot_state": plot_state,
         "origin_phase_tick_state": plot_state["phase_ticks"],

@@ -96,6 +96,34 @@ def generate_eis() -> None:
     _write("eis_nyquist.csv", ["Zreal (ohm)", "Zimag (ohm)"], rows)
 
 
+def generate_trajectory3d() -> None:
+    """Create original multi-position Nyquist arcs with a real third-axis variable."""
+    rows = []
+    conditions = (
+        (20, 0.45, 1.65, 1.55),
+        (50, 0.65, 2.15, 2.25),
+        (80, 0.85, 2.75, 2.90),
+    )
+    for position, start, radius, height in conditions:
+        for index in range(61):
+            theta = math.pi * index / 60.0
+            real = start + radius * (1.0 - math.cos(theta))
+            negative_imag = height * math.sin(theta)
+            rows.append(
+                (
+                    f"{real:.6f}",
+                    position,
+                    f"{negative_imag:.6f}",
+                    f"Position {position} mm",
+                )
+            )
+    _write(
+        "trajectory3d.csv",
+        ["Zreal (Ohm)", "Condition Position (mm)", "-Zimag (Ohm)", "Series"],
+        rows,
+    )
+
+
 def generate_cv() -> None:
     forward = [-0.50 + index * 0.01 for index in range(131)]
     reverse = [0.80 - index * 0.01 for index in range(131)]
@@ -425,10 +453,173 @@ def generate_pl_trpl() -> None:
     _write("pl_trpl.csv", headers, rows)
 
 
+def generate_material_spectroscopy() -> None:
+    """Create dense, original teaching spectra for public material-science examples."""
+    xps_rows = []
+    for index in range(301):
+        energy = 296.0 - index * 0.06
+        values = []
+        for sample_index, shift in enumerate((-0.18, 0.0, 0.24)):
+            baseline = 92.0 + 4.0 * sample_index + 1.8 * (296.0 - energy)
+            signal = (
+                baseline
+                + _gaussian(energy, 284.7 + shift, 0.72, 520.0 - sample_index * 35.0)
+                + _gaussian(energy, 286.4 + shift * 0.6, 0.90, 210.0 + sample_index * 20.0)
+                + _gaussian(energy, 288.7 - shift * 0.4, 0.82, 115.0 + sample_index * 12.0)
+                + 3.0 * math.sin(index * 0.39 + sample_index * 0.9)
+            )
+            values.append(f"{signal:.4f}")
+        xps_rows.append((f"{energy:.2f}", *values))
+    _write(
+        "xps_compare.csv",
+        ["Binding Energy (eV)", "Reference Counts", "Modified A Counts", "Modified B Counts"],
+        xps_rows,
+    )
+
+    dsc_rows = []
+    for index in range(201):
+        temperature = 25.0 + index * 1.5
+        values = []
+        for sample_index in range(3):
+            baseline = 0.18 - 0.00115 * temperature + sample_index * 0.035
+            glass_transition = -0.08 / (1.0 + math.exp(-(temperature - (82 + sample_index * 7)) / 3.8))
+            exotherm = _gaussian(temperature, 174 + sample_index * 9, 10.5, 0.34 - sample_index * 0.025)
+            melt = -_gaussian(temperature, 246 + sample_index * 5, 12.0, 0.48 + sample_index * 0.03)
+            values.append(f"{baseline + glass_transition + exotherm + melt:.5f}")
+        dsc_rows.append((f"{temperature:.2f}", *values))
+    _write(
+        "dsc_multi.csv",
+        [
+            "Temperature (°C)",
+            "Reference Heat Flow (W/g)",
+            "Modified A Heat Flow (W/g)",
+            "Modified B Heat Flow (W/g)",
+        ],
+        dsc_rows,
+    )
+
+    nmr_rows = []
+    for index in range(281):
+        shift = -118.0 - index * 0.18
+        reference = (
+            0.025
+            + _gaussian(shift, -126.4, 0.30, 0.95)
+            + _gaussian(shift, -139.6, 0.44, 0.42)
+            + _gaussian(shift, -151.7, 0.36, 0.58)
+            + _gaussian(shift, -164.2, 0.31, 0.80)
+        )
+        composite = (
+            0.022
+            + _gaussian(shift, -130.1, 0.34, 0.74)
+            + _gaussian(shift, -146.5, 0.48, 0.31)
+            + _gaussian(shift, -156.2, 0.38, 0.45)
+            + _gaussian(shift, -166.0, 0.33, 0.66)
+        )
+        nmr_rows.append((f"{shift:.3f}", f"{reference:.6f}", f"{composite:.6f}"))
+    _write(
+        "nmr_comparison.csv",
+        ["19F Chemical Shift (ppm)", "Reference Intensity (a.u.)", "Composite Intensity (a.u.)"],
+        nmr_rows,
+    )
+
+    ftir_rows = []
+    for index in range(401):
+        wavenumber = 1800.0 - index * 2.875
+        row: list[object] = [f"{wavenumber:.3f}"]
+        for condition_index, _temperature in enumerate((30, 80, 130, 180, 230, 280)):
+            baseline = 96.0 - condition_index * 0.22 + 0.35 * math.sin(wavenumber / 270.0)
+            transmittance = baseline
+            for center, width, depth in (
+                (1715.0 - condition_index * 0.5, 23.0, 18.0),
+                (1240.0 + condition_index * 0.3, 28.0, 11.0),
+                (1032.0 + condition_index * 0.5, 20.0, 15.0),
+                (965.0 + condition_index * 0.8, 17.0, 9.0),
+                (744.0 - condition_index * 0.4, 19.0, 8.0),
+            ):
+                transmittance -= _gaussian(wavenumber, center, width, depth * (1.0 - 0.045 * condition_index))
+            row.append(f"{transmittance:.5f}")
+        ftir_rows.append(row)
+    _write(
+        "ftir_temperature_series.csv",
+        [
+            "Wavenumber (cm^-1)",
+            "30 C Transmittance (%)",
+            "80 C Transmittance (%)",
+            "130 C Transmittance (%)",
+            "180 C Transmittance (%)",
+            "230 C Transmittance (%)",
+            "280 C Transmittance (%)",
+        ],
+        ftir_rows,
+    )
+
+    pl_rows = []
+    temperatures = (150, 175, 200, 225, 250, 275)
+    for index in range(321):
+        wavelength = 430.0 + index
+        row = [f"{wavelength:.2f}"]
+        for condition_index, _temperature in enumerate(temperatures):
+            primary = _gaussian(
+                wavelength,
+                525.0 + condition_index * 3.2,
+                37.0 + condition_index * 1.5,
+                1.00 - condition_index * 0.095,
+            )
+            shoulder = _gaussian(wavelength, 458.0, 19.0, 0.19 - condition_index * 0.014)
+            tail = 0.035 + 0.012 * math.exp(-(wavelength - 430.0) / 180.0)
+            row.append(f"{primary + shoulder + tail:.6f}")
+        pl_rows.append(row)
+    _write(
+        "pl_temperature_series.csv",
+        ["Wavelength (nm)", *[f"{temperature} C PL Intensity (a.u.)" for temperature in temperatures]],
+        pl_rows,
+    )
+
+    uv_rows = []
+    for index in range(296):
+        wavelength = 260.0 + index * 2.0
+        row = [f"{wavelength:.2f}"]
+        for sample_index, edge in enumerate((382.0, 392.0, 405.0)):
+            plateau = 0.92 - sample_index * 0.035
+            absorbance = 0.075 + plateau / (1.0 + math.exp((wavelength - edge) / 9.5))
+            absorbance += _gaussian(wavelength, 315.0 + sample_index * 6.0, 31.0, 0.12)
+            absorbance += 0.008 * math.exp(-(wavelength - 260.0) / 260.0)
+            row.append(f"{absorbance:.6f}")
+        uv_rows.append(row)
+    _write(
+        "uv_vis_multi.csv",
+        [
+            "Wavelength (nm)",
+            "Reference Absorbance (a.u.)",
+            "Modified A Absorbance (a.u.)",
+            "Modified B Absorbance (a.u.)",
+        ],
+        uv_rows,
+    )
+
+
+def generate_dense_heatmap() -> None:
+    headers = ["Dataset", *[f"Series {index:02d}" for index in range(1, 41)]]
+    rows = []
+    for row_index in range(40):
+        values = []
+        for column_index in range(40):
+            value = (
+                0.52
+                + 0.18 * math.sin((row_index + 1) * 0.23)
+                + 0.15 * math.cos((column_index + 1) * 0.19)
+                + 0.08 * math.sin((row_index + column_index + 2) * 0.31)
+            )
+            values.append(f"{max(0.0, min(1.0, value)):.4f}")
+        rows.append((f"Dataset {row_index + 1:02d}", *values))
+    _write("heatmap_dense_40x40.csv", headers, rows)
+
+
 def main() -> None:
     generate_xps()
     generate_xrd()
     generate_eis()
+    generate_trajectory3d()
     generate_cv()
     generate_lsv()
     generate_xas()
@@ -439,6 +630,8 @@ def main() -> None:
     generate_evidence_plots()
     generate_medical_distribution_interpretability()
     generate_pl_trpl()
+    generate_material_spectroscopy()
+    generate_dense_heatmap()
     print(f"Generated showcase data in {OUTPUT}")
 
 

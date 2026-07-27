@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "xps_compare",
+  "required_roles": ["binding_energy", "measured_series"],
+  "allowed_display_modes": ["overlay", "stacked_offset"],
+  "default_display_mode": "overlay",
+  "axis_direction": "descending",
+  "minimum_measured_series": 2,
+  "automatic_normalization": false,
+  "automatic_background_subtraction": false,
+  "automatic_smoothing": false,
+  "automatic_fitting": false,
+  "automatic_component_detection": false,
+  "automatic_peak_assignment": false,
+  "fit_role_names_require_rerouting": [
+    "background",
+    "baseline",
+    "envelope",
+    "fit",
+    "residual",
+    "component",
+    "peak"
+  ],
+  "min_columns": 3,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

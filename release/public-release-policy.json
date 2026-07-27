@@ -362,7 +362,7 @@
   "gallery": {
     "directory": "assets/gallery",
     "manifest": "assets/gallery/gallery-manifest.json",
-    "expected_case_count": 37,
+    "expected_case_count": 44,
     "reject_nonempty_png_text": true
   },
   "palettes": {
@@ -383,7 +383,7 @@
     "inventory_generator": "tools/build_asset_provenance.py",
     "gallery_fixture_generator": "tools/generate_showcase_data.py",
     "required_review_decision": "approved_for_public_source_release",
-    "expected_asset_count": 193,
+    "expected_asset_count": 218,
     "require_synthetic_or_generated": true,
     "require_contains_phi_false": true
   }

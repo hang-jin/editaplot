@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
-  "asset_policy": "reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
-  "case_count": 37,
+  "asset_policy": "programmatically verified and explicitly manually reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
+  "case_count": 44,
   "cases": [
     {
       "id": "bar-error-groups",
@@ -28,6 +28,12 @@
       "size_bytes": 28641
     },
     {
+      "id": "dsc-multi",
+      "title_zh": "DSC 多样品热流曲线",
+      "sha256": "449c5241498a8fb62fca80e63fdd36b3ffad662b3b694403d2468daf2d90cf01",
+      "size_bytes": 59586
+    },
+    {
       "id": "eis-nyquist",
       "title_zh": "EIS Nyquist 阻抗图",
       "sha256": "81c3d11fbd416e9ed06b38750b8914e2afee04b359cbbf0048e5098b0fdcb8ef",
@@ -38,6 +44,18 @@
       "title_zh": "效应量森林图",
       "sha256": "df26aadc469869023ee99f5cca5efa0b6eb46830b44212baf0fc784543014374",
       "size_bytes": 28210
+    },
+    {
+      "id": "ftir-temperature-series",
+      "title_zh": "FTIR 温度序列光谱",
+      "sha256": "158c060277c3558098897a1da3cb43d4332e1ce026134184a768924ba821f3ac",
+      "size_bytes": 81442
+    },
+    {
+      "id": "heatmap-dense-40x40",
+      "title_zh": "40×40 高密度热力图",
+      "sha256": "b5538ea18a688e81ceb960f7f47d8f113d108c7794482b0f111d0092085b668d",
+      "size_bytes": 61710
     },
     {
       "id": "heatmap-results",
@@ -130,6 +148,12 @@
       "size_bytes": 40511
     },
     {
+      "id": "nmr-comparison",
+      "title_zh": "19F NMR 光谱对比",
+      "sha256": "9772e573463422f24847394f8435c70adaddcaf4e95a572ac6c8625d682fa70e",
+      "size_bytes": 41013
+    },
+    {
       "id": "percent-composition",
       "title_zh": "百分比堆叠组成图",
       "sha256": "f9b288608c88b0068d944dbe2c6b84b1ee667a3f4c7a5bdb23fe7bfea3d268cc",
@@ -146,6 +170,12 @@
       "title_zh": "稳态 PL 发射光谱",
       "sha256": "2c2d7352ee2e287a441504d67530be67e52f782a05ec8f4a2dd9e74c3da43b57",
       "size_bytes": 60539
+    },
+    {
+      "id": "pl-temperature-series",
+      "title_zh": "PL 温度序列光谱",
+      "sha256": "211253908985f3e47287c33cb9f81d0559321e331b5ad4c188248cd743e09916",
+      "size_bytes": 74572
     },
     {
       "id": "pl-trpl",
@@ -186,14 +216,20 @@
     {
       "id": "trajectory3d",
       "title_zh": "三维多条件 Nyquist 轨迹",
-      "sha256": "4fc2daa9f7c8c4555e268e62036a490463775fd11e1b7e8c7eef017817d90238",
-      "size_bytes": 365492
+      "sha256": "06a4bdf973ebb6154fcf1a1856377f2b8248c7bef00132ba404625b6022108c9",
+      "size_bytes": 383974
     },
     {
       "id": "trend-progression",
       "title_zh": "多系列进展折线图",
       "sha256": "7908b309b86e2628e9980e9367ff717c47015e5ab1d3031592cfd4fdd7d4f575",
       "size_bytes": 39934
+    },
+    {
+      "id": "uv-vis-multi",
+      "title_zh": "UV-Vis 多样品吸收光谱",
+      "sha256": "b4b5d41f8ae40b00381cb0d5c7b78198478e329c59d4695a9abfbae0211c26e7",
+      "size_bytes": 50955
     },
     {
       "id": "uv-vis-tauc",
@@ -212,6 +248,12 @@
       "title_zh": "XAS 吸收谱对比",
       "sha256": "c0a93898ffb6fbc148c0c6368db1776c90e8aa075bab16d15935a82215fc4e47",
       "size_bytes": 47719
+    },
+    {
+      "id": "xps-comparison",
+      "title_zh": "XPS 多样品谱线对比",
+      "sha256": "10c9121d701005b86c1bb2685fc74dab580ddc75efeefb34c5b18bc2eb06943a",
+      "size_bytes": 47338
     },
     {
       "id": "xps-fit",

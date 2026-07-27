@@ -17,24 +17,28 @@ from matplotlib.path import Path
 from matplotlib.text import Text
 from matplotlib.ticker import AutoMinorLocator, FixedLocator, MaxNLocator
 
-from .scientific_workflow import (
-    ScientificPreparation,
-    ScientificSeries,
-    ScientificWorkflowError,
-    evidence_jitter_offsets,
-    log_decade_increment,
-    load_scientific_frame,
-    series_values,
-    shap_beeswarm_offsets,
-    shap_within_feature_color_values,
+from .heatmap_layout import (
+    resolve_heatmap_colorbar_geometry,
+    resolve_heatmap_layout,
 )
 from .scientific_visual import (
     AdaptiveOriginStyle,
     interpolate_hex_colors,
     palette_colors,
+    series_palette_colors,
     signed_effect_colors,
 )
-
+from .scientific_workflow import (
+    ScientificPreparation,
+    ScientificSeries,
+    ScientificWorkflowError,
+    evidence_jitter_offsets,
+    load_scientific_frame,
+    log_decade_increment,
+    series_values,
+    shap_beeswarm_offsets,
+    shap_within_feature_color_values,
+)
 
 mpl.rcParams.update(
     {
@@ -110,7 +114,9 @@ def _preview_style(figure: Figure) -> _PreviewStyle:
     return style
 
 
-def _resolved_preview_style(style: AdaptiveOriginStyle, marker_size_pt: float) -> _PreviewStyle:
+def _resolved_preview_style(
+    style: AdaptiveOriginStyle, marker_size_pt: float, series_count: int
+) -> _PreviewStyle:
     page_width_in = style.page_width_cm / 2.54
     scale = PREVIEW_WIDTH_IN / page_width_in
     return _PreviewStyle(
@@ -126,7 +132,7 @@ def _resolved_preview_style(style: AdaptiveOriginStyle, marker_size_pt: float) -
         minor_tick_pt=style.minor_tick_length_pt * scale,
         marker_pt=marker_size_pt * scale,
         fill_transparency_percent=style.fill_transparency_percent,
-        colors=palette_colors(style.palette_name),
+        colors=series_palette_colors(style.palette_name, max(1, series_count)),
     )
 
 
@@ -173,6 +179,7 @@ def _new_figure(
     preview = _resolved_preview_style(
         origin_style,
         preparation.plot_spec.display_plan.marker_size_pt,
+        len(preparation.plot_spec.series),
     )
     figure = Figure(
         figsize=(PREVIEW_WIDTH_IN, preview.height_in),
@@ -198,6 +205,7 @@ def _new_empty_figure(preparation: ScientificPreparation) -> Figure:
     preview = _resolved_preview_style(
         origin_style,
         preparation.plot_spec.display_plan.marker_size_pt,
+        len(preparation.plot_spec.series),
     )
     figure = Figure(
         figsize=(PREVIEW_WIDTH_IN, preview.height_in),
@@ -318,9 +326,7 @@ def _draw_line_profiles(axis: Any, frame: Any, preparation: ScientificPreparatio
     right_axis = None
     assignment_roles = dict(preparation.assignments)
     observed_color_index = {
-        series.source_column: index
-        for index, series in enumerate(spec.series)
-        if series.series_role != "fit"
+        series.source_column: index for index, series in enumerate(spec.series) if series.series_role != "fit"
     }
     for index, series in enumerate(spec.series):
         target = axis
@@ -408,7 +414,7 @@ def _draw_line_profiles(axis: Any, frame: Any, preparation: ScientificPreparatio
                 y,
                 color=color,
                 linewidth=style.plot_line_pt,
-                marker="o",
+                marker="o" if marker_size > 0.0 else None,
                 markersize=marker_size,
                 markerfacecolor="white",
                 markeredgewidth=style.frame_line_pt * 0.55,
@@ -480,9 +486,7 @@ def _draw_rietveld_refinement(
                 y,
                 color=color,
                 linewidth=(
-                    style.plot_line_pt
-                    if series.series_role == "calculated"
-                    else style.plot_line_pt * 0.78
+                    style.plot_line_pt if series.series_role == "calculated" else style.plot_line_pt * 0.78
                 ),
                 linestyle="--" if mark_kind == "secondary_line" else "-",
                 label=_series_label(series),
@@ -580,11 +584,7 @@ def _draw_reference_lines(axis: Any, preparation: ScientificPreparation) -> None
             )
             axis.axhline(
                 value,
-                color=(
-                    "#B65C67"
-                    if spec.plot_kind == "bland_altman" and index == 0
-                    else "#8A8F94"
-                ),
+                color=("#B65C67" if spec.plot_kind == "bland_altman" and index == 0 else "#8A8F94"),
                 linewidth=_preview_style(axis.figure).frame_line_pt,
                 linestyle="-" if spec.plot_kind == "bland_altman" and index == 0 else "--",
                 label=None,
@@ -609,8 +609,7 @@ def _draw_grouped_box(axis: Any, frame: Any, preparation: ScientificPreparation)
     style = _preview_style(axis.figure)
     positions = np.arange(1, len(spec.series) + 1, dtype=float)
     group_colors = {
-        group: style.colors[index % len(style.colors)]
-        for index, group in enumerate(spec.group_order)
+        group: style.colors[index % len(style.colors)] for index, group in enumerate(spec.group_order)
     }
     y_span = spec.axis_plan.y_to - spec.axis_plan.y_from
     for index, (position, series) in enumerate(zip(positions, spec.series, strict=True)):
@@ -662,9 +661,7 @@ def _draw_grouped_box(axis: Any, frame: Any, preparation: ScientificPreparation)
     category_positions: list[float] = []
     for category in spec.category_order:
         members = [
-            positions[index]
-            for index, series in enumerate(spec.series)
-            if series.category == category
+            positions[index] for index, series in enumerate(spec.series) if series.category == category
         ]
         category_positions.append(float(np.mean(members)))
     axis.set_xticks(category_positions, spec.category_order)
@@ -819,9 +816,7 @@ def _draw_horizontal_bars(axis: Any, frame: Any, preparation: ScientificPreparat
         if finite.size and float(np.min(finite)) < 0 < float(np.max(finite)):
             ablation_colors = signed_effect_colors(values)
         else:
-            ablation_colors = interpolate_hex_colors(
-                style.colors[0], style.colors[-1], len(categories)
-            )
+            ablation_colors = interpolate_hex_colors(style.colors[0], style.colors[-1], len(categories))
     for index, series in enumerate(spec.series):
         offset = (index - (count - 1) / 2.0) * spacing
         axis.barh(
@@ -855,12 +850,15 @@ def _draw_stacked_bars(axis: Any, frame: Any, preparation: ScientificPreparation
     values = np.column_stack([series_values(frame, item) for item in spec.series])
     if spec.plot_kind == "percent_stacked_bar":
         totals = np.nansum(values, axis=1)
-        values = np.divide(
-            values,
-            totals[:, None],
-            out=np.zeros_like(values),
-            where=totals[:, None] > 0,
-        ) * 100.0
+        values = (
+            np.divide(
+                values,
+                totals[:, None],
+                out=np.zeros_like(values),
+                where=totals[:, None] > 0,
+            )
+            * 100.0
+        )
     bottom = np.zeros(len(categories), dtype=float)
     for index, series in enumerate(spec.series):
         display = np.nan_to_num(values[:, index], nan=0.0)
@@ -1419,9 +1417,7 @@ def _draw_radar(figure: Figure, frame: Any, preparation: ScientificPreparation) 
             origin_style.layer_left_percent / 100.0,
             max(
                 0.08,
-                1.0
-                - (origin_style.layer_top_percent + origin_style.layer_height_percent)
-                / 100.0,
+                1.0 - (origin_style.layer_top_percent + origin_style.layer_height_percent) / 100.0,
             ),
             origin_style.layer_width_percent / 100.0,
             origin_style.layer_height_percent / 100.0,
@@ -1431,10 +1427,7 @@ def _draw_radar(figure: Figure, frame: Any, preparation: ScientificPreparation) 
     )
     axis.set_theta_offset(np.pi / 2.0)
     axis.set_theta_direction(-1)
-    upper = max(
-        float(np.nanmax(series_values(frame, series)))
-        for series in spec.series
-    )
+    upper = max(float(np.nanmax(series_values(frame, series))) for series in spec.series)
     upper = max(upper * 1.08, 1.0)
     for index, series in enumerate(spec.series):
         values = series_values(frame, series)
@@ -1477,6 +1470,12 @@ def _draw_heatmap(figure: Figure, frame: Any, preparation: ScientificPreparation
     categories = [str(item) for item in frame[spec.category_column].tolist()]
     series_labels = [series.label for series in spec.series]
     values = np.column_stack([series_values(frame, series) for series in spec.series])
+    layout = resolve_heatmap_layout(
+        x_labels=series_labels,
+        y_labels=categories,
+        tick_label_size_pt=origin_style.tick_label_size_pt,
+        major_tick_length_pt=origin_style.major_tick_length_pt,
+    )
     left = origin_style.layer_left_percent / 100.0
     bottom = max(
         0.08,
@@ -1504,23 +1503,25 @@ def _draw_heatmap(figure: Figure, frame: Any, preparation: ScientificPreparation
             interpolation="nearest",
             cmap="viridis",
         )
-    axis.set_xticks(np.arange(len(series_labels)), series_labels)
-    axis.set_yticks(np.arange(len(categories)), categories)
+    axis.set_xticks(np.arange(len(series_labels)), layout.x_display_labels)
+    axis.set_yticks(np.arange(len(categories)), layout.y_display_labels)
+    preview_scale = style.tick_label_pt / origin_style.tick_label_size_pt
     axis.tick_params(
         axis="both",
         which="major",
-        length=0,
         labelsize=style.tick_label_pt,
         pad=5,
     )
-    if len(series_labels) > 6 or max(map(len, series_labels), default=0) > 10:
+    axis.tick_params(axis="x", length=layout.x_tick_length_pt * preview_scale)
+    axis.tick_params(axis="y", length=layout.y_tick_length_pt * preview_scale)
+    if layout.x_rotation_deg:
         for label in axis.get_xticklabels():
-            label.set_rotation(35)
+            label.set_rotation(layout.x_rotation_deg)
             label.set_ha("right")
     for spine in axis.spines.values():
         spine.set_color("#39424E")
         spine.set_linewidth(style.frame_line_pt)
-    if values.shape[0] <= 15 and values.shape[1] <= 12:
+    if layout.show_cell_labels:
         normalization = image.norm
         for row in range(values.shape[0]):
             for column in range(values.shape[1]):
@@ -1536,12 +1537,23 @@ def _draw_heatmap(figure: Figure, frame: Any, preparation: ScientificPreparation
                     ha="center",
                     va="center",
                     color="white" if luminance < 0.48 else "#17212B",
-                    fontsize=style.tick_label_pt * 0.82,
+                    fontsize=layout.cell_label_size_pt * preview_scale,
                 )
-    color_axis = figure.add_axes([left + width + 0.035, bottom, 0.025, height])
+    geometry = resolve_heatmap_colorbar_geometry(
+        origin_style.layer_left_percent,
+        origin_style.layer_width_percent,
+    )
+    color_axis = figure.add_axes(
+        [
+            geometry.left_fraction,
+            bottom,
+            geometry.bar_axis_width_fraction,
+            height,
+        ]
+    )
     colorbar = figure.colorbar(image, cax=color_axis)
     colorbar.ax.tick_params(
-        labelsize=style.tick_label_pt * 0.88,
+        labelsize=layout.colorbar_label_size_pt * preview_scale,
         length=style.major_tick_pt * 0.75,
         width=style.frame_line_pt * 0.75,
     )
@@ -1567,12 +1579,8 @@ def _set_axis_contract(axis: Any, preparation: ScientificPreparation, right_axis
         axis.xaxis.set_major_locator(MaxNLocator(nbins=6))
         axis.xaxis.set_minor_locator(AutoMinorLocator(2))
         return
-    axis.set_xlabel(
-        _matplotlib_label(spec.x_title), fontsize=style.axis_title_pt, fontweight="bold"
-    )
-    axis.set_ylabel(
-        _matplotlib_label(spec.y_title), fontsize=style.axis_title_pt, fontweight="bold"
-    )
+    axis.set_xlabel(_matplotlib_label(spec.x_title), fontsize=style.axis_title_pt, fontweight="bold")
+    axis.set_ylabel(_matplotlib_label(spec.y_title), fontsize=style.axis_title_pt, fontweight="bold")
     if right_axis is not None and spec.y2_title:
         right_axis.set_ylabel(
             _matplotlib_label(spec.y2_title),
@@ -1624,9 +1632,7 @@ def _set_axis_contract(axis: Any, preparation: ScientificPreparation, right_axis
         if spec.y_scale == "log10":
             axis.set_yscale("log")
             frame = load_scientific_frame(preparation.source_path, preparation)
-            y_values = np.concatenate(
-                [series_values(frame, series) for series in spec.series]
-            )
+            y_values = np.concatenate([series_values(frame, series) for series in spec.series])
             finite_y = y_values[np.isfinite(y_values) & (y_values > 0)]
             if finite_y.size:
                 exponent_from = math.floor(math.log10(float(np.min(finite_y))))
@@ -1646,9 +1652,7 @@ def _set_axis_contract(axis: Any, preparation: ScientificPreparation, right_axis
 def _add_legend(axis: Any, right_axis: Any | None, preparation: ScientificPreparation) -> None:
     if preparation.plot_spec.plot_kind in {"paired_trajectory", "bland_altman", "grouped_box"}:
         return
-    visible_series = [
-        series for series in preparation.plot_spec.series if series.series_role != "fit"
-    ]
+    visible_series = [series for series in preparation.plot_spec.series if series.series_role != "fit"]
     needs_legend = len(visible_series) > 1 or any(series.error_kind for series in visible_series)
     if not needs_legend:
         return

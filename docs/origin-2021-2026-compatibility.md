@@ -97,6 +97,23 @@ Origin 2024b / 10.15 是当前唯一完成上述全链路实机验证的基线�
 如果连 Automation 握手或版本读取调用本身都失败，则按技术连接失败报告稳定阶段和错误代码，
 而不是猜测原因。
 
+## 遇到 0x80080005 等启动错误时会怎样
+
+`0x80080005` 表示 COM Server 没有在规定时间内完成启动注册；它本身不能证明是 Origin 版本、
+Python 包或数据文件的问题。EditaPlot 会把常见启动错误收敛成短代码：
+
+- `origin_com_server_execution_failed`：对应 `0x80080005`；
+- `origin_com_class_not_registered`：对应 `0x80040154`；
+- `origin_com_activation_access_denied`：对应 `0x80070005`。
+
+如果只读检查已经发现 `Origin.Application`，但真实 smoke 在受限执行上下文中失败，EditaPlot
+最多会在征得同意后，在当前活动的 Windows 交互桌面会话中重试**同一条** smoke 命令一次。它不会
+循环重试、自动改 DCOM/注册表、切换到 `ApplicationSI`，也不会把管理员模式作为普通用法。
+再次失败就停止，并保留脱敏兼容报告。
+
+smoke 或正式绘图失败时，Python 预览以及单独生成的 PNG/PDF/SVG 只能算预览，不能写成
+“Origin 已完成”。正式完成仍须同时具备 OPJU、PNG、PDF、TIF、对象反读和人工视觉检查。
+
 ## 为什么 2025b 以后更需要反读
 
 OriginLab 官方说明，Origin 2025b 调整了图页比例、边距、字体呈现、轴框、线宽和刻度标签自动旋转

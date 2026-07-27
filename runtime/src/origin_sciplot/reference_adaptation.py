@@ -111,6 +111,7 @@ _LINE_PRIMITIVES = frozenset(
 # marks.
 TEMPLATE_PRIMITIVE_COMPATIBILITY: dict[str, frozenset[str]] = {
     "xps": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES | frozenset({"area"}),
+    "xps_compare": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "xrd": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "xas": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "eis": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
@@ -165,6 +166,9 @@ TEMPLATE_PRIMITIVE_COMPATIBILITY: dict[str, frozenset[str]] = {
     "shap_summary": _COMMON_CONTEXT_PRIMITIVES | frozenset({"symbol", "reference_line", "colorbar"}),
     "grouped_box": _COMMON_CONTEXT_PRIMITIVES | frozenset({"box", "symbol", "error_bar", "reference_line"}),
     "pl": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
+    "dsc": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
+    "nmr": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
+    "ftir": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "uv_vis": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "trajectory3d": _COMMON_CONTEXT_PRIMITIVES | frozenset({"line", "symbol", "line_symbol"}),
 }

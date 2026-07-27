@@ -4,7 +4,9 @@ Select from the scientific question first, then check that the data layout suppo
 The route list below records template verification on the fully verified Origin 2024b / 10.15
 baseline. It is separate from compatibility with the user's current Origin host. After the live
 smoke, require the template capability decision for that host; a connected 2021+ installation does
-not automatically support every route.
+not automatically support every route. Rendering starts a dedicated Origin instance, so do not ask
+the user to open Origin first. Origin/OriginPro 2021–2026b is the compatibility target; only 2024b
+is the current fully verified baseline.
 
 ## Verified V1 routes
 
@@ -22,7 +24,7 @@ not automatically support every route.
 | Trend with uncertainty | `line_error` | X + value/error pairs | Define SD/SE/SEM/custom |
 | Ordered progression without uncertainty | `trend` | ordered numeric X + one or more numeric series | Preserve source order; do not smooth |
 | Comparable multimetric profile | `radar` | metric labels + >=2 nonnegative series; >=3 metrics | Confirm scales are comparable; never auto-normalize |
-| Category × series result matrix | `heatmap` | row labels + >=2 numeric columns; >=2 rows | Use continuous/diverging color scale and retain color bar |
+| Category × series result matrix | `heatmap` | row labels + >=2 numeric columns; >=2 rows | Keep all matrix values; dense 30×30/40×40 plans hide cell numbers, thin labels, and detach the colorbar; the 40×40 route is verified on Origin 2024b |
 | Flow | `sankey` | source + target + positive value | Avoid self-links and excessive nodes |
 | Preserve every observation | `raw_summary` | one or more raw numeric group columns | Show raw points and an explicit median; do not infer error bars |
 | Compare distribution shape | `violin` | one or more raw numeric group columns | Use only when sample density supports a distribution view |
@@ -38,9 +40,21 @@ not automatically support every route.
 | Grouped raw distributions | `grouped_box` | raw columns named `Category | Group` | Preserve category/group text verbatim; show every point and exact n; never invent p-values, brackets, or stars |
 | Distribution with raw evidence and compact summary | `raincloud` | one or more raw numeric group columns, at least 5 observations/group | Half violin + all raw points + mean ± 1 SD; do not remove outliers |
 | Model feature contribution | `shap_summary` | Feature + precomputed SHAP value + numeric Feature value | Never run SHAP or reorder features; normalize feature value for color only |
-| Steady-state or time-resolved photoluminescence | `pl` | Wavelength or Time + PL series; optional explicitly paired Fit columns | TRPL uses log Y; never calculate lifetime or fit curves |
-| UV–Vis spectrum with optional Tauc evidence | `uv_vis` | Wavelength + Absorbance/Transmittance; optional Photon energy + Tauc value/fit/Eg | Never calculate photon energy, exponent, fit, or band gap |
+| Steady-state or time-resolved photoluminescence | `pl` | Wavelength or Time + one or more PL series; optional explicitly paired Fit columns | Preserve multi-condition order; TRPL uses log Y; never calculate lifetime or fit curves |
+| UV–Vis spectrum with optional Tauc evidence | `uv_vis` | Wavelength + one or more comparable Absorbance or Transmittance series; optional Photon energy + Tauc value/fit/Eg | Do not mix signal definitions without an explicit axis contract; never calculate photon energy, exponent, fit, or band gap |
 | Multi-condition 3D Nyquist trajectory | `trajectory3d` | Long table: explicit Zreal + real third variable with meaning/unit + explicit -Zimag + Series; 1–6 groups | Never create decorative depth, fit circuits, or infer the third variable |
+
+## Verified materials routes
+
+These routes have generated Origin 2024b OPJU/PNG/PDF/TIF files and passed programmatic object
+readback, SHA-bound human visual QA, and the sanitized public-gallery audit.
+
+| Question/evidence | Candidate | Required shape | Cautions |
+|---|---|---|---|
+| Compare independent measured XPS spectra | `xps_compare` | Binding Energy + at least two measured Intensity/Counts/Experimental series | Overlay by default; fit/background/residual/component columns are not samples; stacked offset requires explicit confirmation |
+| Infrared spectrum or ordered IR series | `ftir` | Wavenumber + one or more comparable Absorbance/Transmittance series | Decreasing wavenumber axis; never correct, smooth, label, or assign peaks |
+| Processed NMR spectrum comparison | `nmr` | Chemical Shift (ppm) + one or more processed intensity series | Decreasing chemical-shift axis; never phase-correct, integrate, pick, or assign peaks |
+| DSC heat-flow comparison | `dsc` | Temperature + one or more comparable Heat Flow series | Confirm endothermic/exothermic direction; never infer Tg/Tm/Tc or enthalpy |
 
 ## Ranking signals
 
@@ -79,6 +93,12 @@ not automatically support every route.
 - Time plus explicit PL semantics favors TRPL; paired Fit columns remain user-supplied evidence.
 - Wavelength plus Absorbance/Transmittance favors `uv_vis`; a Tauc inset requires complete explicit
   Photon-energy and Tauc-value columns.
+- Binding Energy plus at least two independently named measured XPS series favors `xps_compare`.
+  Background, envelope, residual, fit, component, and peak semantics instead favor the XPS fit route
+  or an explicit retained-without-rendering role.
+- Wavenumber plus Absorbance/Transmittance favors `ftir`; Chemical Shift/ppm favors `nmr`.
+- Temperature plus explicit Heat Flow/DSC semantics favors `dsc`; temperature alone is not enough
+  because PL, electrical, and other ordered measurements may use the same X column.
 - Recommend `trajectory3d` only when all four long-table roles are explicit, the third-axis header
   includes scientific meaning and unit, `-Zimag` is supplied rather than inferred, and Series has
   1–6 groups. Otherwise require mapping confirmation or reject the 3D route.
@@ -91,6 +111,6 @@ to three choices and wait.
 
 ## Experimental backlog
 
-Raman, FTIR, TGA/DSC, GCD/Tafel, ECDF/KDE, correlation matrix,
+Raman, TGA, GCD/Tafel, ECDF/KDE, correlation matrix,
 regression, volcano, waterfall/diverging bars, and multi-panel layouts remain experimental
 until their Origin routes pass the full verification contract.

@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 
 from .data_loader import DataLoadError, LoadedTable, load_table
+from .heatmap_layout import heatmap_cell_labels_enabled
 from .palette_catalog import get_palette
 from .scientific_visual import AdaptiveOriginStyle, resolve_adaptive_style
 from .xrd_semantics import (
@@ -60,6 +61,10 @@ ScientificTemplateId = Literal[
     "raincloud",
     "shap_summary",
     "grouped_box",
+    "dsc",
+    "nmr",
+    "ftir",
+    "xps_compare",
     "pl",
     "uv_vis",
     "trajectory3d",
@@ -100,6 +105,10 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "raincloud",
         "shap_summary",
         "grouped_box",
+        "dsc",
+        "nmr",
+        "ftir",
+        "xps_compare",
         "pl",
         "uv_vis",
         "trajectory3d",
@@ -164,6 +173,7 @@ class ScientificSeries:
     group: str | None = None
     series_role: str = "data"
     paired_with: str | None = None
+    display_offset: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -523,6 +533,36 @@ _X_ALIASES: dict[str, tuple[str, ...]] = {
         "阈值",
         "阈值概率",
     ),
+    "dsc": (
+        "temperature",
+        "temp",
+        "temperaturec",
+        "温度",
+    ),
+    "nmr": (
+        "chemicalshift",
+        "shiftppm",
+        "ppm",
+        "化学位移",
+        "位移",
+        "核磁位移",
+    ),
+    "ftir": (
+        "wavenumber",
+        "wave number",
+        "cm-1",
+        "cm^-1",
+        "波数",
+        "红外波数",
+    ),
+    "xps_compare": (
+        "bindingenergy",
+        "binding energy",
+        "bindingenergyev",
+        "beev",
+        "结合能",
+        "结合能ev",
+    ),
     "pl": (
         "wavelength",
         "emissionwavelength",
@@ -558,6 +598,95 @@ _TAUC_VALUE_ALIASES = (
 )
 _TAUC_FIT_ALIASES = ("taucfit", "taucfitting", "tauc拟合", "带隙拟合")
 _BANDGAP_ALIASES = ("bandgap", "eg", "energygap", "带隙", "禁带宽度")
+_MATERIAL_SIGNAL_ALIASES: dict[str, tuple[str, ...]] = {
+    "dsc": ("heatflow", "heat flow", "dsc", "热流", "热流率"),
+    "nmr": ("intensity", "signal", "spectrum", "nmr", "强度", "信号", "谱"),
+    "ftir": (
+        "transmittance",
+        "transmission",
+        "absorbance",
+        "absorption",
+        "intensity",
+        "ftir",
+        "infrared",
+        "透过率",
+        "透射",
+        "吸光度",
+        "吸收",
+        "强度",
+        "红外",
+    ),
+    "pl": ("pl", "intensity", "emission", "fluorescence", "强度", "发光", "荧光"),
+    "uv_vis": (
+        "absorbance",
+        "absorption",
+        "transmittance",
+        "transmission",
+        "uv",
+        "optical",
+        "吸光度",
+        "吸收",
+        "透过率",
+        "透射",
+        "光学",
+    ),
+    "xps_compare": (
+        "intensity",
+        "counts",
+        "count",
+        "experimental",
+        "measured",
+        "raw",
+        "signal",
+        "强度",
+        "计数",
+        "实测",
+        "原始",
+        "信号",
+    ),
+}
+_XPS_FIT_COLUMN_ALIASES = (
+    "background",
+    "baseline",
+    "envelope",
+    "fit",
+    "fitted",
+    "residual",
+    "difference",
+    "component",
+    "peak",
+    "背景",
+    "基线",
+    "包络",
+    "拟合",
+    "残差",
+    "差值",
+    "分峰",
+    "峰组分",
+)
+_MATERIAL_NUMERIC_METADATA_ALIASES = (
+    "time",
+    "cycle",
+    "scan",
+    "segment",
+    "program",
+    "step",
+    "index",
+    "mass",
+    "weight",
+    "rate",
+    "duration",
+    "timestamp",
+    "时间",
+    "循环",
+    "扫描",
+    "程序",
+    "步骤",
+    "序号",
+    "质量",
+    "速率",
+    "时长",
+)
 
 _TRAJECTORY3D_X_ALIASES = (
     "zreal",
@@ -905,6 +1034,11 @@ def mapping_context_options(template_id: str) -> tuple[tuple[str, str], ...]:
         return (("roc", "ROC"), ("pr", "Precision–Recall"))
     if template_id == "pl":
         return (("steady_state", "Steady-state PL"), ("trpl", "TRPL decay"))
+    if template_id in {"dsc", "nmr", "ftir", "xps_compare"}:
+        return (
+            ("overlay", "原始数值直接叠加"),
+            ("stacked_offset", "仅显示用纵向错位（原始列不变）"),
+        )
     return ()
 
 
@@ -969,6 +1103,15 @@ def _numeric_compatible(raw: pd.Series) -> bool:
     return int(converted.notna().sum()) >= 1
 
 
+def _material_numeric_role(column: str, template_id: str) -> str:
+    """Classify a numeric non-X column without silently plotting metadata."""
+    if _alias_score(column, _MATERIAL_SIGNAL_ALIASES[template_id]) > 0:
+        return "signal"
+    if _alias_score(column, _MATERIAL_NUMERIC_METADATA_ALIASES) > 0:
+        return "metadata"
+    return "uncertain"
+
+
 def _select_x_column(frame: pd.DataFrame, template_id: str) -> tuple[str, float, tuple[str, ...]]:
     aliases = _X_ALIASES[template_id]
     scored = [(column, _alias_score(str(column), aliases)) for column in frame.columns]
@@ -1009,6 +1152,8 @@ def _physical_unit(column: str) -> str | None:
         return None
     unit = match.group(1).strip()
     canonical = _canonical(unit)
+    if unit in {"°C", "℃", "K", "%"} or canonical in {"c", "k", "nm", "ppm", "au"}:
+        return unit
     known = (
         "v",
         "mv",
@@ -1030,6 +1175,10 @@ def _physical_unit(column: str) -> str | None:
         "s",
         "min",
         "h",
+        "w/g",
+        "mw/mg",
+        "j/g",
+        "kj/mol",
     )
     if not any(token in canonical for token in known):
         return None
@@ -1064,9 +1213,11 @@ def _standard_line_axis_titles(
         # ``2theta`` describes the coordinate rather than its unit, so retain
         # only the final, recognized angular unit in the public axis title.
         coordinate_hint, candidate_unit = x_unit.rsplit(",", maxsplit=1)
-        if "2theta" in _canonical(coordinate_hint) and _canonical(
-            candidate_unit
-        ) in {"deg", "degree", "degrees"}:
+        if "2theta" in _canonical(coordinate_hint) and _canonical(candidate_unit) in {
+            "deg",
+            "degree",
+            "degrees",
+        }:
             x_unit = candidate_unit.strip()
     unit_suffix = f" ({_format_unit(x_unit)})" if x_unit else ""
     if template_id in {"cv", "lsv"}:
@@ -1403,12 +1554,139 @@ def _fit_base_name(column: str) -> str:
     return text or column
 
 
+def _automatic_material_mapping(
+    loaded: LoadedTable,
+    template_id: str,
+) -> _AutoMapping:
+    """Map one physical X coordinate and only numeric measured signal columns."""
+
+    frame = loaded.frame
+    x_column, confidence, x_reasons = _select_x_column(frame, template_id)
+    assignments = {str(column): "ignored" for column in frame.columns}
+    assignments[x_column] = "x"
+    reasons = list(x_reasons)
+    signal_columns: list[str] = []
+    ignored_columns: list[str] = []
+    metadata_columns: list[str] = []
+    uncertain_columns: list[str] = []
+    for column in map(str, frame.columns):
+        if column == x_column:
+            continue
+        if not _numeric_compatible(frame[column]):
+            ignored_columns.append(column)
+            continue
+        numeric_role = _material_numeric_role(column, template_id)
+        if numeric_role == "signal":
+            assignments[column] = "series"
+            signal_columns.append(column)
+        elif numeric_role == "metadata":
+            metadata_columns.append(column)
+        else:
+            uncertain_columns.append(column)
+    if not signal_columns and uncertain_columns:
+        for column in uncertain_columns:
+            assignments[column] = "series"
+        signal_columns.extend(uncertain_columns)
+        uncertain_columns.clear()
+        reasons.append("material_series_roles_require_confirmation")
+    if not signal_columns:
+        raise ScientificWorkflowError(
+            "series_missing",
+            f"{template_id.upper()} data needs at least one numeric signal series.",
+        )
+    if ignored_columns:
+        reasons.append("nonnumeric_columns_ignored")
+    if metadata_columns:
+        reasons.append("material_numeric_metadata_ignored")
+    if uncertain_columns:
+        reasons.append("material_numeric_columns_ignored_uncertain")
+    unique_reasons = tuple(dict.fromkeys(reasons))
+    warnings = unique_reasons
+    if len(signal_columns) > 10:
+        warnings = tuple(dict.fromkeys((*warnings, "material_series_count_high")))
+    return _AutoMapping(
+        assignments,
+        "overlay",
+        min(confidence, 0.68) if unique_reasons else 0.98,
+        unique_reasons,
+        warnings,
+    )
+
+
+def _automatic_xps_compare_mapping(loaded: LoadedTable) -> _AutoMapping:
+    """Select only independent measured XPS spectra, never fit-table columns."""
+    frame = loaded.frame
+    x_column, confidence, x_reasons = _select_x_column(frame, "xps_compare")
+    assignments = {str(column): "ignored" for column in frame.columns}
+    assignments[x_column] = "x"
+    measured: list[str] = []
+    uncertain: list[str] = []
+    fit_columns: list[str] = []
+    metadata: list[str] = []
+    nonnumeric: list[str] = []
+    for column in map(str, frame.columns):
+        if column == x_column:
+            continue
+        if not _numeric_compatible(frame[column]):
+            nonnumeric.append(column)
+            continue
+        if _alias_score(column, _XPS_FIT_COLUMN_ALIASES) > 0:
+            fit_columns.append(column)
+            continue
+        numeric_role = _material_numeric_role(column, "xps_compare")
+        if numeric_role == "signal":
+            assignments[column] = "series"
+            measured.append(column)
+        elif numeric_role == "metadata":
+            metadata.append(column)
+        else:
+            uncertain.append(column)
+    if len(measured) < 2:
+        needed = 2 - len(measured)
+        promoted = uncertain[:needed] if measured else uncertain
+        for column in promoted:
+            assignments[column] = "series"
+            measured.append(column)
+        uncertain = [column for column in uncertain if column not in promoted]
+    if len(measured) < 2:
+        code = "xps_fit_table_requires_fit_template" if fit_columns else "xps_compare_series_missing"
+        raise ScientificWorkflowError(
+            code,
+            "XPS comparison needs at least two independent measured spectra. "
+            "Use the XPS fit template when the remaining columns are background, "
+            "envelope, residual, or component peaks.",
+        )
+    reasons = list(x_reasons)
+    if fit_columns:
+        reasons.append("xps_fit_columns_ignored_use_fit_template")
+    if metadata:
+        reasons.append("material_numeric_metadata_ignored")
+    if uncertain:
+        reasons.append("xps_numeric_columns_ignored_uncertain")
+    if nonnumeric:
+        reasons.append("nonnumeric_columns_ignored")
+    # Any series without a measured-signal alias was promoted only to keep a
+    # two-or-more comparison possible and must still be confirmed by the user.
+    if any(_material_numeric_role(column, "xps_compare") == "uncertain" for column in measured):
+        reasons.append("xps_series_roles_require_confirmation")
+    unique_reasons = tuple(dict.fromkeys(reasons))
+    return _AutoMapping(
+        assignments,
+        "overlay",
+        min(confidence, 0.62) if unique_reasons else 0.98,
+        unique_reasons,
+        unique_reasons,
+    )
+
+
 def _automatic_pl_mapping(loaded: LoadedTable) -> _AutoMapping:
     frame = loaded.frame
     x_column, confidence, x_reasons = _select_x_column(frame, "pl")
     assignments: dict[str, str] = {}
     fit_columns: list[str] = []
     ignored: list[str] = []
+    metadata_numeric: list[str] = []
+    uncertain_numeric: list[str] = []
     for column in map(str, frame.columns):
         if column == x_column:
             assignments[column] = "x"
@@ -1418,16 +1696,29 @@ def _automatic_pl_mapping(loaded: LoadedTable) -> _AutoMapping:
         elif _alias_score(column, _FIT_ALIASES) > 0:
             assignments[column] = "fit"
             fit_columns.append(column)
+        elif _material_numeric_role(column, "pl") == "metadata":
+            assignments[column] = "ignored"
+            metadata_numeric.append(column)
         else:
             assignments[column] = "series"
+            if _material_numeric_role(column, "pl") == "uncertain":
+                uncertain_numeric.append(column)
     if not any(role == "series" for role in assignments.values()):
         raise ScientificWorkflowError("series_missing", "PL data needs at least one measured signal series.")
     canonical_x = _canonical(x_column)
     time_like = any(token in canonical_x for token in ("time", "decay", "lifetime", "时间", "寿命"))
-    mode = "trpl" if time_like or fit_columns else "steady_state"
+    wavelength_like = any(token in canonical_x for token in ("wavelength", "波长"))
+    mode = "trpl" if time_like else "steady_state"
     reasons = list(x_reasons)
+    if not time_like and not wavelength_like and fit_columns:
+        mode = "trpl"
+        reasons.append("pl_mode_inferred_from_fit")
     if ignored:
         reasons.append("nonnumeric_columns_ignored")
+    if metadata_numeric:
+        reasons.append("material_numeric_metadata_ignored")
+    if uncertain_numeric:
+        reasons.append("material_series_roles_require_confirmation")
     if mode == "trpl" and not fit_columns:
         reasons.append("trpl_fit_columns_absent")
     return _AutoMapping(
@@ -1465,13 +1756,25 @@ def _automatic_uv_vis_mapping(loaded: LoadedTable) -> _AutoMapping:
             selected.add(winners[0])
             if len(winners) > 1:
                 reasons.append(f"{role}_role_ambiguous")
+    metadata_numeric: list[str] = []
+    uncertain_numeric: list[str] = []
     for column in map(str, frame.columns):
         if column in selected:
             continue
-        if _numeric_compatible(frame[column]):
-            assignments[column] = "series"
-        else:
+        if not _numeric_compatible(frame[column]):
             reasons.append("nonnumeric_columns_ignored")
+            continue
+        numeric_role = _material_numeric_role(column, "uv_vis")
+        if numeric_role == "metadata":
+            metadata_numeric.append(column)
+        else:
+            assignments[column] = "series"
+            if numeric_role == "uncertain":
+                uncertain_numeric.append(column)
+    if metadata_numeric:
+        reasons.append("material_numeric_metadata_ignored")
+    if uncertain_numeric:
+        reasons.append("material_series_roles_require_confirmation")
     if not any(role == "series" for role in assignments.values()):
         raise ScientificWorkflowError(
             "series_missing",
@@ -2005,6 +2308,8 @@ def _validate_assignment_shape(
             else "ordinary_scan"
         )
         mode = mapping.plot_mode or inferred_xrd_mode
+    elif template_id in {"dsc", "nmr", "ftir", "xps_compare"}:
+        mode = mapping.plot_mode or "overlay"
     else:
         mode = mapping.plot_mode or ("nyquist" if template_id == "eis" else "default")
     if template_id == "xrd" and mode not in {"ordinary_scan", "rietveld_refinement"}:
@@ -2031,6 +2336,11 @@ def _validate_assignment_shape(
         raise ScientificWorkflowError("mapping_plot_mode", "Select ROC or Precision-Recall mode.")
     if template_id == "pl" and mode not in {"steady_state", "trpl"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select steady-state PL or TRPL mode.")
+    if template_id in {"dsc", "nmr", "ftir", "xps_compare"} and mode not in {
+        "overlay",
+        "stacked_offset",
+    }:
+        raise ScientificWorkflowError("mapping_plot_mode", "Select overlay or stacked-offset mode.")
     return assignments, mode
 
 
@@ -2755,10 +3065,11 @@ def _build_error_spec(
         series_columns,
         category_column=anchor if category else None,
     )
-    if len(series) > 12:
-        warnings.append("series_count_excessive")
-    elif len(series) > 8:
-        warnings.append("series_count_high")
+    if template_id not in {"heatmap", "confusion_matrix"}:
+        if len(series) > 12:
+            warnings.append("series_count_excessive")
+        elif len(series) > 8:
+            warnings.append("series_count_high")
     bar_group_span = 0.8
     bar_inner_width = 0.72
     if category and len(series) >= 5:
@@ -2766,7 +3077,7 @@ def _build_error_spec(
         bar_inner_width = 0.78 if len(series) <= 8 else 0.80
     if category:
         categories = [str(value) for value in frame[anchor].tolist()]
-        if len(categories) > 20:
+        if len(categories) > 20 and template_id not in {"heatmap", "confusion_matrix"}:
             warnings.append("category_count_high")
         if categories and max(len(value) for value in categories) > 12:
             warnings.append("category_labels_long")
@@ -2834,6 +3145,12 @@ def _build_error_spec(
             "heatmap_shape",
             "A heatmap needs at least two rows and two numeric value columns.",
         )
+    if template_id == "heatmap" and not heatmap_cell_labels_enabled(len(frame), len(series)):
+        warnings.append("heatmap_cell_labels_hidden")
+        if max(len(frame), len(series)) > 60 or len(frame) * len(series) > 3600:
+            warnings.append("heatmap_ultra_dense")
+        else:
+            warnings.append("heatmap_dense_matrix")
     if template_id == "confusion_matrix":
         if len(series) < 2 or len(frame) < 2:
             raise ScientificWorkflowError(
@@ -2883,9 +3200,14 @@ def _build_error_spec(
         category_rotation_deg=category_rotation,
         signed_values=signed_values,
     )
-    x_title = "Predicted class" if template_id == "confusion_matrix" else anchor
     if template_id == "confusion_matrix":
+        x_title = "Predicted class"
         y_title = "Actual class"
+    elif template_id == "heatmap":
+        x_title = "Series"
+        y_title = anchor
+    else:
+        x_title = anchor
     spec = ScientificPlotSpec(
         plot_kind=plot_kind,
         plot_mode="default",
@@ -3653,6 +3975,145 @@ def _match_fit_series(fit_column: str, observed_columns: list[str]) -> str:
     )
 
 
+def _nmr_nucleus_prefix(column: str) -> str:
+    normalized = unicodedata.normalize("NFKC", column)
+    match = re.search(r"(?<!\d)(\d{1,3})\s*([A-Z][a-z]?)", normalized)
+    if match is None:
+        return ""
+    superscript = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+    return f"{match.group(1).translate(superscript)}{match.group(2)} "
+
+
+def _material_axis_titles(
+    template_id: str,
+    x_column: str,
+    series_columns: list[str],
+) -> tuple[str, str, tuple[str, ...]]:
+    x_unit = _physical_unit(x_column)
+    suffix = f" ({_format_unit(x_unit)})" if x_unit else ""
+    warnings: list[str] = []
+    if not x_unit:
+        warnings.append("material_x_unit_missing")
+    if template_id == "dsc":
+        y_unit = _common_unit(series_columns)
+        return (
+            f"Temperature{suffix}",
+            f"Heat flow ({y_unit})" if y_unit else "Heat flow",
+            tuple(warnings),
+        )
+    if template_id == "nmr":
+        return (
+            f"{_nmr_nucleus_prefix(x_column)}Chemical shift{suffix}",
+            "Intensity (a.u.)",
+            tuple(warnings),
+        )
+    if template_id == "xps_compare":
+        canonical = [_canonical(column) for column in series_columns]
+        y_title = (
+            "Counts"
+            if all(any(token in value for token in ("count", "计数")) for value in canonical)
+            else "Intensity (a.u.)"
+        )
+        return f"Binding Energy{suffix}", y_title, tuple(warnings)
+    canonical = [_canonical(column) for column in series_columns]
+    if all(
+        any(token in value for token in ("transmittance", "transmission", "透过率", "透射"))
+        for value in canonical
+    ):
+        y_title = "Transmittance (%)"
+    elif all(
+        any(token in value for token in ("absorbance", "absorption", "吸光度", "吸收")) for value in canonical
+    ):
+        y_title = "Absorbance (a.u.)"
+    else:
+        y_title = "IR signal (a.u.)"
+    return f"Wavenumber{suffix}", y_title, tuple(warnings)
+
+
+def _material_series(
+    frame: pd.DataFrame,
+    columns: list[str],
+    plot_mode: str,
+) -> tuple[ScientificSeries, ...]:
+    base = tuple(ScientificSeries(column, column) for column in columns)
+    if plot_mode != "stacked_offset":
+        return base
+    spans = []
+    for column in columns:
+        values = frame[column].dropna().to_numpy(dtype=float)
+        spans.append(float(np.max(values) - np.min(values)) if values.size else 0.0)
+    step = max(spans, default=0.0) * 1.12
+    if not math.isfinite(step) or step <= 0.0:
+        step = 1.0
+    return tuple(replace(series, display_offset=index * step) for index, series in enumerate(base))
+
+
+def _build_material_spectrum_spec(
+    template_id: str,
+    frame: pd.DataFrame,
+    assignments: dict[str, str],
+    plot_mode: str,
+) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    x_column = _require_one(assignments, "x")
+    series_columns = _require_series(assignments)
+    _require_points(frame, x_column, series_columns)
+    mode = plot_mode or "overlay"
+    if mode not in {"overlay", "stacked_offset"}:
+        raise ScientificWorkflowError(
+            "mapping_plot_mode",
+            "Select overlay or stacked-offset mode.",
+        )
+    series = _material_series(frame, series_columns, mode)
+    x_title, y_title, title_warnings = _material_axis_titles(
+        template_id,
+        x_column,
+        series_columns,
+    )
+    warnings = list(title_warnings)
+    if mode == "stacked_offset":
+        warnings.append("display_vertical_offset_helper_only")
+    axis_plan = _axis_plan(
+        frame,
+        x_column=x_column,
+        series=series,
+        category=False,
+        include_zero_y=False,
+        padding_fraction=0.06,
+    )
+    if template_id in {"nmr", "ftir", "xps_compare"}:
+        axis_plan = replace(
+            axis_plan,
+            x_from=axis_plan.x_to,
+            x_to=axis_plan.x_from,
+            x_step=(-abs(axis_plan.x_step) if axis_plan.x_step is not None else None),
+        )
+        warnings.append("descending_spectral_axis")
+    style = resolve_adaptive_style(
+        template_id=template_id,
+        plot_kind=template_id,
+        row_count=len(frame),
+        series_count=len(series),
+    )
+    return (
+        ScientificPlotSpec(
+            plot_kind=template_id,
+            plot_mode=mode,
+            x_column=x_column,
+            category_column=None,
+            series=series,
+            x_title=x_title,
+            y_title=y_title,
+            y2_title=None,
+            x_scale="linear",
+            y_scale="linear",
+            display_transform=("vertical_offset_helper_only" if mode == "stacked_offset" else "identity"),
+            display_plan=ScientificDisplayPlan(0.0, 0.8, 0.72, figure_style=style),
+            axis_plan=axis_plan,
+        ),
+        tuple(dict.fromkeys(warnings)),
+    )
+
+
 def _build_pl_spec(
     frame: pd.DataFrame,
     assignments: dict[str, str],
@@ -3700,6 +4161,7 @@ def _build_pl_spec(
         row_count=len(frame),
         series_count=len(observed),
     )
+    marker_size_pt = 6.5 if mode == "trpl" else (0.0 if len(observed) > 1 or len(frame) > 80 else 4.8)
     return (
         ScientificPlotSpec(
             plot_kind=plot_kind,
@@ -3714,7 +4176,7 @@ def _build_pl_spec(
             y_scale="log10" if mode == "trpl" else "linear",
             display_transform="identity",
             display_plan=ScientificDisplayPlan(
-                6.5 if mode == "trpl" else 4.8,
+                marker_size_pt,
                 0.8,
                 0.72,
                 figure_style=style,
@@ -3805,6 +4267,7 @@ def _build_uv_vis_spec(
         row_count=len(frame),
         series_count=len(signals),
     )
+    marker_size_pt = 0.0 if len(signals) > 1 or len(frame) > 80 else 4.8
     return (
         ScientificPlotSpec(
             plot_kind="uv_vis",
@@ -3818,7 +4281,7 @@ def _build_uv_vis_spec(
             x_scale="linear",
             y_scale="linear",
             display_transform="identity",
-            display_plan=ScientificDisplayPlan(4.8, 0.8, 0.72, figure_style=style),
+            display_plan=ScientificDisplayPlan(marker_size_pt, 0.8, 0.72, figure_style=style),
             axis_plan=_axis_plan(
                 frame,
                 x_column=x_column,
@@ -4099,6 +4562,8 @@ def _build_plot_spec(
         return _build_bland_altman_spec(frame, assignments)
     if template_id == "grouped_box":
         return _build_grouped_box_spec(frame, assignments)
+    if template_id in {"dsc", "nmr", "ftir", "xps_compare"}:
+        return _build_material_spectrum_spec(template_id, frame, assignments, plot_mode)
     if template_id == "pl":
         return _build_pl_spec(frame, assignments, plot_mode)
     if template_id == "uv_vis":
@@ -4135,6 +4600,10 @@ def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
         return _automatic_bland_altman_mapping(loaded)
     if template_id == "grouped_box":
         return _automatic_raw_distribution_mapping(loaded, template_id)
+    if template_id in {"dsc", "nmr", "ftir"}:
+        return _automatic_material_mapping(loaded, template_id)
+    if template_id == "xps_compare":
+        return _automatic_xps_compare_mapping(loaded)
     if template_id == "pl":
         return _automatic_pl_mapping(loaded)
     if template_id == "uv_vis":
@@ -4248,6 +4717,8 @@ def series_values(frame: pd.DataFrame, series: ScientificSeries) -> np.ndarray:
     values = frame[series.source_column].to_numpy(dtype=float, copy=True)
     if series.transform == "negate":
         values = -values
+    if series.display_offset:
+        values = values + series.display_offset
     return values
 
 

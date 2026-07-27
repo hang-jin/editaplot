@@ -1,0 +1,32 @@
+id: dsc
+name: DSC 差示扫描量热
+category: thermal-analysis/dsc
+version: 0.1.0
+description: 绘制一个或多个用户提供的 DSC 热流曲线，不自动翻转热流方向或识别热转变
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 58
+family: thermal_analysis
+examples:
+  - id: multi_sample
+    name_zh: 三样品 DSC 热流比较
+    file: example_standard.csv
+    description_zh: 原创合成的三样品热流曲线，保留源数据方向且不自动标记转变温度。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 绘制温度与一个或多个 DSC 热流系列的关系。
+  required_columns: [Temperature/温度列, 一个或多个 Heat Flow/热流数值系列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Temperature/温度, Heat Flow/热流, DSC]
+  notes_zh:
+    - 吸热或放热向上/向下的约定必须由用户确认，软件不根据曲线形状猜测或静默翻转。
+    - 不自动识别、拟合或标注 Tg、Tm、Tc、焓变、起始温度或峰温。
+    - 多曲线默认直接叠加；只有用户明确确认后才能增加显示偏移。

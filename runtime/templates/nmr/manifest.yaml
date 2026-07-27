@@ -1,0 +1,32 @@
+id: nmr
+name: NMR 核磁共振谱
+category: spectroscopy/nmr
+version: 0.1.0
+description: 绘制一个或多个用户预处理完成的 NMR 强度谱，不自动做相位、基线、积分或峰指认
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 57
+family: spectroscopy
+examples:
+  - id: comparison
+    name_zh: 双样品 NMR 光谱比较
+    file: example_standard.csv
+    description_zh: 原创合成的双样品 19F NMR 谱，保留递减化学位移轴和源强度。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 绘制化学位移与一个或多个预处理完成的 NMR 强度系列。
+  required_columns: [Chemical Shift/化学位移列, 一个或多个 Intensity/强度数值系列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Chemical Shift/化学位移, ppm, NMR Intensity/核磁强度]
+  notes_zh:
+    - 化学位移按 NMR 惯例由大到小显示，核种只在源表明确给出时保留。
+    - 不自动做相位校正、基线校正、积分、峰识别、峰归属或定量。
+    - 多谱线默认直接叠加；只有用户明确确认后才能增加显示偏移。

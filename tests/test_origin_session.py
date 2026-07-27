@@ -146,6 +146,7 @@ def test_start_failure_has_stable_redacted_diagnostics(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     visibility: list[bool] = []
+    exits: list[str] = []
 
     def set_show(show: bool) -> None:
         visibility.append(show)
@@ -155,7 +156,11 @@ def test_start_failure_has_stable_redacted_diagnostics(
             )
             raise RuntimeError(private_path)
 
-    fake_originpro = SimpleNamespace(oext=True, set_show=set_show)
+    fake_originpro = SimpleNamespace(
+        oext=True,
+        set_show=set_show,
+        exit=lambda: exits.append("exit"),
+    )
     monkeypatch.setitem(sys.modules, "originpro", fake_originpro)
 
     with pytest.raises(OriginEnvironmentError) as raised:
@@ -165,7 +170,42 @@ def test_start_failure_has_stable_redacted_diagnostics(
     assert raised.value.code == "origin_instance_start_failed"
     assert raised.value.stage == "create_instance"
     assert "private" not in str(raised.value)
-    assert visibility == [False, True]
+    assert visibility == [False]
+    assert exits == ["exit"]
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        ((-2146959355, "server execution failed"), "origin_com_server_execution_failed"),
+        ((0x80040154, "class not registered"), "origin_com_class_not_registered"),
+        (("activation failed: 0x80070005",), "origin_com_activation_access_denied"),
+    ],
+)
+def test_start_failure_classifies_hresult_without_exposing_com_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    payload: tuple[object, ...],
+    expected: str,
+) -> None:
+    events: list[str] = []
+
+    def fail_activation(_show: bool) -> None:
+        raise RuntimeError(*payload)
+
+    fake_originpro = SimpleNamespace(
+        oext=True,
+        set_show=fail_activation,
+        exit=lambda: events.append("exit"),
+    )
+    monkeypatch.setitem(sys.modules, "originpro", fake_originpro)
+
+    with pytest.raises(OriginEnvironmentError) as raised:
+        OriginSession().__enter__()
+
+    assert raised.value.code == expected
+    assert raised.value.stage == "create_instance"
+    assert str(raised.value) == "Origin Automation connection failed"
+    assert events == ["exit"]
 
 
 def test_version_is_read_before_project_initialization_and_rejects_pre_2021(

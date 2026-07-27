@@ -9,11 +9,10 @@ single physical size inherited from one teaching task.
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
-from typing import Iterable
 
 from .palette_catalog import list_palettes
-
 
 PALETTES: dict[str, tuple[str, ...]] = {
     # Verified direct ``set -c`` colors for 1–6 editable 3D trajectories.
@@ -142,6 +141,41 @@ PALETTES: dict[str, tuple[str, ...]] = {
         "#3E7C91",
         "#A06D3F",
     ),
+    # Ordered condition ramp for PL/FTIR temperature or concentration series.
+    # The sequence is intentionally continuous and supports up to ten curves
+    # without cycling back to an unrelated colour.
+    "spectroscopy_temperature": (
+        "#155E75",
+        "#1F7899",
+        "#3A91B4",
+        "#68A9C1",
+        "#9ABFD0",
+        "#C5C8DD",
+        "#D8B4CF",
+        "#D98FAE",
+        "#CE6F87",
+        "#B84D62",
+    ),
+    # Restrained material comparison colours for unrelated samples.  This is
+    # distinct from an ordered temperature ramp and remains readable in print.
+    "materials_comparison": (
+        "#263746",
+        "#3B6F8F",
+        "#B85864",
+        "#3E8878",
+        "#7A6699",
+        "#A77A43",
+        "#6F8796",
+        "#C28791",
+    ),
+    "thermal_analysis": (
+        "#263746",
+        "#3B6F8F",
+        "#B85864",
+        "#B9C7B2",
+        "#D5A36A",
+        "#5F8E84",
+    ),
 }
 
 # User-selectable palettes are registered by stable ID.  Internal semantic
@@ -220,15 +254,28 @@ def interpolate_hex_colors(start: str, end: str, count: int) -> tuple[str, ...]:
     return tuple(colors)
 
 
+def series_palette_colors(name: str, count: int) -> tuple[str, ...]:
+    """Resolve a non-cycling palette for the visible series count."""
+
+    if count < 1:
+        raise ValueError("Series count must be positive")
+    colors = palette_colors(name)
+    if count <= len(colors):
+        if name == "spectroscopy_temperature" and count > 1:
+            indices = [round(index * (len(colors) - 1) / (count - 1)) for index in range(count)]
+            return tuple(colors[index] for index in indices)
+        return colors[:count]
+    # Extend a family from its endpoints instead of repeating the first colour.
+    return interpolate_hex_colors(colors[0], colors[-1], count)
+
+
 def signed_effect_colors(values: Iterable[float]) -> tuple[str, ...]:
     """Map signed effect magnitudes to a restrained cool-neutral-warm palette."""
     numeric = [float(value) for value in values]
     finite = [value for value in numeric if math.isfinite(value)]
     negative_scale = max((abs(value) for value in finite if value < 0), default=0.0)
     positive_scale = max((value for value in finite if value > 0), default=0.0)
-    deep_cool, soft_cool, neutral, soft_warm, deep_warm = palette_colors(
-        "diverging_effect"
-    )
+    deep_cool, soft_cool, neutral, soft_warm, deep_warm = palette_colors("diverging_effect")
     cool_ramp = interpolate_hex_colors(soft_cool, deep_cool, 101)
     warm_ramp = interpolate_hex_colors(soft_warm, deep_warm, 101)
     colors: list[str] = []
@@ -326,18 +373,30 @@ def resolve_adaptive_style(
         palette = "comparison_family"
         transparency = 82.0
     elif plot_kind == "heatmap":
-        # Origin's official heatmap templates include an attached color scale
-        # and enforce a practical minimum page extent.  Start above that
-        # threshold, then grow with matrix dimensions and label length.
-        width = min(48.0, max(28.0, 19.0 + series * 1.55 + label_len * 0.24))
-        height = min(36.0, max(21.0, 12.0 + rows * 0.72))
-        left = min(35.0, max(17.0, 15.0 + label_len * 0.55))
+        dense = rows > 12 or series > 10 or rows * series > 120
+        if dense:
+            # Keep physical type readable and make the cells denser instead of
+            # inflating the page to 48 cm and shrinking labels.  The renderer
+            # thins display labels while retaining the complete matrix.
+            width = min(
+                36.0,
+                max(28.0, 22.0 + min(series, 40) * 0.30 + label_len * 0.16),
+            )
+            height = min(30.0, max(21.0, 15.0 + min(rows, 40) * 0.35))
+            left = min(28.0, max(15.0, 14.0 + label_len * 0.45))
+            layer_height = 80.0
+            layer_width_override = max(52.0, 84.0 - left)
+        else:
+            # Preserve the spacious annotated profile for small matrices.
+            width = min(48.0, max(28.0, 19.0 + series * 1.55 + label_len * 0.24))
+            height = min(36.0, max(21.0, 12.0 + rows * 0.72))
+            left = min(35.0, max(17.0, 15.0 + label_len * 0.55))
+            layer_height = 82.0
+            layer_width_override = max(52.0, 89.0 - left)
         top = 5.0
-        layer_height = 82.0
-        layer_width_override = max(52.0, 89.0 - left)
         axis_title = 18.0
-        tick = 15.0 if rows > 12 or series > 10 else 17.0
-        legend = tick
+        tick = 17.0
+        legend = 17.0
     elif plot_kind in {"raw_summary", "violin", "raincloud"}:
         width = min(42.0, max(23.5, 17.0 + series * 3.1 + label_len * 0.20))
         if plot_kind == "raincloud":
@@ -446,7 +505,7 @@ def resolve_adaptive_style(
         width = min(36.0, max(26.0, 24.0 + series * 0.80))
         height = 17.5
         left = 17.0
-        palette = "spectroscopy_jewel"
+        palette = "spectroscopy_temperature" if series > 3 else "materials_comparison"
         line = 2.2
         transparency = 4.0
     elif plot_kind == "uv_vis":
@@ -455,9 +514,41 @@ def resolve_adaptive_style(
         left = 17.0
         top = 5.0
         layer_height = 81.0
-        palette = "spectroscopy_jewel"
+        palette = "materials_comparison"
         line = 2.2
         transparency = 4.0
+    elif plot_kind == "dsc":
+        width = min(38.0, max(27.0, 24.5 + series * 0.90))
+        height = 18.0
+        left = 18.0
+        layer_height = 80.0
+        palette = "thermal_analysis"
+        line = 2.2
+        transparency = 4.0
+    elif plot_kind == "nmr":
+        width = min(40.0, max(29.0, 26.0 + series * 0.90))
+        height = min(24.0, 18.0 + max(0, series - 3) * 0.60)
+        left = 17.0
+        layer_height = 80.0
+        palette = "materials_comparison"
+        line = 2.0
+        transparency = 3.0
+    elif plot_kind == "ftir":
+        width = min(40.0, max(29.0, 26.0 + series * 0.82))
+        height = min(24.0, 18.0 + max(0, series - 4) * 0.45)
+        left = 17.0
+        layer_height = 80.0
+        palette = "spectroscopy_temperature" if series > 3 else "materials_comparison"
+        line = 2.0
+        transparency = 3.0
+    elif plot_kind == "xps_compare":
+        width = min(40.0, max(29.0, 25.5 + series * 0.95))
+        height = min(24.0, 18.0 + max(0, series - 4) * 0.50)
+        left = 18.0
+        layer_height = 80.0
+        palette = "materials_comparison"
+        line = 2.2
+        transparency = 3.0
     elif plot_kind == "shap_summary":
         width = min(48.0, max(28.0, 23.0 + label_len * 0.52))
         width = min(48.0, width + 0.01)
@@ -506,6 +597,7 @@ __all__ = [
     "PALETTES",
     "interpolate_hex_colors",
     "palette_colors",
+    "series_palette_colors",
     "resolve_adaptive_style",
     "signed_effect_colors",
 ]

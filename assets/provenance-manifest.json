@@ -3,18 +3,18 @@
   "release_policy": "synthetic teaching data and original/generated assets only",
   "inventory_generator": {
     "path": "tools/build_asset_provenance.py",
-    "sha256": "1d1bc049ff6550bfff5a00ae3a67ccc5b8c6b94266a2b6a3de8d437e00e00b67"
+    "sha256": "817f3ffa20c74f8ad346112fd786567b4d47e6ed55fc4a6aa9d15416965daea6"
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
-    "sha256": "0932e38fa8a7ce079cebf8f3feb838a759944308c42fc4706f4d42ae0808cb00"
+    "sha256": "ccebcc9f90f52749667a54581551c2fe424c35cd846c7ad141146f2152c214bc"
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
-    "reviewed_on": "2026-07-24",
+    "reviewed_on": "2026-07-27",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, and redistribution boundary"
   },
-  "asset_count": 193,
+  "asset_count": 218,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
@@ -97,6 +97,26 @@
       }
     },
     {
+      "path": "assets/gallery/dsc-multi.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 59586,
+      "sha256": "449c5241498a8fb62fca80e63fdd36b3ffad662b3b694403d2468daf2d90cf01",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
       "path": "assets/gallery/eis-nyquist.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 38248,
@@ -121,6 +141,46 @@
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 28210,
       "sha256": "df26aadc469869023ee99f5cca5efa0b6eb46830b44212baf0fc784543014374",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/ftir-temperature-series.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 81442,
+      "sha256": "158c060277c3558098897a1da3cb43d4332e1ce026134184a768924ba821f3ac",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/heatmap-dense-40x40.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 61710,
+      "sha256": "b5538ea18a688e81ceb960f7f47d8f113d108c7794482b0f111d0092085b668d",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -437,6 +497,26 @@
       }
     },
     {
+      "path": "assets/gallery/nmr-comparison.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 41013,
+      "sha256": "9772e573463422f24847394f8435c70adaddcaf4e95a572ac6c8625d682fa70e",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
       "path": "assets/gallery/percent-composition.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 58827,
@@ -481,6 +561,26 @@
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 60539,
       "sha256": "2c2d7352ee2e287a441504d67530be67e52f782a05ec8f4a2dd9e74c3da43b57",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/pl-temperature-series.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 74572,
+      "sha256": "211253908985f3e47287c33cb9f81d0559321e331b5ad4c188248cd743e09916",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -619,8 +719,8 @@
     {
       "path": "assets/gallery/trajectory3d.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 365492,
-      "sha256": "4fc2daa9f7c8c4555e268e62036a490463775fd11e1b7e8c7eef017817d90238",
+      "size_bytes": 383974,
+      "sha256": "06a4bdf973ebb6154fcf1a1856377f2b8248c7bef00132ba404625b6022108c9",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -641,6 +741,26 @@
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 39934,
       "sha256": "7908b309b86e2628e9980e9367ff717c47015e5ab1d3031592cfd4fdd7d4f575",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/uv-vis-multi.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 50955,
+      "sha256": "b4b5d41f8ae40b00381cb0d5c7b78198478e329c59d4695a9abfbae0211c26e7",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -701,6 +821,26 @@
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 47719,
       "sha256": "c0a93898ffb6fbc148c0c6368db1776c90e8aa075bab16d15935a82215fc4e47",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/xps-comparison.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 47338,
+      "sha256": "10c9121d701005b86c1bb2685fc74dab580ddc75efeefb34c5b18bc2eb06943a",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -929,6 +1069,14 @@
       "contains_phi": false
     },
     {
+      "path": "examples/gallery/dsc_multi.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 6619,
+      "sha256": "5addd806ed5bd85c2c56627144951d680fb572619892db429d94b15ae833b6c0",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "examples/gallery/eis_nyquist.csv",
       "kind": "synthetic_public_example",
       "size_bytes": 992,
@@ -945,10 +1093,26 @@
       "contains_phi": false
     },
     {
+      "path": "examples/gallery/ftir_temperature_series.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 25302,
+      "sha256": "c18928af220d1c74bb8d94111e6a9f459b992dfed3720ddda71080ce92bd28bd",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "examples/gallery/grouped_box_medical.csv",
       "kind": "synthetic_public_example",
       "size_bytes": 756,
       "sha256": "66fe7b80b53b3856c6a1bf07f8a5a6e1027fe65f0819d8ca8e1c7e116d247e41",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/heatmap_dense_40x40.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 12048,
+      "sha256": "7f9acb672f035c82480aaef44ca80a2e5e1cd6b3ae9d101df87a8e47d30eb8b9",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1065,6 +1229,14 @@
       "contains_phi": false
     },
     {
+      "path": "examples/gallery/nmr_comparison.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 7666,
+      "sha256": "d644e6aed96ef917ec619f5f061ba685ede929c4000fe61245581a8abe218e55",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "examples/gallery/percent_composition.csv",
       "kind": "synthetic_public_example",
       "size_bytes": 162,
@@ -1085,6 +1257,14 @@
       "kind": "synthetic_public_example",
       "size_bytes": 645,
       "sha256": "e62e9e0dde12e96684a68904f3a4a01d8cce9b33332298037918229fbb008924",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/pl_temperature_series.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 19753,
+      "sha256": "654578f2b18d9936f338db32ef5ea4e1bbe3f59ca3cc627af6aaf1bfe8a9d633",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1137,10 +1317,26 @@
       "contains_phi": false
     },
     {
+      "path": "examples/gallery/trajectory3d.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 6644,
+      "sha256": "9968ff8078412c47305f166b29d7c55f48e6bf402deb9a21f3c06aded2576cbb",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "examples/gallery/trend_progression.csv",
       "kind": "synthetic_public_example",
       "size_bytes": 312,
       "sha256": "c50c2c7e8fd5886dc28ff9b4de0ba1cc02d42f14b42eacaa9f5f9c61103160da",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/uv_vis_multi.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 10166,
+      "sha256": "8bd7684c3744d5465be4b90e557b630eb4132a2857ac885ba6bcde43cc663fc4",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1165,6 +1361,14 @@
       "kind": "synthetic_public_example",
       "size_bytes": 4388,
       "sha256": "8b07a05b5d4e929fd7d600c70e3b76f53111fecd4fc0796c2badba2317ab84f8",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/xps_compare.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 10191,
+      "sha256": "1df99826b6575f23181de8538e086b2ab06b3df05d75fe0faa137a72fd45e0d8",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1370,6 +1574,22 @@
       "contains_phi": false
     },
     {
+      "path": "runtime/templates/dsc/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 91,
+      "sha256": "06599d952321594daccc0f25d1ca9d61933e1cfc9e2d1773ae074807696e8047",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/dsc/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 605,
+      "sha256": "80236d1654c30870b2f69fca189d74790bdf2a184f747e01ee2fb4e0bffd444b",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "runtime/templates/eis/data_template.csv",
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 25,
@@ -1406,6 +1626,22 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 208,
       "sha256": "d140ee87244066e16d05abbec628181f7cae0acf79ee1e3416a5576a31aaf3d4",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/ftir/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 93,
+      "sha256": "40d26193e9145e581d7153dcede7d7e5f22d494e5493bdd803bd6d2cf24b4e11",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/ftir/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 686,
+      "sha256": "dd61af02123ee96885a8dc7fbdf69ec8fcc465f1344c32a214685c2e91377bbe",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1514,6 +1750,22 @@
       "contains_phi": false
     },
     {
+      "path": "runtime/templates/nmr/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 86,
+      "sha256": "440a2a1a22d689969825e9f1c30b75687e642970759baed01613526689e6ba7e",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/nmr/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 469,
+      "sha256": "64fc4a9d8a18ecd9400822c82f68151219d38aba718f020f37e2dcb4365bb386",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "runtime/templates/paired_trajectory/data_template.csv",
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 52,
@@ -1574,6 +1826,14 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 1047,
       "sha256": "d12a1c76bbd40094cddd774d171becc9622f861bca59329f58d1274f58aa3f9b",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/pl/example_temperature_series.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 1192,
+      "sha256": "98d7fb02d3eff2b832abde03788562015f13243a52dd126674f01e20abdcbfb4",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1738,6 +1998,14 @@
       "contains_phi": false
     },
     {
+      "path": "runtime/templates/uv_vis/example_multi_spectrum.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 577,
+      "sha256": "d99dc2cc50747c98d0fd2f788a2c8d160c89dec0d58ce29afbeb21c386eefb32",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "runtime/templates/uv_vis/example_standard.csv",
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 655,
@@ -1889,6 +2157,22 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 13395,
       "sha256": "f9b912826164c85bc5fe52c0eefe353d2117ac8586666b4cbe289258bdc10e58",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/xps_compare/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 90,
+      "sha256": "60a0b3a5175a9b3f7ef84096bd3aebecb2f34c76b4f41a8e6db790aca545e8c7",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/xps_compare/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 521,
+      "sha256": "c71ac17e789a0527ba43ef6eff7c69619b5a4e7b1364d84a0c3fb41e9f21dc9a",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

@@ -8,12 +8,17 @@ official ``plotxy`` plot IDs, the bundled ``Pie2D`` template, and Origin's own
 from __future__ import annotations
 
 import math
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from origin_sciplot.heatmap_layout import (
+    HeatmapLayoutPlan,
+    resolve_heatmap_colorbar_geometry,
+    resolve_heatmap_layout,
+)
 from origin_sciplot.logging_utils import RunLogger
 from origin_sciplot.output_manager import RunOutput, write_json
 from origin_sciplot.scientific_visual import (
@@ -48,6 +53,7 @@ from .scientific_renderer import (
 )
 from .session import OriginSession
 from .verify_utils import (
+    PAGE_SIZE_TOLERANCE_CM,
     require_nonempty,
     verify_page_and_layer,
     verify_plot_line_widths,
@@ -102,29 +108,6 @@ def _column_letter(index: int) -> str:
     return result
 
 
-def _heatmap_color_scale_geometry(
-    layer_left_percent: float,
-    layer_width_percent: float,
-    *,
-    gap_fraction: float = 0.015,
-    page_right_fraction: float = 0.995,
-    minimum_width_fraction: float = 0.04,
-) -> tuple[float, float, float]:
-    """Return non-overlapping color-scale geometry as page-width fractions."""
-    layer_right_fraction = (layer_left_percent + layer_width_percent) / 100.0
-    color_scale_left_fraction = layer_right_fraction + gap_fraction
-    color_scale_width_fraction = page_right_fraction - color_scale_left_fraction
-    if color_scale_width_fraction < minimum_width_fraction:
-        raise ValueError(
-            "Heatmap color scale has insufficient right margin; reduce the layer width."
-        )
-    return (
-        layer_right_fraction,
-        color_scale_left_fraction,
-        color_scale_width_fraction,
-    )
-
-
 def _sankey_node_color_plan(
     sources: list[str],
     targets: list[str],
@@ -134,9 +117,7 @@ def _sankey_node_color_plan(
         raise ValueError("Sankey source and target arrays must have equal length")
     node_order = tuple(
         dict.fromkeys(
-            node
-            for source, target in zip(sources, targets, strict=True)
-            for node in (source, target)
+            node for source, target in zip(sources, targets, strict=True) for node in (source, target)
         )
     )
     incoming = {node: 0 for node in node_order}
@@ -194,21 +175,24 @@ def _selected_plot_frame(
     if spec.plot_kind == "stacked_bar" and spec.aggregate_error_column:
         total_name = "__StackTotal"
         x_name = "__StackX"
-        selected[total_name] = selected.loc[
-            :, [item.source_column for item in spec.series]
-        ].sum(axis=1, min_count=1)
+        selected[total_name] = selected.loc[:, [item.source_column for item in spec.series]].sum(
+            axis=1, min_count=1
+        )
         selected[x_name] = np.arange(1, len(selected) + 1, dtype=float)
         helpers.extend((total_name, x_name))
     if spec.plot_kind != "percent_stacked_bar":
         return selected, tuple(helpers)
     values = selected.iloc[:, 1:].to_numpy(dtype=float, copy=True)
     totals = np.nansum(values, axis=1)
-    normalized = np.divide(
-        values,
-        totals[:, None],
-        out=np.zeros_like(values),
-        where=totals[:, None] > 0,
-    ) * 100.0
+    normalized = (
+        np.divide(
+            values,
+            totals[:, None],
+            out=np.zeros_like(values),
+            where=totals[:, None] > 0,
+        )
+        * 100.0
+    )
     helper_columns: list[str] = list(helpers)
     for index, series in enumerate(spec.series):
         helper = f"{series.label} (%)"
@@ -247,8 +231,7 @@ def _set_page_size(graph: Any, style: AdaptiveOriginStyle) -> dict[str, float]:
     }
     for _attempt in range(3):
         if not graph.obj.LT_execute(
-            f"page.width=({width_in:g})*page.resx;"
-            f"page.height=({height_in:g})*page.resy;doc -uw;"
+            f"page.width=({width_in:g})*page.resx;page.height=({height_in:g})*page.resy;doc -uw;"
         ):
             raise OriginDrawError("Origin could not set the adaptive physical page size.")
         state = {
@@ -256,8 +239,8 @@ def _set_page_size(graph: Any, style: AdaptiveOriginStyle) -> dict[str, float]:
             "height_cm": float(graph.obj.GetHeight()) * 2.54,
         }
         if (
-            abs(state["width_cm"] - style.page_width_cm) <= 0.01
-            and abs(state["height_cm"] - style.page_height_cm) <= 0.01
+            abs(state["width_cm"] - style.page_width_cm) <= PAGE_SIZE_TOLERANCE_CM
+            and abs(state["height_cm"] - style.page_height_cm) <= PAGE_SIZE_TOLERANCE_CM
         ):
             return state
     raise OriginDrawError(
@@ -278,10 +261,7 @@ def _style_special_legend(
     if legend is None:
         return None
     _style_label(legend, style.legend_size_pt, bold=False)
-    layer.obj.LT_execute(
-        f"legend.font=font({style.font_family});"
-        "legend.color=color(black);legend.bold=0;"
-    )
+    layer.obj.LT_execute(f"legend.font=font({style.font_family});legend.color=color(black);legend.bold=0;")
     legend.set_int("font", _origin_font_code(op, style.font_family))
     _set_borderless_legend(legend)
     return legend
@@ -336,9 +316,7 @@ def _position_external_legend(
     op.lt_exec("doc -uw;")
     page_width = float(op.lt_float("page.width"))
     page_height = float(op.lt_float("page.height"))
-    layer_right = page_width * (
-        style.layer_left_percent + style.layer_width_percent
-    ) / 100.0
+    layer_right = page_width * (style.layer_left_percent + style.layer_width_percent) / 100.0
     gap = page_width * 0.025
     legend.set_float("left", layer_right + gap)
     legend.set_float("top", page_height * 0.14)
@@ -408,9 +386,7 @@ def _position_horizontal_value_title(op: Any, layer: Any, label: Any) -> None:
     op.lt_exec("doc -uw;")
     page_width = float(op.lt_float("page.width"))
     page_height = float(op.lt_float("page.height"))
-    layer_center = page_width * (
-        layer.get_float("left") + layer.get_float("width") / 2.0
-    ) / 100.0
+    layer_center = page_width * (layer.get_float("left") + layer.get_float("width") / 2.0) / 100.0
     label.set_float("left", layer_center - label.get_float("width") / 2.0)
     label.set_float("top", page_height - label.get_float("height") - page_height * 0.015)
     op.lt_exec("doc -uw;")
@@ -507,16 +483,12 @@ def _build_bar_graph(
     plans = _bar_series_plans(preparation)
     error_columns = tuple(plan.error_column for plan in plans if plan.error_column)
     plotted_column_count = (
-        len(plot_sheet.to_df().columns)
-        if spec.plot_kind == "horizontal_bar"
-        else len(spec.series) + 1
+        len(plot_sheet.to_df().columns) if spec.plot_kind == "horizontal_bar" else len(spec.series) + 1
     )
     last_column = _column_letter(plotted_column_count)
     data_range = f"{plot_sheet.lt_range(False)}!(A,B:{last_column})"
     plot_sheet.activate()
-    if not op.lt_exec(
-        f"plotxy iy:={data_range} plot:={plot_id} ogl:=<new template:={template}>;"
-    ):
+    if not op.lt_exec(f"plotxy iy:={data_range} plot:={plot_id} ogl:=<new template:={template}>;"):
         raise OriginDrawError(f"Origin plotxy failed for {spec.plot_kind}.")
     graph = op.find_graph()
     if graph is None:
@@ -538,13 +510,9 @@ def _build_bar_graph(
         style=style,
     )
     initial_plots = list(layer.plot_list())
-    expected_initial = len(spec.series) + (
-        len(error_columns) if spec.plot_kind == "horizontal_bar" else 0
-    )
+    expected_initial = len(spec.series) + (len(error_columns) if spec.plot_kind == "horizontal_bar" else 0)
     if len(initial_plots) != expected_initial:
-        raise OriginDrawError(
-            f"Origin created {len(initial_plots)} plots; expected {expected_initial}."
-        )
+        raise OriginDrawError(f"Origin created {len(initial_plots)} plots; expected {expected_initial}.")
 
     # Origin's BAR template transposes the data axes.  Plot the explicit error
     # columns, then convert each one with Origin's documented
@@ -565,9 +533,7 @@ def _build_bar_graph(
                 f"set __bar_error{error_index} -o __bar_value{error_index};"
                 "doc -uw;"
             ):
-                raise OriginDrawError(
-                    f"Origin could not bind {plan.error_column} to {plan.label}."
-                )
+                raise OriginDrawError(f"Origin could not bind {plan.error_column} to {plan.label}.")
 
     plots = list(layer.plot_list())
     if len(plots) != expected_initial:
@@ -587,9 +553,7 @@ def _build_bar_graph(
         error_plot.set_cmd(f"-w {pt_to_origin_width_units(style.error_bar_width_pt)}")
         error_plots[f"horizontal error {index}"] = error_plot
 
-    plot_indices = {
-        plot.lt_range(): index for index, plot in enumerate(layer.plot_list(), start=1)
-    }
+    plot_indices = {plot.lt_range(): index for index, plot in enumerate(layer.plot_list(), start=1)}
     transparency_state: dict[str, float] = {}
     for plan, plot in zip(plans, value_plots, strict=True):
         plot_index = plot_indices.get(plot.lt_range())
@@ -607,10 +571,7 @@ def _build_bar_graph(
         plot_frame = plot_sheet.to_df()
         values = plot_frame[plans[0].source_column].to_numpy(dtype=float, copy=True)
         finite_values = values[np.isfinite(values)]
-        signed = bool(
-            finite_values.size
-            and float(np.min(finite_values)) < 0 < float(np.max(finite_values))
-        )
+        signed = bool(finite_values.size and float(np.min(finite_values)) < 0 < float(np.max(finite_values)))
         if signed:
             colors = signed_effect_colors(values)
         else:
@@ -627,27 +588,18 @@ def _build_bar_graph(
             code = float(op.ocolor(color))
             expected_codes.append(code)
             commands.append(f"set __horizontal_bar {row} -pfb {int(code)};")
-            commands.append(
-                f"get __horizontal_bar {row} -pfb __horizontal_fill{row};"
-            )
+            commands.append(f"get __horizontal_bar {row} -pfb __horizontal_fill{row};")
         commands.append("doc -uw;")
         if not layer.obj.LT_execute("".join(commands)):
             raise OriginDrawError("Origin could not apply the horizontal ablation color ramp.")
-        actual_codes = [
-            float(op.lt_float(f"__horizontal_fill{row}"))
-            for row in range(1, len(colors) + 1)
-        ]
+        actual_codes = [float(op.lt_float(f"__horizontal_fill{row}")) for row in range(1, len(colors) + 1)]
         if any(
             abs(actual - expected) > 0.5
             for actual, expected in zip(actual_codes, expected_codes, strict=True)
         ):
             raise OriginDrawError("Origin horizontal ablation colors failed readback.")
         point_fill_state = {
-            "mode": (
-                "signed_effect_by_direction_and_magnitude"
-                if signed
-                else "same_family_by_category"
-            ),
+            "mode": ("signed_effect_by_direction_and_magnitude" if signed else "same_family_by_category"),
             "hex": list(colors),
             "origin_codes": actual_codes,
         }
@@ -749,9 +701,7 @@ def _build_bar_graph(
     if spec.plot_kind == "horizontal_bar":
         axis_state["x.label.wrap"] = layer.get_int("x.label.wrap")
         axis_state["category_title_visible"] = title_labels["x_title"].get_int("show")
-    expected_text = {
-        name: style.axis_title_size_pt for name in title_labels
-    }
+    expected_text = {name: style.axis_title_size_pt for name in title_labels}
     labels_for_verify = dict(title_labels)
     if legend is not None:
         labels_for_verify["legend"] = legend
@@ -761,9 +711,7 @@ def _build_bar_graph(
         font_state = verify_text_fonts(op, labels_for_verify, style.font_family)
         line_state = verify_plot_line_widths(op, main_plots, style.bar_border_width_pt)
         error_state = (
-            verify_plot_line_widths(op, error_plots, style.error_bar_width_pt)
-            if error_plots
-            else {}
+            verify_plot_line_widths(op, error_plots, style.error_bar_width_pt) if error_plots else {}
         )
     except RuntimeError as exc:
         raise OriginDrawError(str(exc)) from exc
@@ -775,9 +723,7 @@ def _build_bar_graph(
             **font_state,
             "external_legend": external_legend_state,
             "data_labels": data_label_state,
-            "legend.showframe": (
-                int(legend.get_int("showframe")) if legend is not None else None
-            ),
+            "legend.showframe": (int(legend.get_int("showframe")) if legend is not None else None),
             **(
                 _raw_title_geometry(op, title_labels)
                 if spec.plot_kind == "horizontal_bar"
@@ -831,13 +777,9 @@ def _build_pie_graph(
     ):
         raise OriginDrawError("Origin could not apply the verified pie color list.")
     cue_state = float(op.lt_float("__pie_cue"))
-    color_readback = [
-        float(op.lt_float(f"__pie_cuf[{index}]"))
-        for index in range(1, row_count + 1)
-    ]
+    color_readback = [float(op.lt_float(f"__pie_cuf[{index}]")) for index in range(1, row_count + 1)]
     if int(round(cue_state)) != 1 or any(
-        abs(actual - expected) > 0.5
-        for actual, expected in zip(color_readback, color_codes, strict=True)
+        abs(actual - expected) > 0.5 for actual, expected in zip(color_readback, color_codes, strict=True)
     ):
         raise OriginDrawError("Origin pie colors failed custom-list readback.")
     layer.rescale()
@@ -862,12 +804,8 @@ def _build_pie_graph(
         ):
             raise OriginDrawError("Origin pie legend is clipped by the physical page.")
         try:
-            text_state = verify_text_sizes(
-                {"legend": legend}, {"legend": style.legend_size_pt}
-            )
-            text_state.update(
-                verify_text_fonts(op, {"legend": legend}, style.font_family)
-            )
+            text_state = verify_text_sizes({"legend": legend}, {"legend": style.legend_size_pt})
+            text_state.update(verify_text_fonts(op, {"legend": legend}, style.font_family))
         except RuntimeError as exc:
             raise OriginDrawError(str(exc)) from exc
         text_state.update(
@@ -936,12 +874,10 @@ def _build_sankey_graph(
         raise OriginDrawError("Origin could not apply the verified Sankey node color list.")
     cue_state = float(op.lt_float("__sankey_cue"))
     color_readback = [
-        float(op.lt_float(f"__sankey_cuf[{index}]"))
-        for index in range(1, len(node_colors) + 1)
+        float(op.lt_float(f"__sankey_cuf[{index}]")) for index in range(1, len(node_colors) + 1)
     ]
     if int(round(cue_state)) != 1 or any(
-        abs(actual - expected) > 0.5
-        for actual, expected in zip(color_readback, color_codes, strict=True)
+        abs(actual - expected) > 0.5 for actual, expected in zip(color_readback, color_codes, strict=True)
     ):
         raise OriginDrawError("Origin Sankey colors failed custom-list readback.")
     graph.set_int("background", op.ocolor("#FFFFFF"))
@@ -994,9 +930,7 @@ def _build_radar_graph(
     last_column = _column_letter(len(preparation.plot_spec.series) + 1)
     data_range = f"{plot_sheet.lt_range(False)}!(A,B:{last_column})"
     plot_sheet.activate()
-    if not op.lt_exec(
-        f"plotxy iy:={data_range} plot:=202 ogl:=<new template:=Radar>;"
-    ):
+    if not op.lt_exec(f"plotxy iy:={data_range} plot:=202 ogl:=<new template:=Radar>;"):
         raise OriginDrawError("Origin's official Radar template did not execute.")
     graph = op.find_graph()
     if graph is None:
@@ -1013,9 +947,7 @@ def _build_radar_graph(
     plots = list(layer.plot_list())
     plans = _radar_series_plans(preparation)
     if len(plots) != len(plans):
-        raise OriginDrawError(
-            f"Origin created {len(plots)} Radar plots; expected {len(plans)}."
-        )
+        raise OriginDrawError(f"Origin created {len(plots)} Radar plots; expected {len(plans)}.")
     main_plots: dict[str, Any] = {}
     for plot, plan in zip(plots, plans, strict=True):
         color_code = op.ocolor(plan.color)
@@ -1067,9 +999,7 @@ def _build_radar_graph(
             else {}
         )
         if legend is not None:
-            text_state.update(
-                verify_text_fonts(op, {"legend": legend}, style.font_family)
-            )
+            text_state.update(verify_text_fonts(op, {"legend": legend}, style.font_family))
             text_state["legend.showframe"] = int(legend.get_int("showframe"))
     except RuntimeError as exc:
         raise OriginDrawError(str(exc)) from exc
@@ -1113,7 +1043,7 @@ def _bind_heatmap_labels(
     layer: Any,
     label_sheet: Any,
     *,
-    x_rotation: float,
+    layout: HeatmapLayoutPlan,
     style: AdaptiveOriginStyle,
 ) -> dict[str, float]:
     x_labels = f"{label_sheet.lt_range(False)}!col(1)"
@@ -1124,30 +1054,57 @@ def _bind_heatmap_labels(
         "axis -ps X T __heatmap_x_labels;axis -ps Y T __heatmap_y_labels;"
     ):
         raise OriginDrawError("Origin could not bind Heatmap category labels.")
+    # ``axis -ps`` can inherit a tick-label table from Origin's Heatmap
+    # template.  On dense matrices that table draws one framed cell per
+    # column, producing long vertical rules and clipping rotated labels.
+    # Keep Text from Dataset labels, but explicitly disable the table.
+    layer.set_int("x.label.table", 0)
+    layer.set_int("y.label.table", 0)
+    layer.set_int("x.label.align", 1)
+    layer.set_int("y.label.align", 1)
     layer.set_int("x.minorTicks", 0)
     layer.set_int("y.minorTicks", 0)
-    layer.set_float("x.label.rotate", x_rotation)
+    layer.set_float("x.label.rotate", layout.x_rotation_deg)
+    layer.set_float("x.ticklength", layout.x_tick_length_pt)
+    layer.set_float("y.ticklength", layout.y_tick_length_pt)
     _apply_axis_label_font(op, layer, ("x", "y"), style)
     state = {
         "x_label_type": float(layer.get_int("x.label.type")),
         "y_label_type": float(layer.get_int("y.label.type")),
+        "x_label_table": float(layer.get_int("x.label.table")),
+        "y_label_table": float(layer.get_int("y.label.table")),
+        "x_label_alignment": float(layer.get_int("x.label.align")),
+        "y_label_alignment": float(layer.get_int("y.label.align")),
         "x_label_rotation_deg": float(layer.get_float("x.label.rotate")),
+        "x_tick_length_pt": float(layer.get_float("x.ticklength")),
+        "y_tick_length_pt": float(layer.get_float("y.ticklength")),
         "x_label_size_pt": float(layer.get_float("x.label.pt")),
         "y_label_size_pt": float(layer.get_float("y.label.pt")),
         "x_label_font_code": float(layer.get_float("x.label.font")),
         "y_label_font_code": float(layer.get_float("y.label.font")),
         "font_code_expected": float(_origin_font_code(op, style.font_family)),
+        "x_label_stride": float(layout.x_label_stride),
+        "y_label_stride": float(layout.y_label_stride),
+        "x_visible_label_count": float(len(layout.x_visible_indices)),
+        "y_visible_label_count": float(len(layout.y_visible_indices)),
     }
     if int(round(state["x_label_type"])) != 2 or int(round(state["y_label_type"])) != 2:
         raise OriginDrawError("Origin Heatmap labels are not bound as Text from Dataset.")
-    if abs(state["x_label_rotation_deg"] - x_rotation) > 0.05:
+    if int(round(state["x_label_table"])) != 0 or int(round(state["y_label_table"])) != 0:
+        raise OriginDrawError("Origin Heatmap kept an inherited tick-label table.")
+    if int(round(state["x_label_alignment"])) != 1 or int(round(state["y_label_alignment"])) != 1:
+        raise OriginDrawError("Origin Heatmap tick-label alignment does not match the contract.")
+    if abs(state["x_label_rotation_deg"] - layout.x_rotation_deg) > 0.05:
         raise OriginDrawError("Origin Heatmap X-label rotation does not match the adaptive plan.")
+    if (
+        abs(state["x_tick_length_pt"] - layout.x_tick_length_pt) > 0.05
+        or abs(state["y_tick_length_pt"] - layout.y_tick_length_pt) > 0.05
+    ):
+        raise OriginDrawError("Origin Heatmap tick lengths do not match the density plan.")
     for axis_name in ("x", "y"):
         if abs(state[f"{axis_name}_label_size_pt"] - style.tick_label_size_pt) > 0.05:
             raise OriginDrawError("Origin Heatmap axis-label size verification failed.")
-        if int(round(state[f"{axis_name}_label_font_code"])) != int(
-            round(state["font_code_expected"])
-        ):
+        if int(round(state[f"{axis_name}_label_font_code"])) != int(round(state["font_code_expected"])):
             raise OriginDrawError("Origin Heatmap axis-label font verification failed.")
     return state
 
@@ -1167,6 +1124,14 @@ def _build_heatmap_graph(
         copy=True,
     )
     rows, columns = values.shape
+    layout = resolve_heatmap_layout(
+        x_labels=series_labels,
+        y_labels=categories,
+        tick_label_size_pt=style.tick_label_size_pt,
+        major_tick_length_pt=style.major_tick_length_pt,
+    )
+    if preparation.template_id == "confusion_matrix" and columns <= 4:
+        layout = replace(layout, x_rotation_deg=0.0)
     matrix = op.new_sheet("m", "HEATMAP Matrix")
     if matrix is None:
         raise OriginDrawError("Origin could not create the Heatmap matrix sheet.")
@@ -1175,16 +1140,24 @@ def _build_heatmap_graph(
     label_count = max(rows, columns)
     label_frame = pd.DataFrame(
         {
-            "X Labels": series_labels + [None] * (label_count - columns),
-            "Y Labels": categories + [None] * (label_count - rows),
+            "X Labels": list(layout.x_display_labels) + [None] * (label_count - columns),
+            "Y Labels": list(layout.y_display_labels) + [None] * (label_count - rows),
         }
     )
     label_sheet = op.new_sheet("w", "HEATMAP Labels")
     if label_sheet is None:
         raise OriginDrawError("Origin could not create the Heatmap label worksheet.")
     label_sheet.from_df(label_frame)
-    show_cell_labels = rows <= 15 and columns <= 12 and values.size <= 150
-    template = "Heat_Map_With_Labels" if show_cell_labels else "heatmap"
+    label_readback = label_sheet.to_df()
+
+    def _label_text(value: Any) -> str:
+        return "" if pd.isna(value) else str(value)
+
+    x_readback = tuple(_label_text(value) for value in label_readback.iloc[:columns, 0])
+    y_readback = tuple(_label_text(value) for value in label_readback.iloc[:rows, 1])
+    if x_readback != layout.x_display_labels or y_readback != layout.y_display_labels:
+        raise OriginDrawError("Origin Heatmap display-label helper failed readback.")
+    template = "Heat_Map_With_Labels" if layout.show_cell_labels else "heatmap"
     graph = op.new_graph("HEATMAP Figure", template=template)
     if graph is None:
         raise OriginDrawError(f"Origin could not create the official {template} graph.")
@@ -1194,9 +1167,7 @@ def _build_heatmap_graph(
         raise OriginDrawError("Origin could not add the editable matrix Heatmap plot.")
     layer.rescale("z")
     plot.colormap = style.heatmap_palette
-    if not layer.obj.LT_execute(
-        "layer.cmap.flippal=1;layer.cmap.updateScale();"
-    ):
+    if not layer.obj.LT_execute("layer.cmap.flippal=1;layer.cmap.updateScale();"):
         raise OriginDrawError("Origin could not apply the Heatmap palette direction.")
     _set_page_size(graph, style)
     layer.set_int("unit", 1)
@@ -1216,18 +1187,41 @@ def _build_heatmap_graph(
     _style_axes(op, layer, preparation)
     layer.axis("x").set_limits(0.5, columns + 0.5, 1.0)
     layer.axis("y").set_limits(rows + 0.5, 0.5, -1.0)
-    max_x_label = max((len(value) for value in series_labels), default=0)
-    if preparation.template_id == "confusion_matrix" and columns <= 4:
-        x_rotation = 0.0
-    else:
-        x_rotation = 35.0 if columns > 6 or max_x_label > 10 else 0.0
     label_state = _bind_heatmap_labels(
         op,
         layer,
         label_sheet,
-        x_rotation=x_rotation,
+        layout=layout,
         style=style,
     )
+    # Dataset-backed labels can restore an automatic "nice" increment.  On a
+    # 40x40 matrix that makes the chosen label stride intersect only every
+    # fifteenth row.  Reapply the cell-centred numeric scale after binding and
+    # verify it so every planned sparse label remains eligible for display.
+    layer.axis("x").set_limits(0.5, columns + 0.5, 1.0)
+    layer.axis("y").set_limits(rows + 0.5, 0.5, -1.0)
+    label_state.update(
+        {
+            "x_axis_from": float(layer.get_float("x.from")),
+            "x_axis_to": float(layer.get_float("x.to")),
+            "x_axis_increment": float(layer.get_float("x.inc")),
+            "y_axis_from": float(layer.get_float("y.from")),
+            "y_axis_to": float(layer.get_float("y.to")),
+            "y_axis_increment": float(layer.get_float("y.inc")),
+        }
+    )
+    expected_axis_state = {
+        "x_axis_from": 0.5,
+        "x_axis_to": columns + 0.5,
+        "x_axis_increment": 1.0,
+        "y_axis_from": rows + 0.5,
+        "y_axis_to": 0.5,
+        "y_axis_increment": -1.0,
+    }
+    for key, expected in expected_axis_state.items():
+        if abs(label_state[key] - expected) > 0.05:
+            raise OriginDrawError(f"Origin Heatmap {key} is {label_state[key]:g}, expected {expected:g}.")
+    label_state["helper_sheet_readback_match"] = 1.0
     title_state: dict[str, float] = {}
     title_labels: dict[str, Any] = {}
     if preparation.template_id == "confusion_matrix":
@@ -1242,7 +1236,7 @@ def _build_heatmap_graph(
                 title.set_int("show", 1)
                 title.set_int("bold", 1)
         op.lt_exec("doc -uw;")
-        if x_rotation:
+        if layout.x_rotation_deg:
             _position_rotated_category_title(op, title_labels["x_title"])
         else:
             _position_x_title(op, title_labels["x_title"], style)
@@ -1262,9 +1256,9 @@ def _build_heatmap_graph(
         layer.axis("x").title = ""
         layer.axis("y").title = ""
     graph.set_int("background", op.ocolor("#FFFFFF"))
-    cell_label_state: dict[str, float] = {"show": float(show_cell_labels)}
-    if show_cell_labels:
-        cell_size = float(round(style.tick_label_size_pt * 0.76))
+    cell_label_state: dict[str, float] = {"show": float(layout.show_cell_labels)}
+    if layout.show_cell_labels:
+        cell_size = layout.cell_label_size_pt
         plot_range = plot.lt_range()
         plot.set_cmd(
             f"-qs {cell_size:g}",
@@ -1291,21 +1285,16 @@ def _build_heatmap_graph(
         if (
             abs(cell_label_state["size_pt"] - cell_size) > 0.05
             or int(round(cell_label_state["bold"])) != 0
-            or int(round(cell_label_state["font_code"]))
-            != int(round(cell_label_state["font_code_expected"]))
+            or int(round(cell_label_state["font_code"])) != int(round(cell_label_state["font_code_expected"]))
         ):
             raise OriginDrawError("Origin Heatmap cell labels failed the adaptive contract.")
-    color_scale_size = float(round(style.tick_label_size_pt * 0.82))
+    color_scale_size = layout.colorbar_label_size_pt
     if preparation.template_id != "confusion_matrix":
         for title_name in ("xb", "yl"):
             title = layer.label(title_name)
             if title is not None:
                 title.set_int("show", 0)
-    (
-        layer_right_fraction,
-        color_scale_left_fraction,
-        color_scale_width_fraction,
-    ) = _heatmap_color_scale_geometry(
+    colorbar_geometry = resolve_heatmap_colorbar_geometry(
         style.layer_left_percent,
         style.layer_width_percent,
     )
@@ -1316,15 +1305,15 @@ def _build_heatmap_graph(
         f"spectrum1.labels.fsize={color_scale_size:g};"
         "spectrum1.labels.bold=0;"
         f"spectrum1.labels.font=font({style.font_family});"
-        f"spectrum1.left=page.width*{color_scale_left_fraction:g};"
+        f"spectrum1.left=page.width*{colorbar_geometry.left_fraction:g};"
         "spectrum1.top=page.height*0.08;"
-        f"spectrum1.width=page.width*{color_scale_width_fraction:g};"
+        f"spectrum1.width=page.width*{colorbar_geometry.object_width_fraction:g};"
         "spectrum1.height=page.height*0.75;"
         "spectrum1.barthick=100;"
     ):
         raise OriginDrawError("Origin could not style the Heatmap color scale.")
     page_width_units = float(op.lt_float("page.width"))
-    layer_right_units = page_width_units * layer_right_fraction
+    layer_right_units = page_width_units * colorbar_geometry.layer_right_fraction
     color_scale_state = {
         "title_visible": float(op.lt_float("spectrum1.title")),
         "show": float(op.lt_float("spectrum1.show")),
@@ -1338,6 +1327,8 @@ def _build_heatmap_graph(
         "height": float(op.lt_float("spectrum1.height")),
         "page_width": page_width_units,
         "layer_right": layer_right_units,
+        "gap_fraction_planned": colorbar_geometry.gap_fraction,
+        "page_right_fraction_planned": colorbar_geometry.page_right_fraction,
     }
     color_scale_state["gap_to_layer"] = color_scale_state["left"] - layer_right_units
     color_scale_state["right"] = color_scale_state["left"] + color_scale_state["width"]
@@ -1348,14 +1339,24 @@ def _build_heatmap_graph(
         or int(round(color_scale_state["label_font_code"]))
         != int(round(color_scale_state["font_code_expected"]))
         or int(round(color_scale_state["palette_flipped"])) != 1
-        or color_scale_state["gap_to_layer"] < page_width_units * 0.01
+        or color_scale_state["gap_to_layer"] < page_width_units * 0.015
         or color_scale_state["right"] > page_width_units * 1.005
     ):
-        raise OriginDrawError("Origin Heatmap color scale failed readback verification.")
+        raise OriginDrawError(
+            "Origin Heatmap color scale failed readback verification: "
+            f"title={color_scale_state['title_visible']:.3f}, "
+            f"show={color_scale_state['show']:.3f}, "
+            f"label_size={color_scale_state['label_size_pt']:.3f}, "
+            f"font={color_scale_state['label_font_code']:.3f}/"
+            f"{color_scale_state['font_code_expected']:.3f}, "
+            f"palette_flipped={color_scale_state['palette_flipped']:.3f}, "
+            f"gap={color_scale_state['gap_to_layer']:.3f}/"
+            f"{page_width_units * 0.015:.3f}, "
+            f"right={color_scale_state['right']:.3f}/"
+            f"{page_width_units * 1.005:.3f}."
+        )
     graph.activate()
-    if not op.lt_exec(
-        f"doc -e G {{%B.font=font({style.font_family});}};doc -uw;"
-    ):
+    if not op.lt_exec(f"doc -e G {{%B.font=font({style.font_family});}};doc -uw;"):
         raise OriginDrawError("Origin could not apply the Heatmap page font contract.")
     return graph, {
         **geometry,

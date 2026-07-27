@@ -20,6 +20,10 @@
   capability probe. Never silently label that environment supported or verified.
 - A genuine Automation handshake/readback failure remains a technical failure. Report the stable
   stage and error code without guessing why it failed.
+- Classify common activation failures without exposing the original COM exception:
+  `0x80080005` as `origin_com_server_execution_failed`, `0x80040154` as
+  `origin_com_class_not_registered`, and `0x80070005` as
+  `origin_com_activation_access_denied`.
 
 ## Environment boundary
 
@@ -32,6 +36,9 @@
   the dedicated instance and validates the live route.
 - Never install, replace, patch, or modify the Origin application. Runtime dependency setup is
   limited to the project-local Python environment.
+- Never modify DCOM permissions, COM registration, registry keys, local groups, or Origin launch
+  settings as an automatic recovery step. Do not make administrator mode the normal execution
+  route.
 
 ## Instance lifecycle
 
@@ -43,6 +50,12 @@
   state, overwrite work, hide the window, or call `exit()` in a user-owned session; detach instead.
 - Only an EditaPlot-owned instance may create a fresh project automatically or be closed by the
   runtime.
+- If isolated activation partially starts and raises, perform one best-effort `op.exit()` cleanup.
+  Do not call `set_show(True)` after that exception because it can trigger a second activation.
+- If activation fails in a restricted host but the registration is present, allow at most one
+  user-approved retry of the same smoke command in the active interactive Windows-user context.
+  Do not fall back to `ApplicationSI`; a render that follows a successful retry must use the same
+  execution context.
 - Never use mouse or screen-coordinate automation.
 
 ## Version-sensitive rendering
@@ -74,6 +87,8 @@
 - Keep beginner-facing environment output to one to three plain-language sentences. Store detailed
   stages, detected Automation entries, candidates, risks, probes, and failures in local structured
   diagnostics.
+- Never promote a Python preview or standalone PNG/PDF/SVG after an Automation failure. Formal
+  completion still requires OPJU, PNG, PDF, TIF, object readback, and human visual QA.
 
 ## Experimental API rule
 
