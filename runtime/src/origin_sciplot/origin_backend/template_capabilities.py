@@ -145,6 +145,7 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
         OriginCapability.MATRIX_HEATMAP,
     ),
     "cv": _profile("cv"),
+    "dsc": _profile("dsc"),
     "decision_curve": _profile("decision_curve"),
     "diagnostic_curve": _profile("diagnostic_curve"),
     "eis": _profile("eis", optional=(OriginCapability.LOG_AXIS,)),
@@ -171,6 +172,7 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
     ),
     "line_error": _profile("line_error", OriginCapability.ERROR_BARS),
     "lsv": _profile("lsv"),
+    "nmr": _profile("nmr"),
     "paired_trajectory": _profile("paired_trajectory"),
     "percent_stacked_bar": _profile(
         "percent_stacked_bar",
@@ -199,6 +201,7 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
     ),
     "trajectory3d": _profile("trajectory3d", OriginCapability.OPEN_GL_3D),
     "trend": _profile("trend"),
+    "ftir": _profile("ftir"),
     "uv_vis": _profile("uv_vis", optional=(OriginCapability.INSET_LAYER,)),
     "violin": _profile(
         "violin",
@@ -207,6 +210,7 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
     ),
     "xas": _profile("xas"),
     "xps": _profile("xps", OriginCapability.XPS_FILL_TWO_COLOR),
+    "xps_compare": _profile("xps_compare"),
     "xrd": _profile("xrd"),
 }
 
@@ -266,19 +270,13 @@ def evaluate_template_compatibility(
     invalid_activated = activated - profile.optional
     if invalid_activated:
         invalid = ", ".join(_capability_values(invalid_activated))
-        raise ValueError(
-            f"Capabilities are not optional for template {template_id!r}: {invalid}"
-        )
+        raise ValueError(f"Capabilities are not optional for template {template_id!r}: {invalid}")
     effective_required = profile.required.union(activated)
     unresolved = effective_required - available
     missing_set = unresolved if probe_complete else unresolved & unavailable
     unprobed_set = frozenset() if probe_complete else unresolved - unavailable
-    missing = tuple(
-        sorted(missing_set, key=lambda capability: capability.value)
-    )
-    unprobed = tuple(
-        sorted(unprobed_set, key=lambda capability: capability.value)
-    )
+    missing = tuple(sorted(missing_set, key=lambda capability: capability.value))
+    unprobed = tuple(sorted(unprobed_set, key=lambda capability: capability.value))
 
     if not version.supported_by_originpro:
         status = "blocked"

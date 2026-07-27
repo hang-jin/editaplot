@@ -120,3 +120,31 @@ def test_smoke_worker_preserves_structured_error_without_private_cause(
     assert lines[-1]["compatibility_report"] == str(report.resolve())
     assert "Private" not in output
     assert "0x80004005" not in output
+
+
+def test_smoke_worker_emits_bounded_activation_recovery_policy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fail(*_args: object, **_kwargs: object) -> dict[str, object]:
+        raise OriginEnvironmentError(
+            "Origin Automation connection failed",
+            code="origin_com_server_execution_failed",
+            stage="create_instance",
+        )
+
+    monkeypatch.setattr(origin_smoke_worker, "run_origin_smoke", fail)
+
+    returncode = origin_smoke_worker.main(["--output-dir", str(tmp_path / "smoke")])
+    lines = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+
+    assert returncode == WorkerExitCode.ORIGIN_ENVIRONMENT
+    assert lines[-1]["recovery"] == {
+        "action": "retry_same_command_in_active_interactive_user_context",
+        "maximum_attempts": 1,
+        "requires_user_approval": True,
+        "must_preserve_execution_context_for_render": True,
+        "automatic_fallback_to_attach_existing": False,
+        "system_configuration_changes_allowed": False,
+    }

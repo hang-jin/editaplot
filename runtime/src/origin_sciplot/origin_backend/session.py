@@ -16,7 +16,7 @@ from .capabilities import (
     SessionOwnership,
     parse_origin_version,
 )
-from .safe_errors import OriginEnvironmentError
+from .safe_errors import OriginEnvironmentError, classify_origin_activation_error
 from .version_risks import ProbePriority, known_version_risks
 
 
@@ -140,15 +140,16 @@ class OriginSession:
             # OriginExt.Application(), which always creates a new instance.
             op.set_show(False)
         except Exception as exc:  # noqa: BLE001 - redact local Automation failure details
-            # Activation may have progressed far enough to hide a window even
-            # when the call raises. Restore visibility without exposing the
-            # underlying local COM error.
+            # Activation may have created a partial EditaPlot-owned instance.
+            # Best-effort exit follows OriginLab's external-Python cleanup
+            # guidance.  Do not call set_show(True): that can perform a second
+            # activation and obscure the original failure.
             with suppress(Exception):
-                op.set_show(True)
+                op.exit()
             self._clear_failed_entry()
             raise OriginEnvironmentError(
                 "Origin Automation connection failed",
-                code="origin_instance_start_failed",
+                code=classify_origin_activation_error(exc),
                 stage="create_instance",
             ) from exc
 

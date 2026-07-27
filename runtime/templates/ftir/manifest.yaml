@@ -1,0 +1,32 @@
+id: ftir
+name: FTIR / IR 红外光谱
+category: spectroscopy/infrared
+version: 0.1.0
+description: 绘制单样品、多样品或有序条件下的 FTIR / IR 吸收与透射光谱，不自动平滑、校正或指认峰位
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 56
+family: spectroscopy
+examples:
+  - id: temperature_series
+    name_zh: 变温 FTIR 多谱线
+    file: example_standard.csv
+    description_zh: 原创合成的六条件透射光谱，使用递减波数轴和有序同系列配色。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 绘制波数与一个或多个红外吸收或透射信号的关系。
+  required_columns: [Wavenumber/波数列, 一个或多个 Absorbance/Transmittance 数值系列]
+  optional_columns: []
+  accepted_layouts: [宽表]
+  aliases: [Wavenumber/波数, Absorbance/吸光度, Transmittance/透过率, FTIR/红外]
+  notes_zh:
+    - 波数按红外光谱惯例由大到小显示，源表顺序和数值保持不变。
+    - 不自动做基线校正、平滑、归一化、峰识别、峰指认或峰面积计算。
+    - 多谱线默认直接叠加；只有用户明确确认后才能增加显示偏移。

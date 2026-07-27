@@ -87,6 +87,10 @@ VERIFIED_TEMPLATE_IDS = frozenset(
         "shap_summary",
         "grouped_box",
         "pl",
+        "dsc",
+        "nmr",
+        "ftir",
+        "xps_compare",
         "uv_vis",
         "trajectory3d",
     }
@@ -315,6 +319,52 @@ _SEMANTIC_ALIASES: dict[str, tuple[str, ...]] = {
         "光致发光",
     ),
     "time": ("time", "decaytime", "时间", "衰减时间"),
+    "temperature": (
+        "temperature",
+        "sampletemperature",
+        "temp",
+        "温度",
+        "样品温度",
+    ),
+    "heat_flow": (
+        "heatflow",
+        "heatflux",
+        "dscsignal",
+        "热流",
+        "热流率",
+        "差示扫描量热",
+    ),
+    "chemical_shift": (
+        "chemicalshift",
+        "shiftppm",
+        "nmrshift",
+        "化学位移",
+    ),
+    "nmr_signal": (
+        "nmrintensity",
+        "nmrsignal",
+        "nmr",
+        "核磁强度",
+        "核磁信号",
+    ),
+    "wavenumber": (
+        "wavenumber",
+        "wave number",
+        "ramanshift",
+        "波数",
+    ),
+    "ir_signal": (
+        "transmittance",
+        "transmission",
+        "absorbance",
+        "absorption",
+        "ftir",
+        "irsignal",
+        "透过率",
+        "透射率",
+        "吸光度",
+        "红外强度",
+    ),
     "fit": ("fit", "fitted", "fitting", "拟合"),
     "photon_energy": ("photonenergy", "hnu", "hv", "光子能量"),
     "tauc": ("taucvalue", "tauc", "tauc值"),
@@ -505,6 +555,14 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
         layouts.append("pl_wide")
         if "time" in tags or "fit" in tags:
             layouts.append("trpl_wide")
+    if {"temperature", "heat_flow"}.issubset(tags):
+        layouts.append("dsc_wide")
+    if "chemical_shift" in tags and len(numeric_columns) >= 2:
+        layouts.append("nmr_wide")
+    if {"wavenumber", "ir_signal"}.issubset(tags):
+        layouts.append("ftir_wide")
+    if "xps_energy" in tags and len(numeric_columns) >= 3:
+        layouts.append("xps_compare_wide")
     if {"estimate", "lower", "upper"}.issubset(tags) and categorical_columns:
         layouts.append("interval_table")
     if "size" in tags and len(numeric_columns) >= 3:
@@ -576,6 +634,9 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
         "shap": int("shap_long" in layouts),
         "grouped_box": int("grouped_box_wide" in layouts),
         "pl": sum(tag in tags for tag in ("pl_signal", "time", "fit")),
+        "dsc": sum(tag in tags for tag in ("temperature", "heat_flow")),
+        "nmr": sum(tag in tags for tag in ("chemical_shift", "nmr_signal")),
+        "ftir": sum(tag in tags for tag in ("wavenumber", "ir_signal")),
         "uv_vis": sum(tag in tags for tag in ("wavelength", "uv_signal", "tauc", "bandgap")),
         "trajectory3d": int("trajectory3d_long" in layouts),
     }
@@ -594,10 +655,7 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
             "profile": loaded.source_profile,
             "header_row_number": loaded.header_row_number,
             "metadata_record_count": len(loaded.metadata),
-            "metadata": [
-                {"key": key, "value": value}
-                for key, value in loaded.metadata
-            ],
+            "metadata": [{"key": key, "value": value} for key, value in loaded.metadata],
         },
         "table": {
             "row_count": len(loaded.frame),
@@ -619,6 +677,16 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
 
 _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "xps": ("xps", "photoelectron", "光电子", "结合能", "分峰"),
+    "xps_compare": (
+        "xpscomparison",
+        "xpscompare",
+        "xpsmulti",
+        "multispectrumxps",
+        "xps对比",
+        "xps多谱线",
+        "多样品xps",
+        "结合能对比",
+    ),
     "xrd": ("xrd", "diffraction", "衍射", "物相"),
     "xas": ("xas", "xanes", "exafs", "absorption", "吸收谱"),
     "eis": ("eis", "impedance", "nyquist", "bode", "阻抗"),
@@ -657,6 +725,30 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     ),
     "grouped_box": ("groupedbox", "boxplot", "boxanddots", "分组箱线", "箱线图", "箱体图"),
     "pl": ("pl", "trpl", "photoluminescence", "luminescence", "光致发光", "荧光寿命", "时间分辨荧光"),
+    "dsc": (
+        "dsc",
+        "differentialscanningcalorimetry",
+        "heatflow",
+        "差示扫描量热",
+        "热流",
+    ),
+    "nmr": (
+        "nmr",
+        "nuclearmagneticresonance",
+        "chemicalshift",
+        "核磁",
+        "核磁共振",
+        "化学位移",
+    ),
+    "ftir": (
+        "ftir",
+        "infrared",
+        "irspectrum",
+        "wavenumber",
+        "红外",
+        "傅里叶红外",
+        "波数",
+    ),
     "uv_vis": (
         "uvvis",
         "uv-vis",
@@ -674,6 +766,12 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
 
 def _intent_match(template_id: str, intent: str) -> bool:
     canonical = _canonical(intent)
+    if (
+        template_id == "xps"
+        and canonical
+        and any(_canonical(item) in canonical for item in _INTENT_KEYWORDS["xps_compare"])
+    ):
+        return False
     return bool(canonical) and any(_canonical(item) in canonical for item in _INTENT_KEYWORDS[template_id])
 
 
@@ -701,10 +799,14 @@ def _score_candidate(
 
     domain_map = {
         "xps": "xps",
+        "xps_compare": "xps",
         "xrd": "xrd",
         "xas": "xas",
         "eis": "eis",
         "pl": "pl",
+        "dsc": "dsc",
+        "nmr": "nmr",
+        "ftir": "ftir",
         "uv_vis": "uv_vis",
     }
     if template_id in domain_map:
@@ -1147,13 +1249,9 @@ def _semantic_confirmation_template(proposal: Any) -> dict[str, Any]:
     return {
         "proposal_hash": proposal.proposal_hash,
         "confirmed": True,
-        "approved_derived_item_ids": [
-            item["item_id"] for item in proposal_payload["derived_items"]
-        ],
+        "approved_derived_item_ids": [item["item_id"] for item in proposal_payload["derived_items"]],
         "resolved_ambiguities": {
-            item["ambiguity_id"]: (
-                item["options"][0] if item["options"] else "<请填写确认结论>"
-            )
+            item["ambiguity_id"]: (item["options"][0] if item["options"] else "<请填写确认结论>")
             for item in proposal_payload["ambiguities"]
             if item["blocking"]
         },
@@ -1206,24 +1304,16 @@ def understand_data(
         )
 
     uncertain_items = [
-        item["item_id"]
-        for item in proposal_payload["data_items"]
-        if item["disposition"] == "uncertain"
+        item["item_id"] for item in proposal_payload["data_items"] if item["disposition"] == "uncertain"
     ]
     blocking_ambiguities = [
-        item["ambiguity_id"]
-        for item in proposal_payload["ambiguities"]
-        if item["blocking"]
+        item["ambiguity_id"] for item in proposal_payload["ambiguities"] if item["blocking"]
     ]
     can_confirm = not uncertain_items
     return {
         "schema_version": "1.0",
         "ok": True,
-        "state": (
-            "awaiting_semantic_confirmation"
-            if can_confirm
-            else "awaiting_column_meaning_correction"
-        ),
+        "state": ("awaiting_semantic_confirmation" if can_confirm else "awaiting_column_meaning_correction"),
         "source": {
             "file_name": source_path.name,
             "sha256": proposal.source_sha256,
@@ -1340,9 +1430,7 @@ def review_reference_figure(
         },
         "confirmation_gate": {
             "required": True,
-            "message_zh": (
-                "请确认这份理解只保留了图形语法和视觉风格，而且所有必要元素都已绑定到你的数据。"
-            ),
+            "message_zh": ("请确认这份理解只保留了图形语法和视觉风格，而且所有必要元素都已绑定到你的数据。"),
             "confirmation_payload_template": {
                 "reference_contract_hash": spec.contract_sha256,
                 "confirmed": True,
@@ -1457,9 +1545,7 @@ def start_session(
         profile["name"] for profile in inspection["columns"] if not profile["semantic_tags"]
     ]
     error_columns = [
-        profile["name"]
-        for profile in inspection["columns"]
-        if "error" in profile["semantic_tags"]
+        profile["name"] for profile in inspection["columns"] if "error" in profile["semantic_tags"]
     ]
 
     confirmation_questions: list[dict[str, Any]] = [
@@ -1506,26 +1592,20 @@ def start_session(
         )
 
     selected_template_id = top["template_id"] if top else None
-    all_semantic_tags = {
-        tag for profile in inspection["columns"] for tag in profile["semantic_tags"]
-    }
+    all_semantic_tags = {tag for profile in inspection["columns"] for tag in profile["semantic_tags"]}
     canonical_headers = {_canonical(profile["name"]) for profile in inspection["columns"]}
     precomputed = _PRECOMPUTED_EVIDENCE.get(selected_template_id or "")
     if selected_template_id == "xps" and (
         {"background", "envelope", "residual"} & all_semantic_tags
         or any(
-            token in header
-            for header in canonical_headers
-            for token in ("component", "peak", "组分", "分峰")
+            token in header for header in canonical_headers for token in ("component", "peak", "组分", "分峰")
         )
     ):
         precomputed = "文件中实际出现的背景、包络、峰组分或残差等结果"
     elif selected_template_id == "pl" and (
         "fit" in all_semantic_tags
         or any(
-            token in header
-            for header in canonical_headers
-            for token in ("lifetime", "tau", "寿命", "拟合")
+            token in header for header in canonical_headers for token in ("lifetime", "tau", "寿命", "拟合")
         )
     ):
         precomputed = "用户认可的拟合曲线与寿命参数"
@@ -1621,8 +1701,7 @@ def start_session(
             "helper_columns": "如绘图确有需要，只能在 Origin 工作簿内部创建 helper columns。",
             "palette": "配色暂不锁定；模板和科学目的确认后再选择或接受色盲友好默认值。",
             "origin": (
-                "数据识别阶段不调用 Origin；render 时直接测试本机 Automation 连接，"
-                "失败只报告技术错误。"
+                "数据识别阶段不调用 Origin；render 时直接测试本机 Automation 连接，失败只报告技术错误。"
             ),
             "analysis_boundary": "不推断统计检验、误差语义、拟合参数或模型输出。",
         },
@@ -1683,8 +1762,7 @@ def _confirm_semantic_proposal(
             "approved_derived_item_ids must be a JSON array of item IDs.",
         )
     if not isinstance(resolutions, dict) or not all(
-        isinstance(key, str) and isinstance(value, str)
-        for key, value in resolutions.items()
+        isinstance(key, str) and isinstance(value, str) for key, value in resolutions.items()
     ):
         raise EditaPlotError(
             "semantic_confirmation_invalid",
@@ -1806,24 +1884,18 @@ def build_plan(
     route_capabilities: set[OriginCapability] = set()
     if plot_spec is not None:
         if getattr(plot_spec, "aggregate_error_column", None) or any(
-            getattr(series, "error_column", None)
-            for series in getattr(plot_spec, "series", ())
+            getattr(series, "error_column", None) for series in getattr(plot_spec, "series", ())
         ):
             route_capabilities.add(OriginCapability.ERROR_BARS)
         if getattr(plot_spec, "inset_series", ()):
             route_capabilities.add(OriginCapability.INSET_LAYER)
-        if any(
-            getattr(plot_spec, axis_name, None) == "log10"
-            for axis_name in ("x_scale", "y_scale")
-        ):
+        if any(getattr(plot_spec, axis_name, None) == "log10" for axis_name in ("x_scale", "y_scale")):
             route_capabilities.add(OriginCapability.LOG_AXIS)
     invalid_route_capabilities = route_capabilities - (
         capability_profile.required | capability_profile.optional
     )
     if invalid_route_capabilities:
-        invalid_names = ", ".join(
-            sorted(capability.value for capability in invalid_route_capabilities)
-        )
+        invalid_names = ", ".join(sorted(capability.value for capability in invalid_route_capabilities))
         raise EditaPlotError(
             "origin_capability_profile_invalid",
             f"The template capability profile does not allow: {invalid_names}.",
@@ -1854,11 +1926,7 @@ def build_plan(
     reference_renderer_ready = True
     reference_blocked_reasons: list[str] = []
     if reference_requested:
-        if (
-            reference_image is None
-            or reference_spec is None
-            or reference_confirmation is None
-        ):
+        if reference_image is None or reference_spec is None or reference_confirmation is None:
             raise EditaPlotError(
                 "reference_inputs_incomplete",
                 "Reference adaptation needs an image, a reviewed spec, and explicit confirmation.",
@@ -1890,19 +1958,12 @@ def build_plan(
             raise EditaPlotError(code, str(exc)) from exc
         reference_adaptation = adaptation.to_dict()
         required_reference_capabilities = set(
-            reference_adaptation["origin_capability_gate"][
-                "additional_required_capabilities"
-            ]
+            reference_adaptation["origin_capability_gate"]["additional_required_capabilities"]
         )
         allowed_reference_capabilities = {
-            capability.value
-            for capability in (
-                capability_profile.required | capability_profile.optional
-            )
+            capability.value for capability in (capability_profile.required | capability_profile.optional)
         }
-        unavailable = sorted(
-            required_reference_capabilities - allowed_reference_capabilities
-        )
+        unavailable = sorted(required_reference_capabilities - allowed_reference_capabilities)
         if unavailable:
             raise EditaPlotError(
                 "reference_capability_unavailable",
@@ -1922,12 +1983,9 @@ def build_plan(
             raise EditaPlotError(code, str(exc)) from exc
         frozen_payload = style_application.preparation
         reference_style_report = style_application.report
-        reference_renderer_ready = bool(
-            reference_style_report["execution_allowed"]
-        )
+        reference_renderer_ready = bool(reference_style_report["execution_allowed"])
         reference_blocked_reasons.extend(
-            str(item)
-            for item in reference_style_report.get("blocking_reasons", [])
+            str(item) for item in reference_style_report.get("blocking_reasons", [])
         )
     plan: dict[str, Any] = {
         "plan_version": PLAN_VERSION,
@@ -1989,11 +2047,7 @@ def build_plan(
             and reference_renderer_ready
         ),
         "blocked_reasons": (
-            (
-                ["column_mapping_confirmation_required"]
-                if prepared.requires_confirmation
-                else []
-            )
+            (["column_mapping_confirmation_required"] if prepared.requires_confirmation else [])
             + reference_blocked_reasons
         ),
     }
@@ -2067,10 +2121,8 @@ def validate_plan(plan: dict[str, Any]) -> None:
         if (
             not isinstance(reference_report_hash, str)
             or reference_report_hash != _json_hash(reference_report_payload)
-            or reference_style.get("reference_plan_hash")
-            != reference_adaptation.get("plan_hash")
-            or reference_style.get("output_plan_digest")
-            != plan.get("template", {}).get("plan_digest")
+            or reference_style.get("reference_plan_hash") != reference_adaptation.get("plan_hash")
+            or reference_style.get("output_plan_digest") != plan.get("template", {}).get("plan_digest")
         ):
             raise EditaPlotError(
                 "reference_style_report_mismatch",
@@ -2099,9 +2151,7 @@ def build_worker_command(
     close_origin: bool = False,
 ) -> tuple[list[str], dict[str, str], Path]:
     execution = plan.get("execution")
-    planned_engine_home = (
-        execution.get("engine_home") if isinstance(execution, dict) else None
-    )
+    planned_engine_home = execution.get("engine_home") if isinstance(execution, dict) else None
     root = bootstrap_engine(engine_home or planned_engine_home)
     validate_plan(plan)
     python = str(python_executable or os.environ.get("EDITAPLOT_PYTHON") or sys.executable)
@@ -2150,8 +2200,7 @@ def build_worker_command(
                         "expected_report_hash": reference_style["report_hash"],
                         "locked_palette_id": (
                             str(palette["palette_id"])
-                            if isinstance(palette, dict)
-                            and palette.get("palette_id")
+                            if isinstance(palette, dict) and palette.get("palette_id")
                             else None
                         ),
                     },
@@ -2189,9 +2238,7 @@ def build_origin_smoke_command(
     ]
     env = dict(os.environ)
     source_path = str(root / "src")
-    env["PYTHONPATH"] = source_path + (
-        os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
-    )
+    env["PYTHONPATH"] = source_path + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
     env["PYTHONIOENCODING"] = "utf-8"
     return command, env, root
 
@@ -2699,9 +2746,7 @@ def _recover_managed_environment(root: Path, actions: list[dict[str, Any]]) -> N
         for stale in reversed(stale_paths):
             os.replace(stale, env_root)
             if managed_environment_status(root)["valid"]:
-                actions.append(
-                    {"action": "restore_interrupted_environment_swap", "path": stale.name}
-                )
+                actions.append({"action": "restore_interrupted_environment_swap", "path": stale.name})
                 stale_paths.remove(stale)
                 break
             os.replace(env_root, stale)
@@ -2721,8 +2766,8 @@ def _verify_managed_dependencies(python: Path) -> dict[str, Any]:
         "import importlib.metadata as m,json;"
         f"e=json.loads({json.dumps(json.dumps(expected))});"
         "a={};"
-        "exec(\"for n,v in e.items():\\n try:a[n]=m.version(n)==v\\n except "
-        "m.PackageNotFoundError:a[n]=False\");"
+        'exec("for n,v in e.items():\\n try:a[n]=m.version(n)==v\\n except '
+        'm.PackageNotFoundError:a[n]=False");'
         "print(json.dumps(a))"
     )
     try:
@@ -2810,9 +2855,7 @@ def _repair_environment_transaction(
             }
 
     current_executable = os.path.normcase(str(Path(sys.executable).resolve()))
-    running_managed = python.is_file() and current_executable == os.path.normcase(
-        str(python.resolve())
-    )
+    running_managed = python.is_file() and current_executable == os.path.normcase(str(python.resolve()))
     if running_managed:
         raise EditaPlotError(
             "managed_environment_self_repair_requires_base_python",
@@ -2876,9 +2919,7 @@ def _repair_environment_transaction(
                 "dependency_install_timeout",
                 "Installing the audited dependencies exceeded 900 seconds.",
             ) from exc
-        actions.append(
-            {"action": "install_audited_runtime_dependencies", "returncode": completed.returncode}
-        )
+        actions.append({"action": "install_audited_runtime_dependencies", "returncode": completed.returncode})
         if completed.returncode != 0:
             raise EditaPlotError(
                 "dependency_install_failed",
@@ -3073,11 +3114,7 @@ def _discover_origin_com_registration(
     for clsid, progid_view, progid_label in clsids:
         searches = [
             (rf"CLSID\{clsid}\LocalServer32", progid_view, progid_label),
-            *[
-                (rf"CLSID\{clsid}\LocalServer32", view, label)
-                for view, label in views
-                if view != progid_view
-            ],
+            *[(rf"CLSID\{clsid}\LocalServer32", view, label) for view, label in views if view != progid_view],
             (rf"WOW6432Node\CLSID\{clsid}\LocalServer32", 0, "WOW6432Node"),
         ]
         seen_searches: set[tuple[str, int]] = set()
@@ -3214,11 +3251,7 @@ def _discover_installed_origin_candidates(winreg: Any) -> list[dict[str, Any]]:
                 if executable is None:
                     continue
                 existing = next(
-                    (
-                        item
-                        for item in candidates
-                        if _same_origin_executable(str(item["path"]), executable)
-                    ),
+                    (item for item in candidates if _same_origin_executable(str(item["path"]), executable)),
                     None,
                 )
                 if existing is not None:
@@ -3320,9 +3353,7 @@ def discover_origin_application() -> dict[str, Any]:
         "progid": launch["progid"],
         "clsid": launch["clsid"],
         "registry_view": launch["registry_view"],
-        "callability_status": (
-            "registration_detected" if launch_detected else "not_detected"
-        ),
+        "callability_status": ("registration_detected" if launch_detected else "not_detected"),
         "reason": reason,
         "registration_detected": any_detected,
         "launch_registration_detected": launch_detected,
@@ -3374,9 +3405,7 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
             origin_application.get("application_present", False),
         )
     )
-    attach_registration_detected = bool(
-        origin_application.get("attach_registration_detected", False)
-    )
+    attach_registration_detected = bool(origin_application.get("attach_registration_detected", False))
     checks.append(
         {
             "name": "origin_application",
@@ -3392,9 +3421,7 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
             ),
             "launch_registration_detected": launch_registration_detected,
             "attach_registration_detected": attach_registration_detected,
-            "live_connection_tested": bool(
-                origin_application.get("live_connection_tested", False)
-            ),
+            "live_connection_tested": bool(origin_application.get("live_connection_tested", False)),
         }
     )
     try:
@@ -3428,10 +3455,11 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
             }
         )
 
-    ready_analysis = python_ok and windows and engine_ok and all(
-        dependency_state[name]
-        for name in dependencies
-        if name not in {"originpro", "OriginExt"}
+    ready_analysis = (
+        python_ok
+        and windows
+        and engine_ok
+        and all(dependency_state[name] for name in dependencies if name not in {"originpro", "OriginExt"})
     )
     ready_render = (
         ready_analysis
@@ -3468,9 +3496,7 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
     if not dependency_state.get("OriginExt", False):
         manual_blockers.append("python_originext_package_missing")
     if ready_render:
-        summary_zh = (
-            "环境已具备绘图前提；真正的 Origin 连接会在绘图或独立 smoke test 时完成。"
-        )
+        summary_zh = "环境已具备绘图前提；真正的 Origin 连接会在绘图或独立 smoke test 时完成。"
         next_step_zh = "直接提交数据即可，EditaPlot 会自动启动一个专用 Origin 实例。"
     elif ready_analysis:
         summary_zh = "数据分析环境可用，但 Origin 绘图前提尚未全部满足。"
@@ -3570,9 +3596,10 @@ def _font_readback_audit(report: dict[str, Any]) -> dict[str, Any]:
                 if canonical == "font_code_expected" and isinstance(item, (int, float)):
                     expected_codes.append(int(round(float(item))))
                 elif isinstance(item, (int, float)) and (
-                    canonical == "font_code"
+                    canonical in {"font", "font_code"}
                     or canonical.endswith(".font")
                     or canonical.endswith(".font_code")
+                    or canonical.endswith("_font")
                     or canonical.endswith("_font_code")
                 ):
                     actual_codes[child] = int(round(float(item)))

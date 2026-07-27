@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 352,
+  "file_count": 387,
   "files": [
     {
       "path": "LICENSE",
@@ -49,6 +49,11 @@
       "sha256": "a1af3b5ce18766d3d792afc0d5fa2df0dd272302bd768b459f3708f7fc79efc1"
     },
     {
+      "path": "src/origin_sciplot/heatmap_layout.py",
+      "size_bytes": 5923,
+      "sha256": "8ed1f7a1de83ffa2c75824c4ec7f4247f7d729f2134d6e265d7691eeb73fdb93"
+    },
+    {
       "path": "src/origin_sciplot/logging_utils.py",
       "size_bytes": 833,
       "sha256": "80db8e0bfdc602836d5376a36eaf04361bb8b3992c3400fef825d101364420af"
@@ -75,8 +80,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/categorical_renderer.py",
-      "size_bytes": 59981,
-      "sha256": "fe3d140ca8d77822dca3067d863ae077454887482fcc0d502bddfc41bbe17e05"
+      "size_bytes": 63128,
+      "sha256": "8c7c3589763572f11321af9aa4d30266dad859e9c6841f30939572c2abd900c3"
     },
     {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
@@ -90,18 +95,18 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/safe_errors.py",
-      "size_bytes": 1636,
-      "sha256": "c55e1bf5b43e32251e2c71f4503af7221d9bb43c8f9a5c9ff2c688bdf059c637"
+      "size_bytes": 4786,
+      "sha256": "0e558af795e94a32e24a4a9e47c122da132f7e84bb7f977e35fcde75f3ac77cf"
     },
     {
       "path": "src/origin_sciplot/origin_backend/scientific_renderer.py",
-      "size_bytes": 69277,
-      "sha256": "db8f8d5138896c1e0e26df205256c1cbcf048d331fa90f4e5af0f366652322eb"
+      "size_bytes": 70808,
+      "sha256": "da0ad09b145d9a4ccbc224d258d8bd6b1475f142418cd39fbf3d592c292b98f7"
     },
     {
       "path": "src/origin_sciplot/origin_backend/session.py",
-      "size_bytes": 12895,
-      "sha256": "f532c29904b133413e1bf57185bacf4fc9a0d54b8f91da76b7fc3ccd2b43a455"
+      "size_bytes": 13023,
+      "sha256": "e611150bf075f3f69fdd0b07595ad268ccfd1a1f00a57f8eb307fcf8f0f67df5"
     },
     {
       "path": "src/origin_sciplot/origin_backend/smoke_test.py",
@@ -110,18 +115,18 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/template_capabilities.py",
-      "size_bytes": 11459,
-      "sha256": "fa1988596efaa17dc39855c069bb076b5baa69f3ae488501a729d1fde679e962"
+      "size_bytes": 11539,
+      "sha256": "98029374c87300960cbdd8838f6c89179bf811d75b39e817ddbfb014d6202460"
     },
     {
       "path": "src/origin_sciplot/origin_backend/trajectory3d_renderer.py",
-      "size_bytes": 19775,
-      "sha256": "e76b425083d9047d6a3f15433ab6e4b5aa9bb835878a9b538cee285370458499"
+      "size_bytes": 19727,
+      "sha256": "a4ab63e0e0b2231d09bfe055d261c99821b115bcf740c70993409d53e9f48026"
     },
     {
       "path": "src/origin_sciplot/origin_backend/verify_utils.py",
-      "size_bytes": 8483,
-      "sha256": "7aed33580b78e3939421e85a43f100d187abdeb1c030ff8fff92141311ae9e5a"
+      "size_bytes": 8844,
+      "sha256": "79192d848bc5a58268f3b9c7a6301eb9da5a75afdb9f508816f9f9435f803048"
     },
     {
       "path": "src/origin_sciplot/origin_backend/version_risks.py",
@@ -145,8 +150,8 @@
     },
     {
       "path": "src/origin_sciplot/reference_adaptation.py",
-      "size_bytes": 28373,
-      "sha256": "9db3cdbcb07f4b7f1ae27b8dd123230e64c530d22d1bf97d8c43c27eece2257b"
+      "size_bytes": 28614,
+      "sha256": "0f7f368e04e6a38e85690a4ef8d5aff176cad010a3cbe676cb275852938ac893"
     },
     {
       "path": "src/origin_sciplot/reference_figure.py",
@@ -155,8 +160,8 @@
     },
     {
       "path": "src/origin_sciplot/reference_style.py",
-      "size_bytes": 22019,
-      "sha256": "9e5d41e2f0f06d20d354489713e117ea677085d7937b0852c5304c87fff0cbe2"
+      "size_bytes": 22088,
+      "sha256": "cd29f6364c10aaa58f43e851a8841fe26da7525713bef166a98b8394bef4f428"
     },
     {
       "path": "src/origin_sciplot/resources/app_icon.png",
@@ -170,18 +175,18 @@
     },
     {
       "path": "src/origin_sciplot/scientific_preview.py",
-      "size_bytes": 67990,
-      "sha256": "347f27426edd273cef5459e4cbad9721746d6e00b6c6f7b9d483098b2fb17d98"
+      "size_bytes": 68706,
+      "sha256": "7056bd3b9815dedb0451b230e1b7ecb1310fb3da69f819e7a3bf3c6efba552fc"
     },
     {
       "path": "src/origin_sciplot/scientific_visual.py",
-      "size_bytes": 16508,
-      "sha256": "3656a25d03c420363c564e752423d827c13d3bcde83f022e1aa8c166ed7b5cea"
+      "size_bytes": 19854,
+      "sha256": "efb888b0d16d3057aea094502b9b21d291dd336060fd2b29deacf36f79156e27"
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 155259,
-      "sha256": "d78f8f7a840aa1f8f9388edd6091f284a1a73b7f9832a166858b528410d7ad92"
+      "size_bytes": 171061,
+      "sha256": "dff114cf38bd99c3d6ab86a9c189f2123241e2da53e6c19cd6537bea2ce05812"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
@@ -225,8 +230,8 @@
     },
     {
       "path": "src/origin_sciplot/workers/origin_smoke_worker.py",
-      "size_bytes": 2905,
-      "sha256": "7be4bd33b1ccc0cf5c6fefaa8a46cf3078ef8a39507effa6680e2c5c8b6fc07f"
+      "size_bytes": 3065,
+      "sha256": "271ebbe16b59a23f4e3d9cbbce66c39d91b5f5e24b357a6d36a7b85d6684f9bf"
     },
     {
       "path": "src/origin_sciplot/workers/process_launcher.py",
@@ -594,6 +599,46 @@
       "sha256": "cc39f55c70922d7ba3828099238094f51d00540bb65222407e003488b59e8498"
     },
     {
+      "path": "templates/dsc/data_contract.md",
+      "size_bytes": 898,
+      "sha256": "efc42c32cfdd36b2fda13674b9788532d83d6ae61585ac7ffdf92dc257d99974"
+    },
+    {
+      "path": "templates/dsc/data_template.csv",
+      "size_bytes": 91,
+      "sha256": "06599d952321594daccc0f25d1ca9d61933e1cfc9e2d1773ae074807696e8047"
+    },
+    {
+      "path": "templates/dsc/example_standard.csv",
+      "size_bytes": 605,
+      "sha256": "80236d1654c30870b2f69fca189d74790bdf2a184f747e01ee2fb4e0bffd444b"
+    },
+    {
+      "path": "templates/dsc/manifest.yaml",
+      "size_bytes": 1288,
+      "sha256": "3b0c2450d9af9ae6ade2f8eb5fa5059d10f66bd3a14147c1899ba8e5b5bbc00a"
+    },
+    {
+      "path": "templates/dsc/runner.py",
+      "size_bytes": 413,
+      "sha256": "81b8a9bc8fd1e428f2a301e0b3d1a60f5bad50866a2aa3ad975a19dbe35ddb10"
+    },
+    {
+      "path": "templates/dsc/schema.json",
+      "size_bytes": 393,
+      "sha256": "51300fc4026f0592e4c98a74190451cb95234319b6570fd993595c0e961adf5e"
+    },
+    {
+      "path": "templates/dsc/service.py",
+      "size_bytes": 207,
+      "sha256": "4727810f2a7d8d9ded49038980a0210a467b1261c087d6eaa3026ac01917b3f2"
+    },
+    {
+      "path": "templates/dsc/visual_contract.md",
+      "size_bytes": 762,
+      "sha256": "47a8dc73c2820f772daca8ccb2e01646741b6dcc1cd6f8a7719ef003e81ddc8a"
+    },
+    {
       "path": "templates/eis/data_contract.md",
       "size_bytes": 370,
       "sha256": "6e7a1dcfc4dc387e6580347fd2093609e43cc2bd0babdfd401a05cdfc49430d9"
@@ -677,6 +722,46 @@
       "path": "templates/forest/visual_contract.md",
       "size_bytes": 259,
       "sha256": "c103156f4ef32cd50dc0c453f656ddf78b987a22acbbdcfacbce31a333b8ccde"
+    },
+    {
+      "path": "templates/ftir/data_contract.md",
+      "size_bytes": 879,
+      "sha256": "257b14bca363eae9a76bb5fa84ca0e2cc9e42cf76722089b8f49fc9fe244d5b2"
+    },
+    {
+      "path": "templates/ftir/data_template.csv",
+      "size_bytes": 93,
+      "sha256": "40d26193e9145e581d7153dcede7d7e5f22d494e5493bdd803bd6d2cf24b4e11"
+    },
+    {
+      "path": "templates/ftir/example_standard.csv",
+      "size_bytes": 686,
+      "sha256": "dd61af02123ee96885a8dc7fbdf69ec8fcc465f1344c32a214685c2e91377bbe"
+    },
+    {
+      "path": "templates/ftir/manifest.yaml",
+      "size_bytes": 1336,
+      "sha256": "2b16d1ac8a5a542b35fc72c03b91bb815db04ed45babe7c7cd7a111c2482de9f"
+    },
+    {
+      "path": "templates/ftir/runner.py",
+      "size_bytes": 420,
+      "sha256": "9d370f8fde7a6320c0214dd0767d517185d89f0ff7f49d6b28289538b2240828"
+    },
+    {
+      "path": "templates/ftir/schema.json",
+      "size_bytes": 465,
+      "sha256": "6cf4722db98320b8745538047784ae6bd3871cc8a21b23cb7969d9b3c87ac663"
+    },
+    {
+      "path": "templates/ftir/service.py",
+      "size_bytes": 213,
+      "sha256": "44e31145f108c75ed87b38f2877d7c0cea9386035787e1590400641aaa1dcc5b"
+    },
+    {
+      "path": "templates/ftir/visual_contract.md",
+      "size_bytes": 865,
+      "sha256": "f5a38618eeb0cf56d0d3078256826f6dac033b0773fd632b068d976993f4fdcc"
     },
     {
       "path": "templates/grouped_box/data_contract.md",
@@ -924,6 +1009,46 @@
       "sha256": "58c8efc0e6bfef138f27d9cb55cf37f19f983de86ab4b37920c3eeac2027b12f"
     },
     {
+      "path": "templates/nmr/data_contract.md",
+      "size_bytes": 813,
+      "sha256": "2f6b7b286ecd8dc517b22c0c2d07e30c9fe80bab4a464624ee1cbbaa766e74c8"
+    },
+    {
+      "path": "templates/nmr/data_template.csv",
+      "size_bytes": 86,
+      "sha256": "440a2a1a22d689969825e9f1c30b75687e642970759baed01613526689e6ba7e"
+    },
+    {
+      "path": "templates/nmr/example_standard.csv",
+      "size_bytes": 469,
+      "sha256": "64fc4a9d8a18ecd9400822c82f68151219d38aba718f020f37e2dcb4365bb386"
+    },
+    {
+      "path": "templates/nmr/manifest.yaml",
+      "size_bytes": 1294,
+      "sha256": "f7fbe0cc08202c68569a9b6030cb9c29c4ac61d645fdda0b50dacf33e80ad9b7"
+    },
+    {
+      "path": "templates/nmr/runner.py",
+      "size_bytes": 417,
+      "sha256": "c0fb153a63505f5acaa4f4f2f839e2331eef3a71131b66b351a6fd4c7a8b6d06"
+    },
+    {
+      "path": "templates/nmr/schema.json",
+      "size_bytes": 410,
+      "sha256": "798f1c10982dc15bd101dd2fc39b9a355440b7bf7efb349ad01ec5b656922980"
+    },
+    {
+      "path": "templates/nmr/service.py",
+      "size_bytes": 207,
+      "sha256": "822111a7b34f6b640d3c9532a003428b5a105146f2473f15084a33cf9482eb4f"
+    },
+    {
+      "path": "templates/nmr/visual_contract.md",
+      "size_bytes": 786,
+      "sha256": "4974522688fb0d2fe4e7aa9c2a486d36d3b6e1a38201c9d2811562ab149968e5"
+    },
+    {
       "path": "templates/paired_trajectory/data_contract.md",
       "size_bytes": 221,
       "sha256": "fd8b096303f2beebb84c8c12c626a33d5f1e3ad8138e9d4e9f02064e2a1b55c7"
@@ -1045,8 +1170,8 @@
     },
     {
       "path": "templates/pl/data_contract.md",
-      "size_bytes": 331,
-      "sha256": "5cb8f9c2251f214344511b84d35085236e175c4b9b8c56a3a4d3d845b730be77"
+      "size_bytes": 933,
+      "sha256": "a0452e2f93a2435cf137b1c428bb168cdb1a10237564c0be802b8ab82ae90ddd"
     },
     {
       "path": "templates/pl/data_template.csv",
@@ -1059,9 +1184,14 @@
       "sha256": "d12a1c76bbd40094cddd774d171becc9622f861bca59329f58d1274f58aa3f9b"
     },
     {
+      "path": "templates/pl/example_temperature_series.csv",
+      "size_bytes": 1192,
+      "sha256": "98d7fb02d3eff2b832abde03788562015f13243a52dd126674f01e20abdcbfb4"
+    },
+    {
       "path": "templates/pl/manifest.yaml",
-      "size_bytes": 1176,
-      "sha256": "5ad8241f857f948b5f9a2fa889820cf1632a6b2a993c73a406577ee173b9f836"
+      "size_bytes": 1698,
+      "sha256": "c05f8f803d288f7adbf21ca230097f143b8fec4122e701d62c7594e4cde2e6cc"
     },
     {
       "path": "templates/pl/runner.py",
@@ -1080,8 +1210,8 @@
     },
     {
       "path": "templates/pl/visual_contract.md",
-      "size_bytes": 339,
-      "sha256": "a2bedc03543a040a387f5c02e9c64e6ea1ec4cc6da913bdb471c27ffd4f539d5"
+      "size_bytes": 866,
+      "sha256": "e2e9b9efb08a7563720bf5a6eba0d323f73e4050196f923997f17618d0719acd"
     },
     {
       "path": "templates/radar/data_contract.md",
@@ -1455,13 +1585,18 @@
     },
     {
       "path": "templates/uv_vis/data_contract.md",
-      "size_bytes": 331,
-      "sha256": "6174cbd1a2629f918da2a8d18aaad53acd7b67feddabedaa67b598566b07dd8e"
+      "size_bytes": 868,
+      "sha256": "395285bb189ba56dd349907f8bcee95a5f1c4826bd44f61de8002c92da31b56f"
     },
     {
       "path": "templates/uv_vis/data_template.csv",
       "size_bytes": 87,
       "sha256": "f3906a6a1ac450277cad1223f50f180350593bfff659b8b912239efe099af524"
+    },
+    {
+      "path": "templates/uv_vis/example_multi_spectrum.csv",
+      "size_bytes": 577,
+      "sha256": "d99dc2cc50747c98d0fd2f788a2c8d160c89dec0d58ce29afbeb21c386eefb32"
     },
     {
       "path": "templates/uv_vis/example_standard.csv",
@@ -1470,8 +1605,8 @@
     },
     {
       "path": "templates/uv_vis/manifest.yaml",
-      "size_bytes": 1365,
-      "sha256": "d3d99580d880eefb97a82232f61d25a14aeaca669a474ff0f2b99b3fd2e8e59f"
+      "size_bytes": 1883,
+      "sha256": "c103910d7b7ebff5ab5dd8dec42c07508a470f5c43df356e6c8efa0d38b4495c"
     },
     {
       "path": "templates/uv_vis/runner.py",
@@ -1490,8 +1625,8 @@
     },
     {
       "path": "templates/uv_vis/visual_contract.md",
-      "size_bytes": 369,
-      "sha256": "4d9d67b832c2177cda7824d1e7ee2fbde8a8064da37a95deed161f6fdaed2cf3"
+      "size_bytes": 732,
+      "sha256": "707bcd2954d565c5452e698ad1e8a474c6121357d5d30a292d79bd2a3bea6fc9"
     },
     {
       "path": "templates/violin/data_contract.md",
@@ -1712,6 +1847,46 @@
       "path": "templates/xps_c1s_fit/visual_contract.md",
       "size_bytes": 2969,
       "sha256": "549edc576bab88ab7ade56db7a69e478f81224d2feb4c62924c7f7a531aed7d9"
+    },
+    {
+      "path": "templates/xps_compare/data_contract.md",
+      "size_bytes": 1712,
+      "sha256": "981ceb6deb2d6e9649686039ae378efb81d353e53cc031ff384c5fdcd95192e8"
+    },
+    {
+      "path": "templates/xps_compare/data_template.csv",
+      "size_bytes": 90,
+      "sha256": "60a0b3a5175a9b3f7ef84096bd3aebecb2f34c76b4f41a8e6db790aca545e8c7"
+    },
+    {
+      "path": "templates/xps_compare/example_standard.csv",
+      "size_bytes": 521,
+      "sha256": "c71ac17e789a0527ba43ef6eff7c69619b5a4e7b1364d84a0c3fb41e9f21dc9a"
+    },
+    {
+      "path": "templates/xps_compare/manifest.yaml",
+      "size_bytes": 1589,
+      "sha256": "21ba732fa1b1896f262a7541e3173c6421d8e5a00740b9d860437431ca844e67"
+    },
+    {
+      "path": "templates/xps_compare/runner.py",
+      "size_bytes": 423,
+      "sha256": "953a1289a2df3e30531c76af054987861de47e5af0ab04c8157b6e5ab81ecedc"
+    },
+    {
+      "path": "templates/xps_compare/schema.json",
+      "size_bytes": 787,
+      "sha256": "67e6f6bb8352b2159269394a26c9d9fe8632e21371c9858c4b29f8bf1bde0d60"
+    },
+    {
+      "path": "templates/xps_compare/service.py",
+      "size_bytes": 218,
+      "sha256": "240d96fed46b0fb8fa00fcf03a9ee696ff7d9ceffcfd0f376eeb7fff76de475d"
+    },
+    {
+      "path": "templates/xps_compare/visual_contract.md",
+      "size_bytes": 1631,
+      "sha256": "23b72792fc6efcb1be9a6d86ee98c6703576345b6780587af6fbe7ffa391c362"
     },
     {
       "path": "templates/xrd/data_contract.md",

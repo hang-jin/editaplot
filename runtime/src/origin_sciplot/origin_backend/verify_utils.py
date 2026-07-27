@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from .base_style_contract import FIXED_ORIGIN_STYLE, pt_to_origin_width_units
+
+# Origin stores page dimensions in internal/printer units and can round an
+# adaptive size by roughly one tenth of a millimetre on readback.  A 0.3 mm
+# gate accepts that quantization while remaining far below a visible layout
+# change.
+PAGE_SIZE_TOLERANCE_CM = 0.03
 
 
 def require_nonempty(path: str | Path) -> None:
@@ -62,8 +69,7 @@ def verify_text_fonts(
         state[f"{name}.font_code"] = actual
         if abs(actual - expected) > tolerance:
             raise RuntimeError(
-                f"Origin font verification failed: {name}.font={actual}, expected "
-                f"{font_family} ({expected})"
+                f"Origin font verification failed: {name}.font={actual}, expected {font_family} ({expected})"
             )
     return state
 
@@ -115,8 +121,7 @@ def verify_plot_color(
     expected = float(op.ocolor(expected_html))
     if int(actual) != int(expected):
         raise RuntimeError(
-            f"Origin plot color verification failed: {actual:g}, expected {expected:g} "
-            f"for {expected_html}"
+            f"Origin plot color verification failed: {actual:g}, expected {expected:g} for {expected_html}"
         )
     return {
         "html": expected_html,
@@ -177,8 +182,8 @@ def verify_page_and_layer(
             "factor": layer.get_float("factor"),
         }
         page_ok = (
-            abs(page_cm["width_cm"] - style.page_width_cm) <= 0.01
-            and abs(page_cm["height_cm"] - style.page_height_cm) <= 0.01
+            abs(page_cm["width_cm"] - style.page_width_cm) <= PAGE_SIZE_TOLERANCE_CM
+            and abs(page_cm["height_cm"] - style.page_height_cm) <= PAGE_SIZE_TOLERANCE_CM
         )
         layer_ok = all(abs(layer_values[key] - value) <= 0.02 for key, value in expected.items())
         if page_ok and layer_ok:
@@ -201,12 +206,12 @@ def verify_page_and_layer(
         "width_cm": graph.obj.GetWidth() * 2.54,
         "height_cm": graph.obj.GetHeight() * 2.54,
     }
-    if abs(page_cm["width_cm"] - style.page_width_cm) > 0.01:
+    if abs(page_cm["width_cm"] - style.page_width_cm) > PAGE_SIZE_TOLERANCE_CM:
         raise RuntimeError(
             f"Origin page width verification failed: got {page_cm['width_cm']:.3f} cm, "
             f"expected {style.page_width_cm:.3f} cm"
         )
-    if abs(page_cm["height_cm"] - style.page_height_cm) > 0.01:
+    if abs(page_cm["height_cm"] - style.page_height_cm) > PAGE_SIZE_TOLERANCE_CM:
         raise RuntimeError(
             f"Origin page height verification failed: got {page_cm['height_cm']:.3f} cm, "
             f"expected {style.page_height_cm:.3f} cm"
@@ -214,7 +219,9 @@ def verify_page_and_layer(
     for key, value in expected.items():
         actual = layer.get_float(key.removesuffix("_percent") if key.endswith("_percent") else key)
         if abs(actual - value) > 0.02:
-            raise RuntimeError(f"Origin layer {key} verification failed: got {actual:.3f}, expected {value:.3f}")
+            raise RuntimeError(
+                f"Origin layer {key} verification failed: got {actual:.3f}, expected {value:.3f}"
+            )
     return {
         **page_cm,
         "left_percent": layer.get_float("left"),

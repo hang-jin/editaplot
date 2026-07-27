@@ -84,12 +84,25 @@ I store only the date and aggregate repository count. I do not read or store use
 
 | Domain | Implemented figure and evidence families |
 |---|---|
-| Materials and spectra | XPS, ordinary XRD, GSAS/GSAS-II XRD Rietveld, XAS, PL/TRPL, UV–Vis/Tauc, EIS, CV, LSV, multi-condition 3D Nyquist |
-| General statistics | bars, horizontal bars, error bars, stacked/percentage composition, pie, Sankey, line, trend, scatter, bubble, radar, heatmap |
+| Materials and spectra | XPS scan/fit, XPS multi-spectrum comparison, ordinary XRD, GSAS/GSAS-II XRD Rietveld, XAS, FTIR/IR, NMR, DSC, PL/TRPL, UV–Vis/Tauc, EIS, CV, LSV, multi-condition 3D Nyquist |
+| General statistics | bars, horizontal bars, error bars, stacked/percentage composition, pie, Sankey, line, trend, scatter, bubble, radar, heatmap, including 30×30/40×40 dense layouts |
 | Distributions and effects | raw summaries, box, violin, Raincloud, histogram, forest plot |
 | Medical and deep learning | ROC, PR, calibration, DCA, confusion matrix, Bland–Altman, paired longitudinal trajectories, grouped boxes, precomputed SHAP, medical panel planning |
 
 I do not silently smooth data, remove outliers, invent peaks, derive error bars, fit curves, identify phases, or train models. Lifetime, band-gap, SHAP, and similar analysis results are drawn only when you explicitly provide them.
+
+### Preparing the new materials routes
+
+| Figure | Minimum table | Boundary I keep |
+|---|---|---|
+| XPS multi-spectrum comparison | binding energy + at least two independent measured intensities | overlay by default; background, envelope, residual, and component columns never become samples |
+| FTIR / IR | wavenumber + one or more absorbance/transmittance series | decreasing wavenumber axis; no automatic correction, smoothing, peak labels, or functional-group assignment |
+| NMR | chemical shift (ppm) + one or more intensity series | decreasing chemical-shift axis; no automatic phase correction, integration, peak picking, or assignment |
+| DSC | temperature + one or more heat-flow series | confirm the endothermic/exothermic convention first; no automatic Tg, Tm, Tc, or enthalpy calculation |
+| PL / TRPL | wavelength or time + emission intensity; optional supplied fits | multi-sample and multi-condition tables are accepted; fits and lifetimes must be supplied |
+| UV–Vis / Tauc | wavelength + absorbance/transmittance; optional supplied Tauc data | multi-sample tables are accepted; no photon-energy conversion, exponent choice, fitting, or band-gap calculation |
+
+For dense heatmaps I keep every matrix value and the original order while reducing only repeated display text. A 30×30 or 40×40 plan hides per-cell numbers, thins row and column labels, and separates the colorbar from the data field. The 40×40 case has passed Origin 2024b OPJU/PNG/PDF/TIF generation, axis and colorbar object readback, and human visual review.
 
 ## Origin-rendered examples
 
@@ -104,7 +117,9 @@ I made and manually checked these examples with synthetic teaching data. Metadat
   <img src="assets/gallery/trajectory3d.png" alt="Multi-condition 3D Nyquist trajectory" width="31%">
 </div>
 
-➡️ [Browse all 37 reviewed examples](docs/gallery.md)
+➡️ [Browse all 44 reviewed examples](docs/gallery.md)
+
+The DSC, NMR, FTIR/IR, XPS comparison, multi-condition PL, multi-sample UV–Vis, and 40×40 heatmap routes have produced 2024b Origin artifacts and passed object readback, human visual review, and the public-asset audit. The gallery contains only PNGs that completed those gates.
 
 ## Scientific palettes
 
@@ -190,7 +205,7 @@ I keep the public repository complete and runnable. To avoid mixing private data
 |---|---|
 | Apache-2.0 source, complete Skill, sanitized runtime | `DEVELOPMENT_LEDGER.md`, internal plans, development logs |
 | Neutral synthetic examples and original palette assets | Your original data, reference screenshots, material without redistribution rights |
-| 37 reviewed, metadata-sanitized PNG examples | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
+| 44 reviewed, metadata-sanitized PNG examples | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
 | Bilingual docs, tests, dependency locks, asset/runtime manifests | Absolute paths, caches, virtual environments, temporary outputs, secrets and tokens |
 
 To avoid publishing local material by mistake, I use an allowlist, secret scanning, PNG checks, and SHA-256 manifests. See [release and licensing boundaries](docs/release-boundaries.md).

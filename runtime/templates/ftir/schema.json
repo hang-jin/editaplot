@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "ftir",
+  "required_roles": ["x", "series"],
+  "allowed_signal_modes": ["absorbance", "transmittance"],
+  "axis_direction": "descending",
+  "automatic_baseline_correction": false,
+  "automatic_smoothing": false,
+  "automatic_normalization": false,
+  "automatic_peak_assignment": false,
+  "min_columns": 2,
+  "min_rows": 2,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

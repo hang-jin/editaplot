@@ -28,6 +28,7 @@ class ShowcaseCase:
     intent: str
     x_title: str | None = None
     y_title: str | None = None
+    title_zh: str | None = None
 
 
 CASES = (
@@ -38,6 +39,15 @@ CASES = (
         "The teaching spectrum is represented by a background, fitted envelope, and three editable components.",
         "comparison",
         "XPS peak fitting",
+    ),
+    ShowcaseCase(
+        "xps-comparison",
+        "xps_compare",
+        "xps_compare.csv",
+        "Three independent synthetic XPS measurements share one binding-energy axis without being reinterpreted as fitted components.",
+        "spectral comparison",
+        "XPS multi-spectrum comparison",
+        title_zh="XPS 多样品谱线对比",
     ),
     ShowcaseCase(
         "xrd-multi",
@@ -54,6 +64,15 @@ CASES = (
         "The teaching impedance response follows a resolved Nyquist arc.",
         "relationship",
         "EIS Nyquist impedance",
+    ),
+    ShowcaseCase(
+        "trajectory3d",
+        "trajectory3d",
+        "trajectory3d.csv",
+        "Three synthetic Nyquist trajectories remain separated by a real, unit-bearing measurement position rather than decorative depth.",
+        "three-axis relationship",
+        "multi-position 3D Nyquist trajectory",
+        title_zh="三维多位置 Nyquist 轨迹",
     ),
     ShowcaseCase(
         "cv-cycles",
@@ -97,12 +116,57 @@ CASES = (
         x_title="Wavelength (nm)",
     ),
     ShowcaseCase(
+        "pl-temperature-series",
+        "pl",
+        "pl_temperature_series.csv",
+        "Six synthetic steady-state PL spectra preserve an ordered temperature progression without hidden normalization or peak labels.",
+        "ordered spectral comparison",
+        "steady-state PL temperature series",
+        title_zh="PL 温度序列光谱",
+    ),
+    ShowcaseCase(
         "uv-vis-tauc",
         "uv_vis",
         "uv_vis_tauc.csv",
         "The measured absorbance spectrum is shown with a Tauc inset that uses only user-supplied photon-energy, Tauc, fit, and band-gap values.",
         "optical spectroscopy",
         "UV-vis absorbance with supplied Tauc inset",
+    ),
+    ShowcaseCase(
+        "uv-vis-multi",
+        "uv_vis",
+        "uv_vis_multi.csv",
+        "Three independently editable synthetic absorbance spectra preserve the measured wavelength range without an invented Tauc analysis.",
+        "optical spectral comparison",
+        "UV-vis multi-sample absorbance comparison",
+        title_zh="UV-Vis 多样品吸收光谱",
+    ),
+    ShowcaseCase(
+        "dsc-multi",
+        "dsc",
+        "dsc_multi.csv",
+        "Three synthetic DSC heat-flow curves preserve their supplied sign convention and remain independently editable.",
+        "thermal comparison",
+        "DSC multi-sample heat flow comparison",
+        title_zh="DSC 多样品热流曲线",
+    ),
+    ShowcaseCase(
+        "nmr-comparison",
+        "nmr",
+        "nmr_comparison.csv",
+        "Two synthetic 19F NMR spectra retain a descending chemical-shift axis without automatic peak assignment.",
+        "spectral comparison",
+        "19F NMR spectrum comparison",
+        title_zh="19F NMR 光谱对比",
+    ),
+    ShowcaseCase(
+        "ftir-temperature-series",
+        "ftir",
+        "ftir_temperature_series.csv",
+        "Six synthetic FTIR transmittance spectra preserve an ordered temperature progression without baseline correction or peak labels.",
+        "ordered spectral comparison",
+        "FTIR temperature series comparison",
+        title_zh="FTIR 温度序列光谱",
     ),
     ShowcaseCase(
         "bar-error-groups",
@@ -199,6 +263,15 @@ CASES = (
         "Five teaching methods are compared across six datasets in one annotated result matrix.",
         "comparison",
         "annotated results heatmap matrix",
+    ),
+    ShowcaseCase(
+        "heatmap-dense-40x40",
+        "heatmap",
+        "heatmap_dense_40x40.csv",
+        "A 40 by 40 synthetic result matrix uses sparse deterministic tick labels and a detached colorbar without unreadable cell text.",
+        "high-density comparison",
+        "dense 40 by 40 heatmap matrix",
+        title_zh="40×40 高密度热力图",
     ),
     ShowcaseCase(
         "raw-observations",
@@ -349,11 +422,48 @@ def build_case(
     python: Path,
     render: bool,
     force: bool,
+    rerender: bool,
 ) -> None:
     entry = GALLERY / case.id
     entry.mkdir(parents=True, exist_ok=True)
     plan_path = entry / "render-plan.json"
+    understanding_path = entry / "semantic-understanding.json"
+    confirmation_path = entry / "semantic-confirmation.json"
     source = DATA / case.data_file
+    _run(
+        [
+            str(python),
+            str(CLI),
+            "understand",
+            str(source),
+            "--template-id",
+            case.template_id,
+            "--engine-home",
+            str(engine),
+            "--output",
+            str(understanding_path),
+        ],
+        log_path=entry / "understand.log",
+    )
+    understanding = json.loads(understanding_path.read_text(encoding="utf-8"))
+    gate = understanding.get("confirmation_gate", {})
+    if not gate.get("can_confirm_now"):
+        raise RuntimeError(
+            f"{case.id} semantic proposal is blocked: "
+            f"{gate.get('blocking_ambiguity_ids') or gate.get('uncertain_item_ids')}"
+        )
+    # These are deterministic, repository-owned synthetic teaching tables.
+    # The build records the exact proposal-bound confirmation before planning;
+    # user-owned data must still be confirmed interactively through the CLI.
+    confirmation_path.write_text(
+        json.dumps(
+            gate["confirmation_payload_template"],
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
     plan_command = [
         str(python),
         str(CLI),
@@ -369,6 +479,8 @@ def build_case(
         case.intent,
         "--engine-home",
         str(engine),
+        "--semantic-confirmation-json",
+        str(confirmation_path),
         "--output",
         str(plan_path),
     ]
@@ -388,16 +500,40 @@ def build_case(
         return
 
     output = entry / "origin-output"
+    verification_path = entry / "verification.json"
     if force and output.exists():
         resolved_output = output.resolve()
         if not resolved_output.is_relative_to(GALLERY.resolve()):
             raise RuntimeError(f"Refusing to remove output outside gallery: {resolved_output}")
         shutil.rmtree(resolved_output)
-    if output.is_dir() and (output / "result.opju").is_file():
-        print(f"SKIP     {case.id} (existing Origin output)", flush=True)
-        return
+    reusable_outputs = sorted(
+        (
+            candidate
+            for candidate in (output, *entry.glob("origin-output_*"))
+            if (candidate / "result.opju").is_file()
+        ),
+        key=lambda candidate: candidate.stat().st_mtime,
+        reverse=True,
+    )
+    if not rerender:
+        for candidate in reusable_outputs:
+            _run(
+                [
+                    str(python),
+                    str(CLI),
+                    "verify",
+                    str(candidate),
+                    "--output",
+                    str(verification_path),
+                ],
+                log_path=entry / "verify.log",
+            )
+            existing_verification = json.loads(verification_path.read_text(encoding="utf-8"))
+            if existing_verification.get("programmatic_pass"):
+                print(f"SKIP     {case.id} (verified Origin output: {candidate.name})", flush=True)
+                return
     print(f"RENDER   {case.id}", flush=True)
-    _run(
+    completed = _run(
         [
             str(python),
             str(CLI),
@@ -413,18 +549,27 @@ def build_case(
         ],
         log_path=entry / "render.log",
     )
+    actual_output = output
+    for line in reversed(completed.stdout.splitlines()):
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "done" and event.get("output_dir"):
+            actual_output = Path(event["output_dir"]).resolve()
+            break
     _run(
         [
             str(python),
             str(CLI),
             "verify",
-            str(output),
+            str(actual_output),
             "--output",
-            str(entry / "verification.json"),
+            str(verification_path),
         ],
         log_path=entry / "verify.log",
     )
-    verification = json.loads((entry / "verification.json").read_text(encoding="utf-8"))
+    verification = json.loads(verification_path.read_text(encoding="utf-8"))
     if not verification.get("programmatic_pass"):
         raise RuntimeError(f"{case.id} failed programmatic verification")
     print(f"PASS     {case.id}", flush=True)
@@ -436,13 +581,25 @@ def main() -> int:
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--render", action="store_true")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--rerender",
+        action="store_true",
+        help="Create a new suffixed Origin output without deleting prior verified outputs.",
+    )
     parser.add_argument("--only", action="append", default=[])
     args = parser.parse_args()
     engine = Path(args.engine_home).resolve()
     python = Path(args.python).resolve()
     selected = [case for case in CASES if not args.only or case.id in set(args.only)]
     for case in selected:
-        build_case(case, engine=engine, python=python, render=args.render, force=args.force)
+        build_case(
+            case,
+            engine=engine,
+            python=python,
+            render=args.render,
+            force=args.force,
+            rerender=args.rerender,
+        )
     print(f"Completed {len(selected)} showcase case(s).", flush=True)
     return 0
 

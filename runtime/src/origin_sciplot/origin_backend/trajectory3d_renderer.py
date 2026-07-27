@@ -27,7 +27,6 @@ from .safe_errors import OriginDrawError
 from .session import OriginSession
 from .verify_utils import require_nonempty
 
-
 PLOTXYZ_TYPE = 240
 GLTRAJECT_TEMPLATE = "glTraject"
 OFFICIAL_PLOTXYZ_REFERENCE = "https://docs.originlab.com/x-function/ref/plotxyz/"
@@ -136,9 +135,7 @@ def _finite(value: Any, name: str) -> float:
 
 def _close(actual: float, expected: float, name: str, tolerance: float = 0.05) -> None:
     if abs(actual - expected) > tolerance:
-        raise OriginDrawError(
-            f"Origin readback mismatch for {name}: {actual:g}, expected {expected:g}"
-        )
+        raise OriginDrawError(f"Origin readback mismatch for {name}: {actual:g}, expected {expected:g}")
 
 
 def _sha256(path: Path) -> str:
@@ -152,8 +149,7 @@ def _sha256(path: Path) -> str:
 def _read_plot_option(op: Any, plot: Any, option: str, variable: str) -> float:
     _require_lt(
         plot.layer.LT_execute(
-            f"{{range __trajectory3d_plot={plot.lt_range()};"
-            f"get __trajectory3d_plot {option} {variable};}}"
+            f"{{range __trajectory3d_plot={plot.lt_range()};get __trajectory3d_plot {option} {variable};}}"
         ),
         f"get {option}",
     )
@@ -246,10 +242,7 @@ def _build_graph(
     for series_index in range(1, len(helper_plan.mappings)):
         start = series_index * 3 + 1
         helper_sheet.activate()
-        command = (
-            f"plotxyz iz:=({start},{start + 1},{start + 2}) "
-            f"plot:={PLOTXYZ_TYPE} ogl:={target_layer};"
-        )
+        command = f"plotxyz iz:=({start},{start + 1},{start + 2}) plot:={PLOTXYZ_TYPE} ogl:={target_layer};"
         _require_lt(op.lt_exec(command), f"add trajectory3d series {series_index + 1}")
         commands.append(command)
 
@@ -305,9 +298,7 @@ def _build_graph(
     colors = palette_colors(style.palette_name)
     width_units = pt_to_origin_width_units(style.plot_line_width_pt)
     plot_state: list[dict[str, Any]] = []
-    for index, (plot, mapping) in enumerate(
-        zip(plots, helper_plan.mappings, strict=True), start=1
-    ):
+    for index, (plot, mapping) in enumerate(zip(plots, helper_plan.mappings, strict=True), start=1):
         color = colors[(index - 1) % len(colors)]
         plot.set_cmd(f"-c color({color})", f"-w {width_units}")
         color_code = _read_plot_option(op, plot, "-c", f"__trajectory3d_color_{index}")
@@ -418,6 +409,7 @@ def _build_graph(
         "origin_text_state": {
             "titles": title_state,
             "font_family_expected": style.font_family,
+            "font_code_expected": font_code,
             "axis_title_size_pt": style.axis_title_size_pt,
             "tick_label_size_pt": style.tick_label_size_pt,
         },

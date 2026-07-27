@@ -10,6 +10,7 @@ from origin_sciplot.origin_backend.safe_errors import (
     OriginEnvironmentError,
     OriginExportError,
     WorkerExitCode,
+    origin_activation_recovery,
     safe_error_message,
 )
 from origin_sciplot.origin_backend.smoke_test import run_origin_smoke
@@ -44,11 +45,13 @@ def main(argv: list[str] | None = None) -> int:
             keep_open=args.keep_origin_open,
         )
     except OriginEnvironmentError as exc:
+        recovery = origin_activation_recovery(exc.code)
         proto.error(
             exc.code,
             safe_error_message(exc),
             stage=exc.stage,
             compatibility_report=_report_path(args.output_dir),
+            **({"recovery": recovery} if recovery is not None else {}),
         )
         return WorkerExitCode.ORIGIN_ENVIRONMENT
     except OriginDrawError as exc:

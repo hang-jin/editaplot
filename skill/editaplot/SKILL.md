@@ -1,6 +1,6 @@
 ---
 name: editaplot
-description: Analyze local scientific CSV, TXT, XLS, or XLSX data; recommend publication-informed charts and Chinese scientific palettes; freeze a reproducible plan; and automate editable figures through a callable local Origin/OriginPro installation on physical Windows 10/11 x64. Use for beginner “drop in a file and draw it” requests; XPS, XRD, XAS, PL/TRPL, UV-Vis, electrochemistry, medical/AI evidence, distribution, relationship, error-bar, bar, stacked, pie, Sankey, radar, heatmap, or verified 3D workflows; project-local Python setup; palette selection; and OPJU/PNG/PDF/TIF verification. Do not use on macOS, Linux, WSL, Wine/CrossOver, Parallels, or other VMs; to install or modify Origin; to redistribute reference images; or to claim an unverified Origin route.
+description: Analyze local scientific CSV, TXT, XLS, or XLSX data; recommend publication-informed charts and Chinese scientific palettes; freeze a reproducible plan; and automate editable figures through a callable local Origin/OriginPro installation on physical Windows 10/11 x64. Use for beginner “drop in a file and draw it” requests; XPS, XRD, XAS, PL/TRPL, DSC, NMR, FTIR/IR, UV-Vis, electrochemistry, medical/AI evidence, distribution, relationship, error-bar, bar, stacked, pie, Sankey, radar, heatmap, or verified 3D workflows; project-local Python setup; palette selection; and OPJU/PNG/PDF/TIF verification. Do not use on macOS, Linux, WSL, Wine/CrossOver, Parallels, or other VMs; to install or modify Origin; to redistribute reference images; or to claim an unverified Origin route.
 ---
 
 # EditaPlot
@@ -80,7 +80,14 @@ rendering, exporting, and readback.
     smoke and version handshake, then apply the template capability decision. `attach_existing` is
     an explicit advanced mode only; never reset, overwrite, or close a user-owned project, and
     detach instead of exiting. Report failures by technical stage and next step without speculation.
-    Never use mouse automation or provide application patches or bypass instructions.
+    Never use mouse automation or provide application patches or bypass instructions. If activation
+    returns `origin_com_server_execution_failed` or `origin_com_activation_access_denied`, do not
+    loop, switch to `ApplicationSI`, edit DCOM/registry permissions, or tell a beginner to run the
+    whole workflow as administrator. Request approval for at most one retry of the identical smoke
+    command in the same active interactive Windows-user context; the subsequent render must use
+    that same context. If it still fails, stop with the stable code and the local compatibility
+    report. For `origin_com_class_not_registered`, report that the isolated Automation entry is not
+    callable and stop; installation/registration changes remain user-managed.
 15. Render an allowed template route with `editaplot.cmd render <plan>`. Keep an EditaPlot-owned
     Origin instance open after success unless the user requests otherwise. By default, let the
     runtime create a direct sibling of the source
@@ -89,7 +96,9 @@ rendering, exporting, and readback.
     a shared global output folder. Use `--output-dir` only when the user explicitly requests another
     location.
 16. Run `editaplot.cmd verify <output-directory>` against that source-adjacent folder and perform
-    human visual QA. Do not report success from a PNG alone.
+    human visual QA. If smoke or render fails, a Python preview or standalone PNG/PDF/SVG is only
+    a preview and must not be presented as completed Origin work. Formal success requires the
+    editable OPJU, PNG, PDF, TIF, object readback, and human visual QA together.
 
 Before any render, read `references/origin-safety.md`, `references/figure-contract.md`, and
 `references/verification.md`. For a new table or chart decision, read
