@@ -19,6 +19,7 @@
     "assets/provenance-manifest.json",
     "assets/star-trend/stars.json",
     "assets/star-trend/stars.svg",
+    "assets/support/wechat-tip.png",
     "release/public-release-policy.json",
     "requirements-runtime.lock",
     "requirements-runtime.txt",
@@ -73,6 +74,7 @@
     "assets/provenance-manifest.json",
     "assets/star-trend/stars.json",
     "assets/star-trend/stars.svg",
+    "assets/support/wechat-tip.png",
     "docs/asset-provenance.md",
     "docs/dependency-inventory.md",
     "docs/gallery.md",
@@ -384,7 +386,7 @@
     "inventory_generator": "tools/build_asset_provenance.py",
     "gallery_fixture_generator": "tools/generate_showcase_data.py",
     "required_review_decision": "approved_for_public_source_release",
-    "expected_asset_count": 220,
+    "expected_asset_count": 221,
     "require_synthetic_or_generated": true,
     "require_contains_phi_false": true
   }

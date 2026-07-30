@@ -1,10 +1,12 @@
 # Asset and data provenance
 
-This open-source release contains only project-created teaching/verification fixtures and original
-project assets.
+This open-source release contains project-created teaching/verification fixtures, original project
+assets, and one author-provided support-payment QR image that the author explicitly approved for
+public display.
 
-The 2026-07-28 public-release review covered every listed CSV and PNG, including synthetic/generated
-status, patient/clinical identifiers, labels, embedded PNG text/EXIF, and redistribution boundaries.
+The 2026-07-30 public-release review covered every listed CSV and PNG, including synthetic/generated
+status, patient/clinical identifiers, labels, embedded PNG text/EXIF, payment-identifier intent, and
+redistribution boundaries.
 The manifest also binds the inventory builder and gallery fixture generator by SHA-256; changing
 either script requires regenerating and manually reviewing the manifest.
 
@@ -27,11 +29,18 @@ history; they are not alternate public showcase entries.
   in the retained verification inventory. None reproduces values, labels, conclusions, arrows,
   logos, or layouts from supplied paper screenshots.
 - The palette cards and selectors are original layouts generated from the machine-readable palette
-  catalog. Reference covers, watermarks, logos, screenshots, and journal layouts are not included.
+  catalog. Scientific gallery and palette assets do not include reference covers, watermarks, logos,
+  screenshots, or journal layouts.
+- `assets/support/wechat-tip.png` is an author-provided WeChat Pay support QR image, intentionally
+  published as the voluntary support destination shown at the end of both READMEs. It is not
+  scientific data, a user upload, or a reusable plotting asset. It contains a masked payee display
+  name and payment-interface branding by design, but no EXIF or PNG text metadata and no PHI.
+  WeChat/WeChat Pay names and marks remain the property of their respective owner and are shown only
+  to identify the payment method.
 - The application icon is an original generic chart icon. The fixed XPS preview is generated from a
   synthetic template fixture.
-- No distributed asset is presented as a Nature, Science, ACS, OriginLab, clinical, or journal
-  specification or endorsement.
+- No distributed asset is presented as a Nature, Science, ACS, OriginLab, WeChat, clinical, or
+  journal specification, affiliation, or endorsement.
 
 [`assets/provenance-manifest.json`](assets/provenance-manifest.json) freezes the SHA-256, size,
 classification, synthetic-data status, and PNG text metadata for every tracked CSV and PNG. Rebuild

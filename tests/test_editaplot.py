@@ -2303,6 +2303,7 @@ def test_public_asset_provenance_is_complete_and_synthetic() -> None:
             PRODUCT_ROOT / "runtime" / "src" / "origin_sciplot" / "resources",
             PRODUCT_ROOT / "assets" / "gallery",
             PRODUCT_ROOT / "assets" / "palettes",
+            PRODUCT_ROOT / "assets" / "support",
             PRODUCT_ROOT / "skill" / "editaplot" / "assets" / "palettes",
         )
         for path in root.rglob("*")
@@ -2322,6 +2323,11 @@ def test_public_asset_provenance_is_complete_and_synthetic() -> None:
 
     preview = records["runtime/templates/xps_c1s_fit/preview.png"]
     assert preview["png_text"] == {"Software": "EditaPlot"}
+    support_qr = records["assets/support/wechat-tip.png"]
+    assert support_qr["kind"] == "author_provided_support_payment_qr"
+    assert support_qr["contains_payment_identifier"] is True
+    assert support_qr["public_release_basis"] == "author_explicitly_approved_support_destination"
+    assert support_qr["png_text"] == {}
     trpl_header = (
         (PRODUCT_ROOT / "examples" / "gallery" / "pl_trpl.csv").read_text(encoding="utf-8").splitlines()[0]
     )

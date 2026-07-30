@@ -15,3 +15,9 @@ include the corresponding full license texts and notices from the exact redistri
 PySide6 community wheels include Qt libraries; any future frozen EXE or installer must separately
 verify the chosen Qt modules and satisfy the applicable LGPL/GPL obligations or use a valid Qt
 commercial license.
+
+The voluntary-support image at `assets/support/wechat-tip.png` includes WeChat/WeChat Pay
+interface branding only to identify the payment method. WeChat and WeChat Pay names and marks
+belong to their respective owner. Their appearance does not imply affiliation, sponsorship, or
+endorsement of EditaPlot. The author-provided payment QR is intentionally published as support
+contact information; it is not offered as a general-purpose reusable project asset.

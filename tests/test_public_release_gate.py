@@ -79,6 +79,9 @@ def test_asset_kind_mapping_is_independent_and_fail_closed() -> None:
     assert _expected_asset_kind("assets/gallery/xps-fit.png") == (
         "verified_origin_export_from_synthetic_fixture"
     )
+    assert _expected_asset_kind("assets/support/wechat-tip.png") == (
+        "author_provided_support_payment_qr"
+    )
     assert _expected_asset_kind("patient-data/scan.png") is None
 
 
@@ -101,6 +104,25 @@ def test_public_readmes_use_aggregate_star_badge_and_anonymous_trend() -> None:
         assert trend in content
         assert repository_link in content
         assert all(token not in content for token in forbidden)
+
+
+def test_public_readmes_end_with_optional_support_section() -> None:
+    chinese = (PRODUCT_ROOT / "README.md").read_text(encoding="utf-8")
+    english = (PRODUCT_ROOT / "README.en.md").read_text(encoding="utf-8")
+    asset = "assets/support/wechat-tip.png"
+
+    assert chinese.rfind("## 请我喝杯咖啡 ☕") > chinese.rfind("## 开源、贡献与支持")
+    assert "一毛、两毛或几块钱" in chinese
+    assert "赞赏完全自愿" in chinese
+    assert "不会解锁任何额外功能" in chinese
+    assert asset in chinese
+
+    assert english.rfind("## Buy me a coffee ☕") > english.rfind(
+        "## Open source, contributing, and support"
+    )
+    assert "Tips are entirely optional" in english
+    assert "do not unlock features" in english
+    assert asset in english
 
 
 def test_gallery_inventory_and_display_selection_are_separate() -> None:

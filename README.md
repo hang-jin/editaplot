@@ -264,3 +264,17 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 - 依赖与许可证清单：[docs/dependency-inventory.md](docs/dependency-inventory.md)
 
 未来我可能会另行提供咨询、安装协助、定制或支持服务，但不会因此限制 Apache-2.0 已授予的权利。如果产品以后进入收费软件许可、托管/远程服务或多租户运行阶段，我会重新完成许可与商标审计后再发布。
+
+## 请我喝杯咖啡 ☕
+
+如果 EditaPlot 帮你省下了一点整理数据、调图或排查环境的时间，你可以随意请我喝杯咖啡。一毛、两毛或几块钱，对我来说都是一份很实在的鼓励，也会支持我继续维护模板、完善兼容性并把教程做得更清楚。
+
+赞赏完全自愿，不会解锁任何额外功能，也不会影响问题处理顺序或 Apache-2.0 已经授予你的开源权利。不赞赏也完全没关系：如果这个项目确实帮到了你，点一个 Star、分享给有需要的朋友或提交一条有用的反馈，同样是很大的支持。
+
+<p align="center">
+  <a href="assets/support/wechat-tip.png">
+    <img src="assets/support/wechat-tip.png" width="360" alt="EditaPlot 微信赞赏码">
+  </a>
+</p>
+
+<p align="center"><sub>微信扫码即可；点击图片可查看原图。请不要在付款备注中填写实验数据、病历、账号或其他敏感信息。</sub></p>
