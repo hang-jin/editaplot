@@ -68,6 +68,8 @@ def _classification(relative: str) -> str:
         return "verified_origin_export_from_synthetic_fixture"
     if "/assets/palettes/" in f"/{relative}" or relative.startswith("assets/palettes/"):
         return "generated_original_palette_asset"
+    if relative == "assets/support/wechat-tip.png":
+        return "author_provided_support_payment_qr"
     if relative.endswith("resources/app_icon.png"):
         return "original_application_icon"
     if relative.endswith("templates/xps_c1s_fit/preview.png"):
@@ -106,6 +108,9 @@ def main() -> int:
             "synthetic_or_generated": True,
             "contains_phi": False,
         }
+        if relative == "assets/support/wechat-tip.png":
+            record["public_release_basis"] = "author_explicitly_approved_support_destination"
+            record["contains_payment_identifier"] = True
         if path.suffix.lower() == ".png":
             record["png_text"] = _png_text(path)
         records.append(record)
@@ -123,10 +128,10 @@ def main() -> int:
         },
         "human_review": {
             "decision": "approved_for_public_source_release",
-            "reviewed_on": "2026-07-28",
+            "reviewed_on": "2026-07-30",
             "scope": (
                 "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, "
-                "metadata, and redistribution boundary"
+                "metadata, payment-identifier intent, and redistribution boundary"
             ),
         },
         "asset_count": len(records),

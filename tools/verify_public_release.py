@@ -832,6 +832,8 @@ def _expected_asset_kind(relative: str) -> str | None:
         return "verified_origin_export_from_synthetic_fixture"
     if relative.startswith("assets/palettes/") or relative.startswith("skill/editaplot/assets/palettes/"):
         return "generated_original_palette_asset"
+    if relative == "assets/support/wechat-tip.png":
+        return "author_provided_support_payment_qr"
     if relative == "runtime/src/origin_sciplot/resources/app_icon.png":
         return "original_application_icon"
     if relative == "runtime/templates/xps_c1s_fit/preview.png":

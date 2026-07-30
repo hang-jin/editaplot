@@ -263,3 +263,17 @@ The badge and trend chart use only GitHub's aggregate repository count. I do not
 - Dependencies and licenses: [docs/dependency-inventory.md](docs/dependency-inventory.md)
 
 I may later offer consulting, installation help, customization, or support, but that will not restrict the rights already granted by Apache-2.0. Before any future paid software licensing, hosted or multi-tenant service, or remote automation release, I will complete a fresh licensing and trademark review.
+
+## Buy me a coffee ☕
+
+If EditaPlot has saved you a little time preparing data, polishing a figure, or troubleshooting a Windows environment, you are welcome to buy me a coffee. Even a very small tip is a meaningful encouragement and helps me keep improving templates, compatibility, and beginner-friendly documentation.
+
+Tips are entirely optional. They do not unlock features, change support priority, or affect any right already granted under Apache-2.0. If you would rather not tip, a Star, a recommendation to another researcher, or a useful issue report helps just as much.
+
+<p align="center">
+  <a href="assets/support/wechat-tip.png">
+    <img src="assets/support/wechat-tip.png" width="360" alt="EditaPlot WeChat Pay support QR code">
+  </a>
+</p>
+
+<p align="center"><sub>Scan with WeChat Pay, or click the image to view it at full resolution. Please do not put experimental data, medical information, account details, or other sensitive content in the payment note.</sub></p>

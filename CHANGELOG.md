@@ -25,6 +25,9 @@
   or a stalled interface.
 - Added final release gates for public-template alignment, hidden regression-gallery entries,
   runtime and asset manifests, provenance exactness, Windows permissions, and dense-heatmap layout.
+- Added a final optional “buy me a coffee” section to both READMEs using an author-approved,
+  metadata-free WeChat Pay QR image. Tips do not unlock features, change support priority, or alter
+  Apache-2.0 rights.
 
 ## 2026-07-22 — Beginner onboarding and simplified public release
 

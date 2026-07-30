@@ -3,7 +3,7 @@
   "release_policy": "synthetic teaching data and original/generated assets only",
   "inventory_generator": {
     "path": "tools/build_asset_provenance.py",
-    "sha256": "a40047ebf4db1a30c4b0b7b31e71ee2469b3aaac89f1c5644a443a589df6c197"
+    "sha256": "2aba4382dc1411f19f9d0aea95ba7d4cd4167103dd48de49a9d00156e11db2be"
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
@@ -11,10 +11,10 @@
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
-    "reviewed_on": "2026-07-28",
-    "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, and redistribution boundary"
+    "reviewed_on": "2026-07-30",
+    "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, payment-identifier intent, and redistribution boundary"
   },
-  "asset_count": 220,
+  "asset_count": 221,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
@@ -1022,6 +1022,17 @@
       "sha256": "e4d069f3c3ceb2692d4de37a591863c8744b32bb7081432a63a28628d9264ea4",
       "synthetic_or_generated": true,
       "contains_phi": false,
+      "png_text": {}
+    },
+    {
+      "path": "assets/support/wechat-tip.png",
+      "kind": "author_provided_support_payment_qr",
+      "size_bytes": 133371,
+      "sha256": "325d15867287a28604d27dcce40aa90fdd80008d0b57b985a509e08eec9b3280",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "public_release_basis": "author_explicitly_approved_support_destination",
+      "contains_payment_identifier": true,
       "png_text": {}
     },
     {
