@@ -167,6 +167,22 @@ def test_ambiguous_numeric_xy_does_not_auto_select() -> None:
     assert "top_score_below_threshold" in result["auto_selection"]["gate_reasons"]
 
 
+def test_dense_matrix_prefers_heatmap_without_overriding_explicit_chart_intent() -> None:
+    source = EXAMPLES / "gallery" / "heatmap_dense_30x30.csv"
+
+    automatic = recommend_charts(source, engine_home=ENGINE)
+    assert automatic["candidates"][0]["template_id"] == "heatmap"
+    assert automatic["auto_selection"]["allowed"] is True
+    assert "dense_matrix_match" in automatic["candidates"][0]["reason_codes"]
+
+    explicit_bar = recommend_charts(
+        source,
+        intent="ranking with long labels",
+        engine_home=ENGINE,
+    )
+    assert explicit_bar["candidates"][0]["template_id"] == "horizontal_bar"
+
+
 def test_recommend_limit_one_still_uses_full_runner_up_margin(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

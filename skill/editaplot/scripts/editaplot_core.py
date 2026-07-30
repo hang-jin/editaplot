@@ -864,6 +864,28 @@ def _score_candidate(
     category_count = int(table["first_category_unique_count"])
     long_label = int(table["maximum_category_label_length"])
     all_nonnegative = bool(table["all_numeric_values_nonnegative"])
+    dense_matrix_without_explicit_intent = (
+        "matrix_candidate" in layouts
+        and category_count >= 12
+        and numeric_count >= 12
+        and not any(_intent_match(item, intent) for item in category_templates)
+    )
+
+    if (
+        dense_matrix_without_explicit_intent
+        and template_id
+        in {
+            "bar",
+            "horizontal_bar",
+            "stacked_bar",
+            "percent_stacked_bar",
+            "pie",
+            "radar",
+        }
+    ):
+        score -= 0.18
+        reason_codes.append("dense_matrix_heatmap_route_preferred")
+        reasons.append("检测到高维类别矩阵；默认采用热力图，避免生成不可读的超密集柱形或雷达图。")
 
     if template_id == "bar" and "category_wide" in layouts:
         score += 0.05
@@ -899,6 +921,10 @@ def _score_candidate(
             score += 0.12
             reason_codes.append("matrix_candidate_match")
             reasons.append("类别 × 数值系列的矩形结构适合颜色矩阵。")
+            if dense_matrix_without_explicit_intent:
+                score += 0.16
+                reason_codes.append("dense_matrix_match")
+                reasons.append("行列均达到 12 个以上，颜色矩阵比逐系列图形更清晰。")
         else:
             score -= 0.30
         if "confusion_matrix" in layouts and _intent_match("confusion_matrix", intent):
