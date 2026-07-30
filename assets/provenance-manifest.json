@@ -3,18 +3,18 @@
   "release_policy": "synthetic teaching data and original/generated assets only",
   "inventory_generator": {
     "path": "tools/build_asset_provenance.py",
-    "sha256": "817f3ffa20c74f8ad346112fd786567b4d47e6ed55fc4a6aa9d15416965daea6"
+    "sha256": "a40047ebf4db1a30c4b0b7b31e71ee2469b3aaac89f1c5644a443a589df6c197"
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
-    "sha256": "ccebcc9f90f52749667a54581551c2fe424c35cd846c7ad141146f2152c214bc"
+    "sha256": "7fa2806f9dfef24e700427aecd007915c48051a5e9c66a38fd4ea2a09653ee39"
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
-    "reviewed_on": "2026-07-27",
+    "reviewed_on": "2026-07-28",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, and redistribution boundary"
   },
-  "asset_count": 218,
+  "asset_count": 220,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
@@ -161,6 +161,26 @@
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 81442,
       "sha256": "158c060277c3558098897a1da3cb43d4332e1ce026134184a768924ba821f3ac",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/heatmap-dense-30x30.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 66283,
+      "sha256": "5496ff5f39f03f5452a87d59937b6949fdac0a89044183afb704b6133ba2f1a2",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -1105,6 +1125,14 @@
       "kind": "synthetic_public_example",
       "size_bytes": 756,
       "sha256": "66fe7b80b53b3856c6a1bf07f8a5a6e1027fe65f0819d8ca8e1c7e116d247e41",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/heatmap_dense_30x30.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 6938,
+      "sha256": "ba3e631a3dbf3cced3d45b8a717ad63e3a133bc78ac8ad72fdad409a96126514",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

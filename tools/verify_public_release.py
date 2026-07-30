@@ -460,6 +460,7 @@ class ReleaseAudit:
                 str(spec["manifest"]),
             )
         records: dict[str, dict[str, Any]] = {}
+        display_case_count = 0
         for record in cases:
             if not isinstance(record, dict) or not isinstance(record.get("id"), str):
                 self.fail(
@@ -471,7 +472,26 @@ class ReleaseAudit:
                 self.fail("gallery_id_unsafe", "Gallery id is not a safe slug.", str(spec["manifest"]))
             if case_id in records:
                 self.fail("gallery_id_duplicate", f"Duplicate gallery id: {case_id}", str(spec["manifest"]))
+            display_in_gallery = record.get("display_in_gallery")
+            if not isinstance(display_in_gallery, bool):
+                self.fail(
+                    "gallery_display_flag_invalid",
+                    f"Gallery case {case_id} lacks a boolean display_in_gallery flag.",
+                    str(spec["manifest"]),
+                )
+            elif display_in_gallery:
+                display_case_count += 1
             records[case_id] = record
+        expected_display_count = int(spec["expected_display_case_count"])
+        if (
+            manifest.get("display_case_count") != display_case_count
+            or display_case_count != expected_display_count
+        ):
+            self.fail(
+                "gallery_display_count_mismatch",
+                f"Gallery must display exactly {expected_display_count} cases.",
+                str(spec["manifest"]),
+            )
         actual = {path.stem: path for path in directory.glob("*.png") if path.is_file()}
         if set(records) != set(actual):
             missing = sorted(set(records) - set(actual))

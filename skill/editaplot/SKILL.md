@@ -9,6 +9,21 @@ Turn a scientific question and a read-only table into an auditable, editable Ori
 the beginner experience conversational; use the deterministic engine for inspection, planning,
 rendering, exporting, and readback.
 
+## Request only scoped Windows permissions
+
+- Read the complete repository, selected table, and optional local reference image.
+- Write only to the EditaPlot repository, the current user's Codex Skill directory, and the selected
+  source file's parent folder for source-adjacent deliverables.
+- Run the local launcher, PowerShell/Python subprocesses, and an EditaPlot-owned Origin instance in
+  the same active interactive Windows user session.
+- Use network access only for repository download/update and locked dependency retrieval. Treat a
+  user-scope winget Python installation as a separate system change that still requires explicit
+  consent.
+- Do not request administrator rights, mouse control, whole-drive write access, cloud upload of
+  private inputs, or DCOM, registry, firewall, user-group, or Origin-installation changes. When
+  Controlled Folder Access, an organization policy, cloud sync, or a read-only location blocks
+  writes, request access only to the affected folder or ask for an explicit alternate output folder.
+
 ## Start with the beginner path
 
 1. Reject unsupported platforms before installing anything. Support the CLI/dependency layer only
@@ -76,10 +91,12 @@ rendering, exporting, and readback.
     succeeded. If the default launch registration is present, proceed to the real pre-render smoke
     without asking the user to open Origin or confirm it again. Keep beginner output to one to three
     plain-language sentences; leave CLSIDs, registry views, candidates, and stages in JSON.
-14. Use `launch_isolated` by default: start and own a dedicated Origin instance, perform the live
-    smoke and version handshake, then apply the template capability decision. `attach_existing` is
-    an explicit advanced mode only; never reset, overwrite, or close a user-owned project, and
-    detach instead of exiting. Report failures by technical stage and next step without speculation.
+14. Run `editaplot.cmd origin-smoke --output-dir <unique-smoke-directory>` with
+    `launch_isolated`: start and own a dedicated Origin instance, perform the live smoke and version
+    handshake, then apply the template capability decision. This command is mandatory after planning
+    and before formal rendering. `attach_existing` is an explicit advanced mode only; never reset,
+    overwrite, or close a user-owned project, and detach instead of exiting. Report failures by
+    technical stage and next step without speculation.
     Never use mouse automation or provide application patches or bypass instructions. If activation
     returns `origin_com_server_execution_failed` or `origin_com_activation_access_denied`, do not
     loop, switch to `ApplicationSI`, edit DCOM/registry permissions, or tell a beginner to run the
@@ -88,9 +105,9 @@ rendering, exporting, and readback.
     that same context. If it still fails, stop with the stable code and the local compatibility
     report. For `origin_com_class_not_registered`, report that the isolated Automation entry is not
     callable and stop; installation/registration changes remain user-managed.
-15. Render an allowed template route with `editaplot.cmd render <plan>`. Keep an EditaPlot-owned
-    Origin instance open after success unless the user requests otherwise. By default, let the
-    runtime create a direct sibling of the source
+15. Only after that smoke passes, render an allowed template route with
+    `editaplot.cmd render <plan>`. Keep an EditaPlot-owned Origin instance open after success unless
+    the user requests otherwise. By default, let the runtime create a direct sibling of the source
     file named `<source_stem>_EditaPlot_YYYYMMDD_HHMMSS`; keep all formal artifacts in that folder.
     Do not redirect ordinary runs to the repository, Skill directory, current working directory, or
     a shared global output folder. Use `--output-dir` only when the user explicitly requests another
@@ -131,7 +148,11 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
 - Reject decorative 3D. Require a scientifically meaningful third axis; keep a new 3D route
   experimental until Z-axis, camera, OpenGL type, source mapping, four exports, editable OPJU,
   readback, and visual QA pass.
-- Keep private data local. Do not upload it to a network service.
+- Do not send selected files to any additional network service or include them in public artifacts.
+  A file explicitly provided through Codex remains subject to the user's Codex account,
+  organization, and retention policies; do not claim the Skill can override those policies.
+- Before inspecting medical data or reference images, require the user to confirm that the material
+  follows their institution's rules, is deidentified, and has been checked for burned-in text.
 - Treat `panel-plan` as a deidentification-aware layout and evidence gate, not an OCR, PHI detector,
   medical image editor, or merged editable Origin project. Preserve every verified subproject.
 

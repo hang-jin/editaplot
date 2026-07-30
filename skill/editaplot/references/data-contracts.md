@@ -10,11 +10,17 @@
 
 Keep the original file read-only.
 
-The data contract is independent of the installed Origin version. Rendering starts a dedicated
-Origin instance and then checks the selected template against the detected host. Target
-Origin/OriginPro versions are 2021–2026b; 2024b / 10.15 is the only current fully verified
-baseline, so never turn a successful installation discovery into a claim that every route is
-verified on that host.
+These contracts cover the 38 registered public plotting routes. The data contract is independent
+of the installed Origin version. After semantic confirmation and plan creation, run the isolated
+`origin-smoke` before formal rendering. Rendering starts a dedicated EditaPlot-owned Origin
+instance and then checks the selected template against the detected host. Target Origin/OriginPro
+versions are 2021–2026b; 2024b / 10.15 is the only current fully verified baseline, so never turn
+a successful installation discovery into a claim that every route is verified on that host.
+
+For an ordinary render, omit `--output-dir`. Create the formal
+`<source_stem>_EditaPlot_<timestamp>` directory beside the original CSV/TXT/XLS/XLSX source and
+place the RenderPlan, OPJU, PNG, PDF, TIF, readback, validation, and provenance there. Use another
+destination only after an explicit user request.
 
 ## Recognized layouts
 
@@ -31,10 +37,13 @@ stacked bar, percent stacked, radar, heatmap, and pie when exactly one numeric s
 For radar, require at least three metric rows and two nonnegative object series; different units must
 already be made comparable or explicitly confirmed. For heatmap, require at least two row labels and
 two numeric columns. EditaPlot does not silently normalize radar values or reorder heatmap rows.
-For 30×30, 40×40, or larger dense matrices, keep every value and the original row/column order,
-hide per-cell numbers, thin only display labels while preserving both endpoints, and place the
-colorbar outside the data field. This dense layout has planning and preview test coverage but is
-not fully Origin-verified until its complete artifact and human visual gates pass.
+For dense matrices, keep every value and the original row/column order, hide per-cell numbers, thin
+only display labels while preserving both endpoints, and place the colorbar outside the data field.
+The real Origin-rendered 30×30 case has passed OPJU/PNG/PDF/TIF, axis/colorbar readback, and
+hash-bound human visual review and is the only heatmap displayed in the public gallery. The smaller
+annotated matrix and 40×40 case remain retained regression evidence. Sizes beyond the verified
+contracts must not be described as fully Origin-verified until their complete artifact and human
+visual gates pass.
 
 ### Error wide table
 

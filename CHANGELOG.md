@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-07-30 — Scientific understanding, compatibility, and release hardening
+
+- Added a confirmation-first scientific understanding layer that classifies every source column as
+  plotted evidence, visible support, calculation/validation only, retained without rendering, or
+  unresolved before a RenderPlan can be approved.
+- Added safe reference-figure adaptation: local PNG/JPEG/TIFF files may guide compatible figure
+  grammar and restrained style choices, but never supply copied data, text, fits, phases, logos,
+  watermarks, or a promised 1:1 reproduction.
+- Expanded the Origin/OriginPro 2021–2026b compatibility layer with isolated-instance startup,
+  live version handshake, per-template capability decisions, stable Automation errors, and explicit
+  reporting that 2024b remains the only complete live baseline.
+- Added and verified materials routes and data contracts for GSAS/GSAS-II XRD Rietveld, XAS,
+  PL/TRPL, DSC, NMR, FTIR/IR, UV–Vis/Tauc, XPS comparison, and high-density heatmaps.
+- Consolidated the public gallery around 38 Origin plotting routes, 45 reviewed verification PNGs,
+  and 43 displayed cases. The gallery now shows one Origin-rendered 30×30 dense heatmap while
+  retaining the smaller and 40×40 cases only as regression evidence.
+- Documented the minimum Codex permissions for Windows beginners, source-adjacent delivery folders,
+  Python discovery and consent boundaries, and a clearer split between local runtime behavior and
+  the user's Codex account or organization data policy.
+- Hardened setup, worker launch, GUI subprocess environment inheritance, smoke-output preparation,
+  source-adjacent delivery writes, and path redaction so common Windows policy, antivirus, cloud
+  sync, missing-executable, and permission failures return short stable errors instead of tracebacks
+  or a stalled interface.
+- Added final release gates for public-template alignment, hidden regression-gallery entries,
+  runtime and asset manifests, provenance exactness, Windows permissions, and dense-heatmap layout.
+
 ## 2026-07-22 — Beginner onboarding and simplified public release
 
 - Added a Windows launcher that discovers a compatible 64-bit CPython 3.10–3.12 even when the

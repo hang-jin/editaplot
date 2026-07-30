@@ -598,12 +598,12 @@ def generate_material_spectroscopy() -> None:
     )
 
 
-def generate_dense_heatmap() -> None:
-    headers = ["Dataset", *[f"Series {index:02d}" for index in range(1, 41)]]
+def _generate_dense_heatmap(*, size: int, filename: str) -> None:
+    headers = ["Dataset", *[f"Series {index:02d}" for index in range(1, size + 1)]]
     rows = []
-    for row_index in range(40):
+    for row_index in range(size):
         values = []
-        for column_index in range(40):
+        for column_index in range(size):
             value = (
                 0.52
                 + 0.18 * math.sin((row_index + 1) * 0.23)
@@ -612,7 +612,14 @@ def generate_dense_heatmap() -> None:
             )
             values.append(f"{max(0.0, min(1.0, value)):.4f}")
         rows.append((f"Dataset {row_index + 1:02d}", *values))
-    _write("heatmap_dense_40x40.csv", headers, rows)
+    _write(filename, headers, rows)
+
+
+def generate_dense_heatmaps() -> None:
+    # Keep the former 40×40 fixture byte-for-byte reproducible for audit history
+    # while adding the single 30×30 example selected for the public showcase.
+    _generate_dense_heatmap(size=40, filename="heatmap_dense_40x40.csv")
+    _generate_dense_heatmap(size=30, filename="heatmap_dense_30x30.csv")
 
 
 def main() -> None:
@@ -631,7 +638,7 @@ def main() -> None:
     generate_medical_distribution_interpretability()
     generate_pl_trpl()
     generate_material_spectroscopy()
-    generate_dense_heatmap()
+    generate_dense_heatmaps()
     print(f"Generated showcase data in {OUTPUT}")
 
 

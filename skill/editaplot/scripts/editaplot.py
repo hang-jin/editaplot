@@ -257,6 +257,45 @@ def _ensure_verify_output_does_not_replace_artifact(
     )
 
 
+def _start_worker_process(
+    command: list[str],
+    *,
+    engine_root: Path,
+    environment: dict[str, str],
+    label: str,
+) -> subprocess.Popen[str]:
+    """Start a fixed local worker and normalize Windows launch failures."""
+
+    try:
+        return subprocess.Popen(  # noqa: S603 - fixed module invocation, never shell=True
+            command,
+            cwd=str(engine_root),
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except PermissionError as exc:
+        raise EditaPlotError(
+            "worker_start_permission_denied",
+            f"Windows blocked the {label} process. Allow this EditaPlot project and its selected "
+            "Python executable in the current user session, then retry; administrator, DCOM, "
+            "registry, and firewall changes are not required.",
+            os_error=type(exc).__name__,
+            errno=exc.errno,
+        ) from exc
+    except OSError as exc:
+        raise EditaPlotError(
+            "worker_start_failed",
+            f"EditaPlot could not start the {label} process. Re-run editaplot.cmd --diagnose "
+            "and check whether the selected Python path still exists.",
+            os_error=type(exc).__name__,
+            errno=exc.errno,
+        ) from exc
+
+
 def _run_render(args: argparse.Namespace) -> int:
     plan = load_json(args.plan_file)
     command, env, engine_root = build_worker_command(
@@ -275,15 +314,11 @@ def _run_render(args: argparse.Namespace) -> int:
         "origin_callability_check": "worker_connection",
     }
     print(json.dumps(start_event, ensure_ascii=False), flush=True)
-    process = subprocess.Popen(  # noqa: S603 - fixed module invocation, never shell=True
+    process = _start_worker_process(
         command,
-        cwd=str(engine_root),
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
+        engine_root=engine_root,
+        environment=env,
+        label="Origin render worker",
     )
     stdout = process.stdout
     if stdout is None:
@@ -313,15 +348,11 @@ def _run_origin_smoke(args: argparse.Namespace) -> int:
         ),
         flush=True,
     )
-    process = subprocess.Popen(  # noqa: S603 - fixed module invocation, never shell=True
+    process = _start_worker_process(
         command,
-        cwd=str(engine_root),
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
+        engine_root=engine_root,
+        environment=env,
+        label="Origin smoke worker",
     )
     stdout = process.stdout
     if stdout is None:

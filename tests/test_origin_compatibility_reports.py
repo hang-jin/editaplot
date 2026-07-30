@@ -69,6 +69,38 @@ def test_successful_render_records_version_aware_template_decision(
     assert stored_verify["template_compatibility"] == decision
 
 
+def test_successful_future_origin_render_uses_raw_numeric_version(
+    tmp_path: Path,
+) -> None:
+    environment_report = tmp_path / "environment_report.json"
+    origin_verify_report = tmp_path / "origin_verify_report.json"
+    environment_report.write_text(
+        json.dumps(
+            {
+                "origin_version": "unknown",
+                "origin_version_raw": 10.4,
+                "version_status": "unknown",
+            }
+        ),
+        encoding="utf-8",
+    )
+    origin_verify_report.write_text("{}", encoding="utf-8")
+    output = SimpleNamespace(
+        environment_report=environment_report,
+        origin_verify_report=origin_verify_report,
+    )
+
+    decision = _record_template_compatibility(
+        output,
+        SimpleNamespace(id="scatter"),
+        None,
+    )
+
+    assert decision["status"] == "compatible_unverified"
+    assert decision["origin_version"]["numeric"] == pytest.approx(10.4)
+    assert decision["origin_version"]["product_label"] == "Unknown Origin (10.4)"
+
+
 def test_successful_optional_inset_route_is_recorded(tmp_path: Path) -> None:
     environment_report = tmp_path / "environment_report.json"
     origin_verify_report = tmp_path / "origin_verify_report.json"

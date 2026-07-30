@@ -3,10 +3,14 @@
 This open-source release contains only project-created teaching/verification fixtures and original
 project assets.
 
-The 2026-07-27 public-release review covered every listed CSV and PNG, including synthetic/generated
+The 2026-07-28 public-release review covered every listed CSV and PNG, including synthetic/generated
 status, patient/clinical identifiers, labels, embedded PNG text/EXIF, and redistribution boundaries.
 The manifest also binds the inventory builder and gallery fixture generator by SHA-256; changing
 either script requires regenerating and manually reviewing the manifest.
+
+The gallery inventory retains 45 verified PNG assets across 38 public plotting routes. The public
+page displays 43 cases. The two non-displayed heatmap PNGs remain only as regression and audit
+history; they are not alternate public showcase entries.
 
 - Every distributed CSV is synthetic. It is not experimental, patient, clinical, or production
   data and must not be interpreted as a scientific result.
@@ -18,8 +22,10 @@ either script requires regenerating and manually reviewing the manifest.
 - The PL/TRPL example uses neutral project-generated sample names and lifetimes; it does not copy
   the material labels or numeric values from the visual reference that motivated the chart family.
 - The DSC, NMR, FTIR/IR, XPS comparison, UV–Vis, PL temperature-series, 3D trajectory, and dense
-  40×40 matrix fixtures are deterministic project-authored teaching data. They do not reproduce
-  values, labels, conclusions, arrows, logos, or layouts from the supplied paper screenshots.
+  matrix fixtures are deterministic project-authored teaching data. The public gallery displays
+  the real Origin-rendered 30×30 matrix only; the smaller annotated matrix and 40×40 matrix remain
+  in the retained verification inventory. None reproduces values, labels, conclusions, arrows,
+  logos, or layouts from supplied paper screenshots.
 - The palette cards and selectors are original layouts generated from the machine-readable palette
   catalog. Reference covers, watermarks, logos, screenshots, and journal layouts are not included.
 - The application icon is an original generic chart icon. The fixed XPS preview is generated from a

@@ -29,6 +29,7 @@ class ShowcaseCase:
     x_title: str | None = None
     y_title: str | None = None
     title_zh: str | None = None
+    display_in_gallery: bool = True
 
 
 CASES = (
@@ -263,6 +264,7 @@ CASES = (
         "Five teaching methods are compared across six datasets in one annotated result matrix.",
         "comparison",
         "annotated results heatmap matrix",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "heatmap-dense-40x40",
@@ -272,6 +274,16 @@ CASES = (
         "high-density comparison",
         "dense 40 by 40 heatmap matrix",
         title_zh="40×40 高密度热力图",
+        display_in_gallery=False,
+    ),
+    ShowcaseCase(
+        "heatmap-dense-30x30",
+        "heatmap",
+        "heatmap_dense_30x30.csv",
+        "A 30 by 30 synthetic result matrix keeps all 900 values while using sparse deterministic tick labels and a detached colorbar.",
+        "high-density comparison",
+        "dense 30 by 30 heatmap matrix",
+        title_zh="30×30 高密度热力图",
     ),
     ShowcaseCase(
         "raw-observations",

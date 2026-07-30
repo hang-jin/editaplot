@@ -68,3 +68,13 @@ verification*.json
 # Local development evidence is intentionally outside the release allowlist.
 /DEVELOPMENT_LEDGER.md
 /showcase/
+/docs/brand_decision.md
+/docs/materials_dense_heatmap_upgrade_plan.md
+/docs/medical_imaging_ai_expansion.md
+/docs/nature_grammar_expansion.md
+/docs/origin_compatibility_upgrade_plan.md
+/docs/product_spec.md
+/docs/publication_acceptance.md
+/docs/semantic_reference_compatibility_upgrade_plan.md
+/tools/build_capability_poster.py
+/tools/build_gallery_index.py

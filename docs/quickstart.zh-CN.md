@@ -7,6 +7,10 @@ Origin/OriginPro 2021–2026b 范围内的版本。Origin 2024b（10.15）是当
 其他目标版本会经过本机握手、真实 smoke 和模板能力检查后报告兼容状态。Origin 2020b 及更早版本、
 macOS、Linux、WSL、Wine/CrossOver、Parallels 与其他虚拟机不支持。
 
+我当前公开了 38 条 Origin 绘图路线，保留 45 张通过完整验证的 PNG 作为审计资产，其中
+43 张用于页面展示。热力图页面只展示真实 Origin 生成的 30×30 高密度案例；小矩阵和
+40×40 案例只留作回归历史，不会重复出现在图库中。
+
 安装时必须下载**完整仓库**，在仓库根目录运行：
 
 ```powershell
@@ -15,8 +19,19 @@ macOS、Linux、WSL、Wine/CrossOver、Parallels 与其他虚拟机不支持。
 
 不要只复制 `skill/editaplot`，那样没有绘图 runtime。会 Git 的用户可以 `git clone`；不会 Git
 或没有 GitHub 账号的用户可以下载 Source ZIP 并完整解压。完整步骤见[安装指南](installation.md)。
-启动器会先复用已有的 64 位 CPython 3.10–3.12；若完全没有兼容 Python，Skill 必须说明这是
-系统级变更并征得明确同意，才可通过官方 winget 以用户范围安装 Python 3.12。Origin 永不自动安装。
+我让启动器先复用已有的 64 位 CPython 3.10–3.12；若完全没有兼容 Python，Codex 必须先向你
+说明这是系统级变更并征得明确同意，才可通过官方 winget 以用户范围安装 Python 3.12。
+EditaPlot 永不自动安装 Origin。
+
+给 Codex 的最小权限是：读取完整仓库、数据和可选参考图；写入仓库、当前用户
+`$HOME\.codex\skills\editaplot` 及数据父文件夹；运行本地 `editaplot.cmd`、PowerShell、Python
+和同一 Windows 用户会话中的 Origin；首次下载/更新时访问 GitHub 与 Python 包源。普通使用不需要
+管理员、鼠标、全盘写入或 DCOM/注册表/防火墙修改。目录被 Windows 安全策略或网盘锁定时，只放行
+当前仓库和当前数据目录，或明确选择另一个可写输出目录。
+
+EditaPlot 本地 runtime 与 Origin 自动化不会主动上传数据；你主动交给 Codex 的文件仍受当前
+Codex 账号、组织和数据保留策略约束。医学数据或参考图必须先按机构要求去标识化并检查烧录文字，
+不要依赖 EditaPlot 自动发现 PHI。
 
 然后把 CSV、TXT、XLS 或 XLSX 拖进 Codex，只说这一句：
 
@@ -33,7 +48,7 @@ macOS、Linux、WSL、Wine/CrossOver、Parallels 与其他虚拟机不支持。
 .\editaplot.cmd start "$HOME\Documents\my-data.csv"
 ```
 
-## Skill 会替新手处理什么
+## 我会让 Skill 替新手处理什么
 
 1. 只读检查平台、兼容 Python、项目级依赖和本机 Origin 注册；缺 Python 时先征得明确同意。
 2. 只读识别列名、列数、单位、数据类型、缺失值和可能的科研语义。
@@ -74,6 +89,18 @@ Publication CSV 的 `Diff` 若已含显示位置，会按源值直接绘制，�
 
 ## 需要正式绘图时
 
+如果你直接使用命令行，确认 RenderPlan 后请按下面的顺序运行：
+
+```powershell
+$smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+.\editaplot.cmd origin-smoke --output-dir $smokeDir
+.\editaplot.cmd render .\render-plan.json
+.\editaplot.cmd verify "<正式输出目录>"
+```
+
+我把 `origin-smoke` 放在 render 前面，是为了先用 EditaPlot 自有的隔离 Origin 实例完成
+最小建图和导出闭环，而不是把 Doctor 的只读发现当成已经连接成功。
+
 ```text
 请使用已确认的方案绘图。我不需要提前打开 Origin；请先运行真实 smoke，自动启动专用 Origin
 实例并按当前版本和模板能力继续。成功后保留可编辑 Origin 窗口，导出 OPJU、PNG、PDF、TIF，
@@ -82,3 +109,6 @@ Publication CSV 的 `Diff` 若已含显示位置，会按源值直接绘制，�
 ```
 
 原始文件始终只读。缺少的数据列不会被补造；helper columns 只能存在于内存或可编辑 Origin 工作簿。
+普通 render 不指定 `--output-dir`。我会让 EditaPlot 在源 CSV、TXT、XLS 或 XLSX 所在目录中，
+新建与原文件同级的 `<source_stem>_EditaPlot_<timestamp>` 文件夹，把 RenderPlan、OPJU、
+PNG、PDF、TIF、对象反读和验证文件全部放在里面。

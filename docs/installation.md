@@ -2,12 +2,12 @@
 
 ## 先看兼容范围
 
-EditaPlot V1 **只支持 Windows 10/11 x64 实体电脑**。macOS（Intel 与 Apple Silicon）、
+我目前把 EditaPlot V1 的完整支持范围限定为 **Windows 10/11 x64 实体电脑**。macOS（Intel 与 Apple Silicon）、
 Linux、WSL、Wine/CrossOver、Parallels 及其他虚拟机均不支持。当前没有 Mac 绘图模式，
 也不建议用兼容层尝试调用 Origin。
 
-`doctor` 会硬性检查 Windows 版本和 x64 架构，但无法可靠识别所有虚拟机；如果机器类型
-不明确，请由用户确认它是实体 Windows 电脑。V1 对虚拟机仍不提供支持承诺。
+我让 `doctor` 硬性检查 Windows 版本和 x64 架构，但它无法可靠识别所有虚拟机；如果机器类型
+不明确，请你确认它是实体 Windows 电脑。V1 对虚拟机仍不提供支持承诺。
 
 你还需要：
 
@@ -21,9 +21,35 @@ Origin 2020b 及更早版本不在当前外部 `originpro` 路线的支持范围
 [Origin 2021–2026b 兼容说明](origin-2021-2026-compatibility.md)。
 
 > `editaplot.cmd` 会优先使用电脑上已有的兼容 Python。Python 依赖只进入项目目录的
-> `.editaplot-venv`。完全没有兼容 Python 时，Skill 必须先说明并取得明确确认，才可安装官方
-> Python；环境修复不会安装或修改 Origin。用户无需提前打开 Origin，正式绘图前的真实 smoke
+> `.editaplot-venv`。完全没有兼容 Python 时，我会要求 Codex 先说明并取得你的明确确认，才可安装官方
+> Python；环境修复不会安装或修改 Origin。你无需提前打开 Origin，正式绘图前的真实 smoke
 > 会自动启动一个由 EditaPlot 独占的专用实例并验证连接。
+
+## 先给 Codex 哪些权限
+
+我建议只批准完成当前任务必需的范围。不同 Codex 客户端显示的权限名称可能略有不同，但实际用途
+应当能对应到下面五项：
+
+| 最小权限 | 具体范围 | 为什么需要 |
+|---|---|---|
+| 读取文件 | 完整仓库、你选中的 CSV/TXT/XLS/XLSX、可选参考图 | 安装、数据理解与计划 |
+| 写入项目 | EditaPlot 仓库目录 | 创建 `.editaplot-venv`、锁文件和项目配置 |
+| 写入 Skill | 当前用户的 `$HOME\.codex\skills\editaplot` | 安装或原子更新 `$editaplot` |
+| 写入交付目录 | 原始数据的父文件夹 | 在源文件旁新建 `<source_stem>_EditaPlot_<时间>` |
+| 本地执行 | `editaplot.cmd`、PowerShell、Python，以及同一交互式 Windows 用户会话中的 Origin Automation | 体检、smoke、绘图、导出和对象反读 |
+
+联网权限只在下载/更新仓库和安装锁定 Python 包时需要。完全没有兼容 Python 时，winget 安装属于
+单独的系统级变更，必须再次解释并征得明确同意。普通运行不需要管理员权限、鼠标控制、整个磁盘
+写权限，也不需要改 DCOM、注册表、防火墙、用户组或 Origin 安装。
+
+如果仓库仍在 ZIP 压缩包里、位于 `Program Files` 等只读目录，先完整解压或移动到当前用户可写
+目录。若 Windows“受控文件夹访问”、单位安全策略、OneDrive/网盘同步或杀毒软件阻止在数据旁
+创建文件夹，请只放行当前仓库和当前数据目录，或由用户明确指定另一个可写输出目录。不要为了省事
+把 Codex、PowerShell 或 Origin 全部改成管理员运行。
+
+EditaPlot 的本地 runtime 与 Origin 自动化不会主动上传数据，但交给 Codex 的文件仍受你当前
+Codex 账号、组织和数据保留策略约束。医学数据或参考图在交给 Codex 前必须先按所在机构要求
+去标识化并检查烧录文字；EditaPlot 不会自动识别 PHI。
 
 ## 路线 A：会使用 GitHub / Git
 
@@ -84,7 +110,7 @@ GitHub 账号不是必需的。任选一种方式：
 .\editaplot.cmd start "$HOME\Documents\my-data.csv"
 ```
 
-我让 Skill 在后台完成环境检查、数据识别和图形推荐。新手不需要理解 `inspect`、`recommend`、
+我会让 EditaPlot 在后台完成环境检查、数据识别和图形推荐。你不需要理解 `inspect`、`recommend`、
 `understand` 或 `RenderPlan` 这些内部步骤；Codex 会用大白话汇总数据类型、每列用途、要画的
 图形元素、保留但不画的内容和不会自动进行的计算。你确认科学目的与这份清单后才能进入绘图；
 列含义、误差、归一化、排序等科学选择存在歧义时，它只追问会改变图意的部分。
@@ -106,7 +132,7 @@ Observed、Calculated、可选 Background、文件提供的 Difference、明确�
 
 ## 如果还上传了一张参考图
 
-PNG、JPEG 或 TIFF 参考图只作为视觉简报。我让 Codex 先总结它的面板、插图、点线柱等元素、
+PNG、JPEG 或 TIFF 参考图只作为视觉简报。我会让 Codex 先总结它的面板、插图、点线柱等元素、
 数据编码和有限的视觉风格，再分别告诉你哪些可以采用、哪些保持模板默认、哪些必须拒绝、哪些仍需
 确认。只有已经通过数据语义确认、且当前模板能够安全表达的部分，才会进入绘图计划。
 
@@ -125,7 +151,7 @@ OPJU，也不承诺任意图 1:1 复刻。你可以直接这样说：
 .\editaplot.cmd doctor
 ```
 
-Doctor 会把 Python、Windows、runtime、依赖和 Origin 应用分别报告：
+我让 Doctor 把 Python、Windows、runtime、依赖和 Origin 应用分别报告：
 
 - `ready_for_analysis`：可以只读分析数据；
 - `registration_detected`：只读发现了至少一个 Origin Automation 注册，不代表已经连接；
@@ -147,9 +173,29 @@ Doctor 会把 Python、Windows、runtime、依赖和 Origin 应用分别报告�
 修复只使用锁定的依赖清单和项目级环境。Python 版本不兼容、非 Windows、runtime 缺失、
 Origin Automation 入口未检测到或实际连接失败，都不能由 Python 依赖修复伪造成成功。
 
+## 真实 smoke、正式绘图与输出目录
+
+Doctor 只读发现环境，不代替真实连接。获得用户确认的 RenderPlan 后，命令顺序必须是
+`origin-smoke → render → verify`：
+
+```powershell
+$smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+.\editaplot.cmd origin-smoke --output-dir $smokeDir
+.\editaplot.cmd render .\render-plan.json
+.\editaplot.cmd verify "<正式输出目录>"
+```
+
+`origin-smoke` 默认启动一个由 EditaPlot 所有的隔离 Origin 实例，并完成最小建图与导出闭环。
+只有 smoke 通过后才能运行正式 render。普通 render 不要指定 `--output-dir`：runtime 会在
+原始 CSV、TXT、XLS 或 XLSX 所在目录中新建
+`<source_stem>_EditaPlot_<timestamp>` 同级文件夹，将 RenderPlan、OPJU、PNG、PDF、TIF、
+对象反读、验证与 provenance 集中保存。源文件不会被覆盖。只有用户明确要求其他目的地时，
+才可为 render 指定 `--output-dir`。
+
 ## 如果电脑完全没有兼容 Python
 
-Skill 应先用中文告诉用户：接下来可能安装一个**用户范围的官方 Python 3.12**，这是系统级变更。
+如果电脑完全没有兼容 Python，我会要求 Codex 先用中文告诉你：接下来可能安装一个
+**用户范围的官方 Python 3.12**，这是系统级变更。
 先用 Windows 官方包管理器 winget 只读查看准确的软件包信息：
 
 ```powershell
@@ -214,6 +260,11 @@ scope. If winget is unavailable, it provides only the official python.org Window
 instructions. Locked dependencies still go into `.editaplot-venv`; Origin is never installed or
 modified automatically.
 
+The bundled runtime and Origin automation do not initiate a network upload of selected data.
+Files explicitly provided through Codex remain subject to the user's Codex account, organization,
+and retention policies. Medical data and reference images must be deidentified and checked for
+burned-in text before they are provided; EditaPlot does not automatically detect PHI.
+
 With Git:
 
 ```powershell
@@ -235,6 +286,19 @@ calculations that will not be performed. Ask me to confirm the scientific purpos
 ask about uncertain roles instead of guessing. Do not modify the source or silently fit, normalize,
 or invent data.
 ```
+
+After the RenderPlan is confirmed, run the live gate and formal workflow in this order:
+
+```powershell
+$smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+.\editaplot.cmd origin-smoke --output-dir $smokeDir
+.\editaplot.cmd render .\render-plan.json
+.\editaplot.cmd verify "<formal-output-directory>"
+```
+
+Omit `render --output-dir` for ordinary work. The runtime creates a unique
+`<source_stem>_EditaPlot_<timestamp>` folder in the same directory as the original CSV, TXT, XLS,
+or XLSX file and keeps all formal artifacts there.
 
 For a GSAS/GSAS-II XRD refinement table, this understanding stage separates Observed, Calculated,
 optional Background, supplied Difference, explicit Phase ticks, and non-rendering control columns.
