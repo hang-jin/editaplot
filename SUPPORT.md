@@ -11,8 +11,23 @@ parameters, and new 3D routes require separate verification.
 The launcher reuses an existing compatible Python and keeps packages in EditaPlot's project-local
 environment. If no compatible Python exists, an agent may offer an official CPython 3.12 user-scope
 installation only after the user explicitly approves that system change. This exception never
-extends to Origin: environment repair does not install or modify Origin. The render worker connects
-to the existing local Automation application only when a render is requested.
+extends to Origin: environment repair does not install or modify Origin. Doctor performs read-only
+discovery only. Before formal rendering, `origin-smoke` starts an EditaPlot-owned isolated Origin
+instance and completes the minimal export loop. Formal rendering uses the same default ownership
+model and does not require the user to open Origin first. Attaching to a user-owned interactive
+Origin window is an explicit advanced mode only; EditaPlot detaches from that session instead of
+resetting, overwriting, or closing it.
+
+Codex needs read access to the complete repository and selected inputs, write access to the
+repository, the current-user Codex Skill directory, and the source data folder, plus permission to
+run the local launcher/Python and start Origin in the same interactive Windows session. Network
+access is needed only for download/update and locked dependencies. Administrator rights, mouse
+control, whole-drive write access, and DCOM/registry/firewall changes are outside the normal support
+path.
+
+For an ordinary render, omit `--output-dir`. The formal result is written to a unique
+`<source_stem>_EditaPlot_<timestamp>` folder in the same directory as the source CSV, TXT, XLS, or
+XLSX file. An alternate destination is supported only when the user explicitly requests it.
 
 Support does not include installing, replacing, or modifying the Origin application. The user
 remains responsible for scientific meaning, statistics, units, privacy, and final publication review.

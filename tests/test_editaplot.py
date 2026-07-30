@@ -1347,6 +1347,96 @@ def test_setup_hard_rejects_unsupported_windows_host(
     assert not (tmp_path / "editaplot").exists()
 
 
+def test_setup_main_reports_write_permission_failure_without_traceback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    target = tmp_path / "codex-home" / "skills" / "editaplot"
+    monkeypatch.setattr(
+        bootstrap,
+        "install_skill",
+        lambda _argv: (_ for _ in ()).throw(
+            PermissionError(13, "injected setup write denial")
+        ),
+    )
+
+    returncode = bootstrap.main(["setup", "--target", str(target)])
+    captured = capsys.readouterr()
+    payload = json.loads(captured.err)
+
+    assert returncode == 5
+    assert captured.out == ""
+    assert "Traceback" not in captured.err
+    assert payload["error"]["code"] == "setup_write_permission_denied"
+    assert payload["error"]["target"] == str(target)
+    assert payload["error"]["errno"] == 13
+    assert "administrator" in payload["error"]["message"]
+
+
+def test_bootstrap_reports_selected_python_start_failure_without_traceback(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    selected = {
+        "source": "managed_environment",
+        "executable": str(ENGINE / ".editaplot-venv" / "Scripts" / "python.exe"),
+    }
+    monkeypatch.setattr(bootstrap, "_resolve_engine", lambda _argv: (ENGINE, {}))
+    monkeypatch.setattr(
+        bootstrap,
+        "discover_python",
+        lambda _engine: {
+            "selected": selected,
+            "host": {"compatible": True},
+            "attempts": [selected],
+            "discovery_order": ["managed_environment"],
+        },
+    )
+    monkeypatch.setattr(
+        bootstrap.subprocess,
+        "run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            FileNotFoundError(2, "injected missing selected Python")
+        ),
+    )
+
+    returncode = bootstrap.main(["doctor"])
+    captured = capsys.readouterr()
+    payload = json.loads(captured.err)
+
+    assert returncode == 5
+    assert captured.out == ""
+    assert "Traceback" not in captured.err
+    assert payload["error"]["code"] == "selected_python_unavailable"
+    assert payload["error"]["errno"] == 2
+
+
+def test_worker_start_permission_failure_is_stable_and_actionable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        editaplot_cli.subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            PermissionError(13, "injected worker launch denial")
+        ),
+    )
+
+    with pytest.raises(EditaPlotError) as raised:
+        editaplot_cli._start_worker_process(
+            ["python.exe", "worker.py"],
+            engine_root=ENGINE,
+            environment={},
+            label="Origin smoke worker",
+        )
+
+    assert raised.value.code == "worker_start_permission_denied"
+    assert raised.value.details["errno"] == 13
+    assert "administrator" in str(raised.value)
+    assert "injected worker launch denial" not in str(raised.value)
+
+
 def test_repair_uses_the_same_python_compatibility_gate(monkeypatch: pytest.MonkeyPatch) -> None:
     incompatible = python_compatibility(
         version=(3, 13, 1),
@@ -2072,6 +2162,37 @@ def test_bundled_runtime_is_self_contained_for_doctor_and_catalog() -> None:
     assert manifest["file_count"] >= 300
 
 
+def test_output_directory_permission_failure_is_short_and_actionable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from origin_sciplot import output_manager
+
+    source = tmp_path / "input.csv"
+    source.write_text("x,y\n1,2\n", encoding="utf-8")
+    target = tmp_path / "input_EditaPlot_test"
+    original_mkdir = Path.mkdir
+
+    def deny_target(path: Path, *args: object, **kwargs: object) -> None:
+        if path == target:
+            raise PermissionError(13, "injected output write denial")
+        original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", deny_target)
+    manifest = types.SimpleNamespace(id="bar")
+
+    with pytest.raises(output_manager.OutputDirectoryError) as raised:
+        output_manager.create_run_output(
+            source,
+            manifest,
+            output_dir=target,
+        )
+
+    assert raised.value.code == "output_directory_write_permission_denied"
+    assert "source file's parent folder" in str(raised.value)
+    assert str(tmp_path) not in str(raised.value)
+
+
 def test_runtime_manifest_is_an_exact_hash_inventory() -> None:
     manifest_path = RUNTIME / "runtime-manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -2315,11 +2436,17 @@ def test_radar_without_scale_intent_does_not_silently_auto_select() -> None:
 @requires_local_showcase
 def test_gallery_report_covers_all_public_verified_routes() -> None:
     report = json.loads((PRODUCT_ROOT / "showcase" / "visual-qa.json").read_text(encoding="utf-8"))
+    visible = [
+        case for case in report["cases"] if case["display_in_gallery"] is True
+    ]
 
-    assert report["case_count"] == 36
-    assert report["route_count"] == 33
-    assert report["programmatic_pass_count"] == 36
-    assert report["manual_visual_pass_count"] == 36
+    assert report["case_count"] == len(report["cases"])
+    assert report["display_case_count"] == len(visible)
+    assert report["route_count"] == len(
+        {case["template_id"] for case in visible}
+    )
+    assert report["programmatic_pass_count"] == report["case_count"]
+    assert report["manual_visual_pass_count"] == report["case_count"]
     assert report["collection_count"] == 6
     assert {case["programmatic_status"] for case in report["cases"]} == {"pass"}
     assert {case["manual_visual_review"] for case in report["cases"]} == {"pass"}
@@ -2363,6 +2490,8 @@ def test_gallery_index_links_are_relative_to_the_showcase_directory() -> None:
     assert "poster-feature" not in document
     assert "poster-feature" not in chinese
     for case in report["cases"]:
+        if case["display_in_gallery"] is not True:
+            continue
         for artifact in case["artifacts"].values():
             product_path = PRODUCT_ROOT / artifact
             index_href = product_path.relative_to(showcase).as_posix()

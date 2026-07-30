@@ -90,14 +90,39 @@ class _SmokePaths:
 
     @classmethod
     def create(cls, output_dir: str | Path) -> _SmokePaths:
-        target = Path(output_dir).resolve()
-        if target.exists() and not target.is_dir():
+        try:
+            target = Path(output_dir).resolve()
+            if target.exists() and not target.is_dir():
+                raise OriginEnvironmentError(
+                    "Origin smoke output must be a directory",
+                    code="smoke_output_not_directory",
+                    stage="prepare_output",
+                )
+            target.mkdir(parents=True, exist_ok=True)
+        except PermissionError as exc:
             raise OriginEnvironmentError(
-                "Origin smoke output must be a directory",
-                code="smoke_output_not_directory",
+                "Windows blocked the Origin smoke output directory. Allow write access only to "
+                "that directory, or choose another writable smoke directory.",
+                code="smoke_output_write_permission_denied",
                 stage="prepare_output",
-            )
-        target.mkdir(parents=True, exist_ok=True)
+            ) from exc
+        except OSError as exc:
+            invalid_path = exc.errno in {22, 36} or getattr(exc, "winerror", None) in {123, 206}
+            raise OriginEnvironmentError(
+                (
+                    "The Origin smoke output path is invalid or too long. Choose a shorter "
+                    "writable directory and retry."
+                    if invalid_path
+                    else "EditaPlot could not prepare the Origin smoke output directory. Check "
+                    "free disk space, cloud-sync or security-software locks, and folder access."
+                ),
+                code=(
+                    "smoke_output_path_invalid"
+                    if invalid_path
+                    else "smoke_output_prepare_failed"
+                ),
+                stage="prepare_output",
+            ) from exc
         paths = cls(
             output_dir=target,
             result_opju=target / "result.opju",
@@ -120,16 +145,17 @@ class _SmokePaths:
                 stage="prepare_output",
             )
             if not paths.compatibility_report.exists():
-                _write_json(
-                    paths.compatibility_report,
-                    {
-                        "schema_version": 1,
-                        "status": "failed",
-                        "connection_mode": ConnectionMode.NEW_ISOLATED.value,
-                        "stages": _new_stage_records(),
-                        "error": _safe_error_payload(error),
-                    },
-                )
+                with suppress(OSError):
+                    _write_json(
+                        paths.compatibility_report,
+                        {
+                            "schema_version": 1,
+                            "status": "failed",
+                            "connection_mode": ConnectionMode.NEW_ISOLATED.value,
+                            "stages": _new_stage_records(),
+                            "error": _safe_error_payload(error),
+                        },
+                    )
             raise error
         return paths
 

@@ -9,3 +9,8 @@ in a public issue.
 The runtime never accepts arbitrary package names during repair, never uses shell command strings for
 pip installation, and never installs or modifies Origin. Render plans are source-hash and plan-hash
 bound. Do not publish `.env`, credentials, private paths, patient data, or raw development logs.
+
+Grant Codex only repository-, current-user Codex Skill (`$HOME\.codex\skills\editaplot`)-, and
+selected-data-folder access. Normal use does not require administrator rights, mouse control,
+whole-drive access, or DCOM, registry, firewall, or Origin-installation changes. A request for those
+privileges is not part of the supported recovery workflow and should be stopped and reviewed.

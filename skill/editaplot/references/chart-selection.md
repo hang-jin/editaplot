@@ -10,6 +10,9 @@ is the current fully verified baseline.
 
 ## Verified V1 routes
 
+The registry exposes 38 public plotting routes. Some table rows group closely related candidates,
+so the number of rows is not the route count.
+
 | Question/evidence | Candidate | Required shape | Cautions |
 |---|---|---|---|
 | XPS scan or peak fit | `xps` | energy + raw; optional background/envelope/components/residual | Do not invent peaks |
@@ -24,7 +27,7 @@ is the current fully verified baseline.
 | Trend with uncertainty | `line_error` | X + value/error pairs | Define SD/SE/SEM/custom |
 | Ordered progression without uncertainty | `trend` | ordered numeric X + one or more numeric series | Preserve source order; do not smooth |
 | Comparable multimetric profile | `radar` | metric labels + >=2 nonnegative series; >=3 metrics | Confirm scales are comparable; never auto-normalize |
-| Category × series result matrix | `heatmap` | row labels + >=2 numeric columns; >=2 rows | Keep all matrix values; dense 30×30/40×40 plans hide cell numbers, thin labels, and detach the colorbar; the 40×40 route is verified on Origin 2024b |
+| Category × series result matrix | `heatmap` | row labels + >=2 numeric columns; >=2 rows | Keep all matrix values; dense plans hide cell numbers, thin labels, and detach the colorbar. The public gallery displays the verified real-Origin 30×30 case only; the smaller and 40×40 cases are retained regression history |
 | Flow | `sankey` | source + target + positive value | Avoid self-links and excessive nodes |
 | Preserve every observation | `raw_summary` | one or more raw numeric group columns | Show raw points and an explicit median; do not infer error bars |
 | Compare distribution shape | `violin` | one or more raw numeric group columns | Use only when sample density supports a distribution view |
@@ -108,6 +111,15 @@ readback, SHA-bound human visual QA, and the sanitized public-gallery audit.
 Allow automatic selection only when the first candidate is high confidence, clearly separated from
 the second candidate, and its internal column mapping needs no confirmation. Otherwise present up
 to three choices and wait.
+
+## Pre-render execution gate
+
+After semantic confirmation and RenderPlan creation, execute
+`editaplot.cmd origin-smoke --output-dir <unique-smoke-directory>` before `editaplot.cmd render`.
+The smoke must start an EditaPlot-owned isolated Origin instance and pass its minimal export loop.
+Doctor discovery is not a substitute for this live gate. For an ordinary render, omit
+`--output-dir`; the runtime must create a unique `<source_stem>_EditaPlot_<timestamp>` folder in the
+same directory as the original data file. Use another destination only on explicit user request.
 
 ## Experimental backlog
 

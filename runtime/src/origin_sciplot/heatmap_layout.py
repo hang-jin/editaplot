@@ -73,6 +73,8 @@ def _visible_indices(count: int, budget: int) -> tuple[tuple[int, ...], int]:
     stride = max(1, math.ceil((count - 1) / (budget - 1)))
     indices = list(range(0, count, stride))
     if indices[-1] != count - 1:
+        if len(indices) > 1 and (count - 1) - indices[-1] < stride:
+            indices.pop()
         indices.append(count - 1)
     return tuple(indices), stride
 

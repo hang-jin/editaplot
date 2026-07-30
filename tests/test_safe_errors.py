@@ -13,6 +13,23 @@ from origin_sciplot.origin_backend.safe_errors import (  # noqa: E402
     classify_origin_activation_error,
     origin_activation_recovery,
 )
+from origin_sciplot.project_paths import redact_windows_paths  # noqa: E402
+
+PRIVATE_DRIVE_BACKSLASH = "\\".join(
+    (f"{chr(67)}:", "Users", "Somebody", "Private", "result.csv")
+)
+PRIVATE_DRIVE_SLASH = "/".join(
+    (f"{chr(67)}:", "Users", "Somebody", "Private", "result.csv")
+)
+PRIVATE_UNC = "\\" * 2 + "\\".join(
+    ("server", "research-share", "private", "result.csv")
+)
+PRIVATE_EXTENDED = (
+    "\\" * 2
+    + "?"
+    + "\\"
+    + "\\".join((f"{chr(67)}:", "very-long-private-path", "result.csv"))
+)
 
 
 @pytest.mark.parametrize(
@@ -62,3 +79,23 @@ def test_activation_recovery_allows_only_one_approved_same_context_retry() -> No
         "system_configuration_changes_allowed": False,
     }
     assert origin_activation_recovery("origin_draw_failed") is None
+
+
+@pytest.mark.parametrize(
+    "private_path",
+    [
+        PRIVATE_DRIVE_BACKSLASH,
+        PRIVATE_DRIVE_SLASH,
+        PRIVATE_UNC,
+        PRIVATE_EXTENDED,
+    ],
+)
+def test_redact_windows_paths_covers_common_absolute_forms(private_path: str) -> None:
+    message = f"Could not read {private_path}; retry with another file."
+    redacted = redact_windows_paths(message)
+
+    assert private_path not in redacted
+    assert "Somebody" not in redacted
+    assert "research-share" not in redacted
+    assert "very-long-private-path" not in redacted
+    assert "<path-redacted>" in redacted

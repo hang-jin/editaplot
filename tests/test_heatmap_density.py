@@ -46,6 +46,29 @@ def test_small_and_dense_cell_label_thresholds_are_explicit() -> None:
     assert not heatmap_cell_labels_enabled(30, 30)
 
 
+def test_public_dense_heatmap_fixture_is_exactly_30_by_30() -> None:
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "examples"
+        / "gallery"
+        / "heatmap_dense_30x30.csv"
+    )
+    frame = pd.read_csv(source)
+    values = frame.iloc[:, 1:].to_numpy(dtype=float)
+
+    assert frame.shape == (30, 31)
+    assert values.shape == (30, 30)
+    assert values.size == 900
+    assert frame.columns[0] == "Dataset"
+    assert frame.columns[1] == "Series 01"
+    assert frame.columns[-1] == "Series 30"
+    assert frame.iloc[0, 0] == "Dataset 01"
+    assert frame.iloc[-1, 0] == "Dataset 30"
+    assert np.isfinite(values).all()
+    assert float(values.min()) >= 0.0
+    assert float(values.max()) <= 1.0
+
+
 @pytest.mark.parametrize(
     ("size", "expected_x_stride", "expected_y_stride"),
     [(30, 4, 2), (40, 5, 3)],
@@ -70,6 +93,14 @@ def test_dense_layout_thins_labels_and_preserves_endpoints(
     assert len(layout.y_visible_indices) <= 16
     assert layout.x_visible_indices[0] == layout.y_visible_indices[0] == 0
     assert layout.x_visible_indices[-1] == layout.y_visible_indices[-1] == size - 1
+    assert (
+        layout.x_visible_indices[-1] - layout.x_visible_indices[-2]
+        >= layout.x_label_stride
+    )
+    assert (
+        layout.y_visible_indices[-1] - layout.y_visible_indices[-2]
+        >= layout.y_label_stride
+    )
     assert layout.x_display_labels[0] == "F01"
     assert layout.x_display_labels[-1] == f"F{size:02d}"
     assert layout.x_tick_length_pt == 0.0

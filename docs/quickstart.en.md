@@ -8,6 +8,11 @@ current fully verified live baseline; other target versions receive a compatibil
 local handshake, real smoke test, and template capability check. Origin 2020b and earlier, macOS,
 Linux, WSL, Wine/CrossOver, Parallels, and other VMs are unsupported.
 
+I currently publish 38 Origin plotting routes and retain 45 fully reviewed PNGs as verification
+assets. The public page displays 43 cases. For heatmaps, it shows only the real Origin-rendered
+30×30 dense example; the smaller matrix and 40×40 cases remain regression history rather than
+additional gallery entries.
+
 Download the **complete repository** and run this from its root:
 
 ```powershell
@@ -21,6 +26,18 @@ in full. See the [installation guide](installation.md).
 The launcher reuses an existing 64-bit CPython 3.10–3.12 first. If none exists, the Skill must
 explain the system-level change and obtain explicit consent before installing official Python 3.12
 in user scope with winget. It never installs Origin automatically.
+
+Codex needs only scoped access: read the complete repository, selected table, and optional reference
+image; write to the repository, the current user's `$HOME\.codex\skills\editaplot`, and the source
+data folder; run local `editaplot.cmd`, PowerShell, Python, and Origin in the same interactive
+Windows user session; and use the network only for initial download/update and locked dependencies.
+Normal use requires no administrator rights, mouse control, whole-drive write access, or DCOM,
+registry, firewall, or Origin-installation changes.
+
+The local EditaPlot runtime and Origin automation do not initiate a network upload of selected data.
+Files explicitly provided through Codex remain subject to the user's Codex account, organization,
+and retention policies. Deidentify medical data and reference images and check burned-in text
+before providing them; EditaPlot does not automatically detect PHI.
 
 Then attach a CSV, TXT, XLS, or XLSX file in Codex and say:
 
@@ -88,6 +105,19 @@ the selected template cannot express safely blocks adaptation instead of being s
 
 ## When you are ready to render
 
+If you use the command line directly, run the confirmed RenderPlan in this order:
+
+```powershell
+$smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+.\editaplot.cmd origin-smoke --output-dir $smokeDir
+.\editaplot.cmd render .\render-plan.json
+.\editaplot.cmd verify "<formal-output-directory>"
+```
+
+I put `origin-smoke` before render so an EditaPlot-owned isolated Origin instance completes the
+minimal graph-and-export loop first; Doctor's read-only discovery is never treated as a successful
+live connection.
+
 ```text
 Use the confirmed plan. I do not need to open Origin first: run the real smoke test, start a
 dedicated Origin instance, and continue according to the detected version and template capabilities.
@@ -98,3 +128,6 @@ stage and next step. Do not report success from a PNG alone.
 
 The source file stays read-only. Missing measurements are never invented; helper columns may exist
 only in memory or in the editable Origin workbook.
+For an ordinary render, omit `--output-dir`. I have EditaPlot create
+`<source_stem>_EditaPlot_<timestamp>` beside the original CSV, TXT, XLS, or XLSX file and keep the
+RenderPlan, OPJU, PNG, PDF, TIF, object readback, and verification files together in that folder.

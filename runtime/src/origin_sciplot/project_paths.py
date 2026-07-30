@@ -6,6 +6,14 @@ import re
 import sys
 from pathlib import Path
 
+_ABSOLUTE_WINDOWS_PATH = re.compile(
+    r"(?i)(?:"
+    r"\\\\\?\\[A-Z]:\\[^\s,;\"']*"
+    r"|[A-Z]:[\\/][^\s,;\"']*"
+    r"|\\\\[^\\/\s,;\"']+[\\/][^\\/\s,;\"']+(?:[\\/][^\s,;\"']*)?"
+    r")"
+)
+
 
 def app_root() -> Path:
     """Return the project root in source mode or PyInstaller extraction root."""
@@ -50,4 +58,4 @@ def relative_or_redacted(path: str | Path, base: str | Path | None = None) -> st
 
 def redact_windows_paths(message: str) -> str:
     """Redact absolute Windows paths from user-visible messages."""
-    return re.sub(r"[A-Za-z]:\\[^\s,;\"']+", "<path-redacted>", message)
+    return _ABSOLUTE_WINDOWS_PATH.sub("<path-redacted>", message)

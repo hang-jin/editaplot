@@ -10,14 +10,17 @@ data, labels, conclusions, or private template assets.
 - Cover sparse/dense, realistic small series counts, long labels, error definitions, and ambiguous cases.
 - Keep the source table next to each gallery output.
 - Generate gallery figures through the same Origin renderer used by customers.
+- Run the isolated pre-render `origin-smoke` before a formal gallery render.
 - Keep OPJU, PNG, PDF, TIF, plan, validation, and readback for every verified showcase entry.
 - Do not use a Python-only mock image as evidence that an Origin route works.
 
 ## Current verified public gallery scope
 
-The public page currently contains 44 reviewed, metadata-sanitized PNGs. Keep that count separate
-from the number of implemented templates: a route enters this list only after its Origin artifacts,
-object readback, human visual QA, sanitized PNG, provenance record, and asset manifest all pass.
+The retained verification inventory contains 45 reviewed, metadata-sanitized PNGs across 38 public
+plotting routes. The public page displays 43 cases. Keep inventory count, display count, and route
+count separate: a case enters the inventory only after Origin artifacts, object readback, human
+visual QA, sanitized PNG, provenance record, and asset manifest all pass. Display visibility is a
+separate decision and does not delete retained verification evidence.
 
 1. XPS scan and multi-component fit.
 2. XRD multi-series spectrum.
@@ -30,7 +33,7 @@ object readback, human visual QA, sanitized PNG, provenance record, and asset ma
 9. Flat pie with a small category count.
 10. Ordered multi-series progression trend.
 11. Comparable multimetric radar profile.
-12. Annotated category × method heatmap.
+12. Dense 30×30 category × series heatmap with sparse labels and a detached colorbar.
 13. Raw observations with deterministic jitter and median lines.
 14. Violin distributions with editable box summaries.
 15. Frozen-bin univariate histogram.
@@ -43,12 +46,13 @@ object readback, human visual QA, sanitized PNG, provenance record, and asset ma
 ## Newly verified materials and dense-matrix cases
 
 On the Origin 2024b baseline, DSC, NMR, FTIR/IR, XPS multi-spectrum comparison, multi-condition PL,
-multi-sample UV–Vis, and the dense 40×40 heatmap have produced editable OPJU plus PNG/PDF/TIF and
+multi-sample UV–Vis, and the dense 30×30 heatmap have produced editable OPJU plus PNG/PDF/TIF and
 passed programmatic readback, SHA-bound human visual QA, and the sanitized public-asset audit.
 
-The 30×30/40×40 dense heatmap keeps the full matrix, hides cell numbers, thins only axis labels,
-and detaches the colorbar. The 40×40 teaching case completed the same Origin artifact, object
-readback, and human-review gates as the rest of the public gallery.
+The public gallery displays only the real Origin-rendered 30×30 dense heatmap. It keeps the full
+900-value matrix, hides cell numbers, thins only axis labels, and detaches the colorbar. The smaller
+annotated matrix and 40×40 teaching case remain in the retained verification inventory for
+regression and audit history, but they are not public-page showcase cards.
 
 The all-in-one poster is an archived promotion asset. It is not embedded in the live bilingual
 gallery and is not required to include every newly added verified case.

@@ -1082,10 +1082,51 @@ def install_skill(argv: list[str], *, _lock_held: bool = False) -> int:
     return 0 if environment_ready else 3
 
 
+def _setup_filesystem_failure(
+    argv: list[str],
+    error: OSError,
+) -> int:
+    """Report a bounded setup write failure without a Python traceback."""
+
+    requested_target, _argument_error = _parse_setup_target(argv)
+    if requested_target is None:
+        codex_home = Path(
+            os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))
+        ).expanduser()
+        requested_target = codex_home / "skills" / "editaplot"
+    permission_denied = isinstance(error, PermissionError)
+    _emit(
+        {
+            "ok": False,
+            "error": {
+                "code": (
+                    "setup_write_permission_denied"
+                    if permission_denied
+                    else "setup_filesystem_operation_failed"
+                ),
+                "message": (
+                    "EditaPlot setup could not write to the project or current-user Codex "
+                    "Skills location. Grant Codex write access to those two locations and "
+                    "rerun setup; administrator, DCOM, registry, and firewall changes are "
+                    "not required."
+                ),
+                "target": str(requested_target),
+                "os_error": type(error).__name__,
+                "errno": error.errno,
+            },
+        },
+        stream=sys.stderr,
+    )
+    return 5
+
+
 def main(argv: list[str] | None = None) -> int:
     arguments = _normalize_cli_arguments(list(sys.argv[1:] if argv is None else argv))
     if arguments and arguments[0] in {"setup", "install-skill"}:
-        return install_skill(arguments[1:])
+        try:
+            return install_skill(arguments[1:])
+        except OSError as exc:
+            return _setup_filesystem_failure(arguments[1:], exc)
 
     engine_root, config = _resolve_engine(arguments)
     discovery = discover_python(engine_root)
@@ -1128,12 +1169,50 @@ def main(argv: list[str] | None = None) -> int:
     if engine_root is not None:
         environment["EDITAPLOT_ENGINE_HOME"] = str(engine_root)
     environment["EDITAPLOT_BOOTSTRAP_SOURCE"] = str(selected["source"])
-    completed = subprocess.run(  # noqa: S603 - selected absolute Python and fixed local CLI
-        [str(selected["executable"]), str(cli), *cli_arguments],
-        cwd=os.getcwd(),
-        env=environment,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(  # noqa: S603 - selected absolute Python and fixed local CLI
+            [str(selected["executable"]), str(cli), *cli_arguments],
+            cwd=os.getcwd(),
+            env=environment,
+            check=False,
+        )
+    except PermissionError as exc:
+        _emit(
+            {
+                "ok": False,
+                "error": {
+                    "code": "selected_python_start_permission_denied",
+                    "message": (
+                        "Windows blocked the selected Python executable. Allow this EditaPlot "
+                        "project and that Python executable in the current user session, then "
+                        "retry; administrator, DCOM, registry, and firewall changes are not "
+                        "required."
+                    ),
+                    "os_error": type(exc).__name__,
+                    "errno": exc.errno,
+                },
+            },
+            stream=sys.stderr,
+        )
+        return 5
+    except OSError as exc:
+        _emit(
+            {
+                "ok": False,
+                "error": {
+                    "code": "selected_python_unavailable",
+                    "message": (
+                        "EditaPlot could not start the selected Python executable. Re-run "
+                        "editaplot.cmd --diagnose so the launcher can select an available "
+                        "64-bit CPython 3.10-3.12."
+                    ),
+                    "os_error": type(exc).__name__,
+                    "errno": exc.errno,
+                },
+            },
+            stream=sys.stderr,
+        )
+        return 5
     return int(completed.returncode)
 
 

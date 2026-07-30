@@ -37,28 +37,39 @@ def _load_json(path: Path, *, label: str) -> dict[str, Any]:
     return payload
 
 
-def _registered_case_titles() -> dict[str, str]:
-    """Load case IDs from the showcase builder, not from the previous manifest."""
+def _registered_case_metadata() -> dict[str, dict[str, object]]:
+    """Load display metadata from the showcase builder, not from the previous manifest."""
     from build_showcase import CASES  # Imported lazily for direct script execution.
 
-    result: dict[str, str] = {}
+    result: dict[str, dict[str, object]] = {}
     for case in CASES:
         case_id = str(case.id)
         title = getattr(case, "title_zh", None) or getattr(case, "intent", None) or case_id
         if case_id in result:
             raise RuntimeError(f"Duplicate showcase case ID: {case_id}")
-        result[case_id] = str(title)
+        result[case_id] = {
+            "title_zh": str(title),
+            "display_in_gallery": bool(getattr(case, "display_in_gallery", True)),
+        }
     return result
 
 
-def _existing_titles(manifest_path: Path) -> dict[str, str]:
+def _registered_case_titles() -> dict[str, str]:
+    """Return the legacy title-only registry used by focused tests and callers."""
+    return {
+        case_id: str(metadata["title_zh"])
+        for case_id, metadata in _registered_case_metadata().items()
+    }
+
+
+def _existing_case_metadata(manifest_path: Path) -> dict[str, dict[str, object]]:
     if not manifest_path.is_file():
         return {}
     manifest = _load_json(manifest_path, label="public gallery manifest")
     cases = manifest.get("cases")
     if not isinstance(cases, list):
         raise RuntimeError(f"Invalid public gallery manifest cases: {manifest_path}")
-    titles: dict[str, str] = {}
+    metadata: dict[str, dict[str, object]] = {}
     for item in cases:
         if not isinstance(item, dict):
             raise RuntimeError(f"Invalid public gallery manifest case: {manifest_path}")
@@ -66,10 +77,16 @@ def _existing_titles(manifest_path: Path) -> dict[str, str]:
         title = item.get("title_zh")
         if not isinstance(case_id, str) or not case_id or not isinstance(title, str) or not title:
             raise RuntimeError(f"Invalid public gallery manifest case: {manifest_path}")
-        if case_id in titles:
+        display_in_gallery = item.get("display_in_gallery", True)
+        if not isinstance(display_in_gallery, bool):
+            raise RuntimeError(f"Invalid public gallery display flag: {manifest_path}")
+        if case_id in metadata:
             raise RuntimeError(f"Duplicate public gallery case ID: {case_id}")
-        titles[case_id] = title
-    return titles
+        metadata[case_id] = {
+            "title_zh": title,
+            "display_in_gallery": display_in_gallery,
+        }
+    return metadata
 
 
 def _resolve_recorded_path(raw_path: object, *, root: Path, case_directory: Path) -> Path:
@@ -214,18 +231,45 @@ def sync_gallery(
     root: Path = ROOT,
     selected_ids: Sequence[str] = (),
     registered_titles: Mapping[str, str] | None = None,
+    registered_visibility: Mapping[str, bool] | None = None,
 ) -> list[dict[str, object]]:
     root = root.resolve()
     source_root = root / "showcase" / "gallery"
     output_root = root / "assets" / "gallery"
     output_root.mkdir(parents=True, exist_ok=True)
     manifest_path = output_root / "gallery-manifest.json"
-    existing_titles = _existing_titles(manifest_path)
-    registry = dict(registered_titles or _registered_case_titles())
-    known_ids = set(existing_titles) | set(registry)
-    selected = sorted(set(selected_ids) if selected_ids else set(existing_titles))
-    if not selected and not existing_titles:
-        selected = sorted(registry)
+    existing_metadata = _existing_case_metadata(manifest_path)
+    registry_metadata = (
+        {
+            case_id: {
+                "title_zh": title,
+                "display_in_gallery": (
+                    registered_visibility.get(case_id, True)
+                    if registered_visibility is not None
+                    else True
+                ),
+            }
+            for case_id, title in registered_titles.items()
+        }
+        if registered_titles is not None
+        else _registered_case_metadata()
+    )
+    if registered_visibility is not None:
+        unknown_visibility = sorted(set(registered_visibility) - set(registry_metadata))
+        invalid_visibility = sorted(
+            case_id
+            for case_id, visible in registered_visibility.items()
+            if not isinstance(visible, bool)
+        )
+        if unknown_visibility or invalid_visibility:
+            raise RuntimeError(
+                "Invalid registered gallery visibility mapping: "
+                f"unknown={unknown_visibility}; non_boolean={invalid_visibility}"
+            )
+    known_ids = set(existing_metadata) | set(registry_metadata)
+    selected = sorted(set(selected_ids) if selected_ids else set(existing_metadata))
+    if not selected and not existing_metadata:
+        selected = sorted(registry_metadata)
     unknown = sorted(set(selected) - known_ids)
     if unknown:
         raise RuntimeError(f"Unknown public gallery case(s): {', '.join(unknown)}")
@@ -236,7 +280,17 @@ def sync_gallery(
         if visual_qa_path.is_file()
         else None
     )
-    titles = dict(existing_titles)
+    case_metadata = {
+        case_id: dict(metadata)
+        for case_id, metadata in existing_metadata.items()
+    }
+    for case_id in sorted(set(case_metadata) & set(registry_metadata)):
+        registered = registry_metadata[case_id]
+        case_metadata[case_id]["display_in_gallery"] = bool(
+            registered["display_in_gallery"]
+        )
+        if not case_metadata[case_id].get("title_zh"):
+            case_metadata[case_id]["title_zh"] = str(registered["title_zh"])
     for case_id in selected:
         png_path, verification = _verified_png(
             case_id,
@@ -252,21 +306,39 @@ def sync_gallery(
             visual_qa=visual_qa,
         )
         shutil.copy2(png_path, output_root / f"{case_id}.png")
-        titles.setdefault(case_id, registry.get(case_id, case_id))
+        registered = registry_metadata.get(
+            case_id,
+            {
+                "title_zh": case_id,
+                "display_in_gallery": True,
+            },
+        )
+        case_metadata.setdefault(
+            case_id,
+            {
+                "title_zh": str(registered["title_zh"]),
+                "display_in_gallery": bool(registered["display_in_gallery"]),
+            },
+        )
 
     records: list[dict[str, object]] = []
-    for case_id in sorted(titles):
+    for case_id in sorted(case_metadata):
         destination = output_root / f"{case_id}.png"
         if not destination.is_file():
             raise RuntimeError(f"Missing public PNG: {case_id}")
+        metadata = case_metadata[case_id]
         records.append(
             {
                 "id": case_id,
-                "title_zh": titles[case_id],
+                "title_zh": str(metadata["title_zh"]),
+                "display_in_gallery": bool(metadata["display_in_gallery"]),
                 "sha256": sha256(destination),
                 "size_bytes": destination.stat().st_size,
             }
         )
+    display_case_count = sum(
+        bool(record["display_in_gallery"]) for record in records
+    )
     manifest_path.write_text(
         json.dumps(
             {
@@ -276,6 +348,7 @@ def sync_gallery(
                     "from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded"
                 ),
                 "case_count": len(records),
+                "display_case_count": display_case_count,
                 "cases": records,
             },
             ensure_ascii=False,
@@ -287,6 +360,10 @@ def sync_gallery(
     lines = [
         "# Origin 2024b 实机生成并复核的图形示例",
         "",
+        f"我从 {len(records)} 个保留验证资产中精选了 {display_case_count} 个案例放在本页，",
+        "让第一次接触 EditaPlot 的读者可以先按科研问题和图形类型判断方向，再用自己的数据定制。",
+        "同一路线的历史验证图不会重复占版面；热力图目前只展示真实 30×30 高密度版本。",
+        "",
         "以下图片均使用本机 Origin/OriginPro 2024b（10.15）生成，并已完成",
         "OPJU/PNG/PDF/TIF、对象反读和人工视觉检查。",
         "全部展示数据均为项目生成的合成教学数据，不代表测量、材料性能或临床结论。",
@@ -295,6 +372,8 @@ def sync_gallery(
         '<div align="center">',
     ]
     for record in records:
+        if not record["display_in_gallery"]:
+            continue
         lines.append(
             f'<img src="../assets/gallery/{record["id"]}.png" alt="{record["title_zh"]}" width="31%" />'
         )

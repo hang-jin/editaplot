@@ -3,6 +3,7 @@
 ## Contents
 
 - [Supported environment](#supported-environment)
+- [Permission preflight](#permission-preflight)
 - [Use the launcher](#use-the-launcher)
 - [Installation and diagnostics](#installation-and-diagnostics)
 - [Origin connection policy](#origin-connection-policy)
@@ -22,6 +23,28 @@ or other virtual machines. A local Origin/OriginPro application must expose a wo
 entry when rendering is requested.
 `doctor` cannot reliably detect every virtual machine, so ask the user to confirm a physical
 Windows host whenever that fact is unknown. VMs remain unsupported in V1.
+
+## Permission preflight
+
+Request only the permissions needed for the current local workflow:
+
+1. Read the complete EditaPlot repository, selected table, and optional reference image.
+2. Write to the repository for `.editaplot-venv`, to the current user's Codex Skill directory for
+   setup/update, and to the source data folder for the timestamped delivery directory.
+3. Run the local batch launcher, PowerShell/Python subprocesses, and an EditaPlot-owned Origin
+   process in the same active interactive Windows user session.
+4. Use network access only for repository download/update and the locked dependency source.
+   Obtain separate explicit consent before any user-scope winget Python installation.
+
+Do not request administrator rights, mouse control, whole-drive access, private-data upload, or
+DCOM, registry, firewall, user-group, or Origin-installation changes. When a protected folder,
+organization policy, cloud-sync client, or security tool blocks writing, request access only to the
+specific repository/data folder or ask the user for an explicit writable destination.
+
+The bundled runtime and Origin process do not initiate a network upload of selected files. A file
+explicitly supplied through Codex remains subject to the user's Codex account, organization, and
+retention policies. Require deidentification and burned-in-text confirmation before inspecting
+medical data or reference images; EditaPlot does not automatically detect PHI.
 
 ## Use the launcher
 
@@ -62,7 +85,6 @@ Run setup from a **complete repository**, never from a copied `skill/editaplot` 
 .\editaplot.cmd setup
 .\editaplot.cmd --diagnose
 .\editaplot.cmd doctor
-.\editaplot.cmd doctor --repair
 ```
 
 `setup` installs or updates the Skill, writes an untracked local runtime pointer, selects a compatible
@@ -77,6 +99,10 @@ and local Origin Automation registration discovery. It is read-only and never la
 found; it is not a live-connection result. If it is true, continue to the real smoke without asking
 the user to open or reconfirm Origin. Summarize the result in one to three sentences and retain
 registry, candidate, and stage details in JSON.
+
+Use `.\editaplot.cmd doctor --repair` only when Doctor explicitly reports a missing or damaged
+project-managed Python dependency. It is not part of the ordinary per-workflow command sequence and
+does not repair, install, register, or modify Origin.
 
 ## Origin connection policy
 
@@ -125,6 +151,7 @@ invalidates that confirmation.
 .\editaplot.cmd plan <file> --template-id bar --claim "Groups differ in response" --evidence-role comparison --semantic-confirmation-json <confirmed-json> --palette-id ocean_coral --output render-plan.json
 .\editaplot.cmd reference-inspect <reference-image>
 .\editaplot.cmd reference-review <reference-image> <reference-spec-json> --output reference-review.json
+.\editaplot.cmd origin-smoke --output-dir <unique-smoke-directory>
 .\editaplot.cmd render render-plan.json
 .\editaplot.cmd verify <output-directory>
 .\editaplot.cmd panel-plan medical-panels.json --claim "The model is accurate, calibrated, and anatomically plausible" --output medical-panel-plan.json
@@ -133,6 +160,8 @@ invalidates that confirmation.
 The launcher forwards engine JSON to stdout. `--output` writes the same payload to disk where the
 command supports it. Render forwards the engine worker's JSON-lines progress protocol. Use
 `--engine-home <root>` only when an engine developer intentionally overrides runtime discovery.
+After `plan`, the required formal sequence is `origin-smoke → render → verify`; never skip the smoke
+because Doctor reported `ready_for_render`.
 
 Reference-image adaptation uses three separate inputs at plan time: the local image, the reviewed
 strict ReferenceFigureSpec JSON, and its exact confirmation JSON. Codex constructs the declarative

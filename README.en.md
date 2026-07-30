@@ -85,7 +85,7 @@ I store only the date and aggregate repository count. I do not read or store use
 | Domain | Implemented figure and evidence families |
 |---|---|
 | Materials and spectra | XPS scan/fit, XPS multi-spectrum comparison, ordinary XRD, GSAS/GSAS-II XRD Rietveld, XAS, FTIR/IR, NMR, DSC, PL/TRPL, UV–Vis/Tauc, EIS, CV, LSV, multi-condition 3D Nyquist |
-| General statistics | bars, horizontal bars, error bars, stacked/percentage composition, pie, Sankey, line, trend, scatter, bubble, radar, heatmap, including 30×30/40×40 dense layouts |
+| General statistics | bars, horizontal bars, error bars, stacked/percentage composition, pie, Sankey, line, trend, scatter, bubble, radar, and adaptive dense-matrix heatmaps |
 | Distributions and effects | raw summaries, box, violin, Raincloud, histogram, forest plot |
 | Medical and deep learning | ROC, PR, calibration, DCA, confusion matrix, Bland–Altman, paired longitudinal trajectories, grouped boxes, precomputed SHAP, medical panel planning |
 
@@ -102,7 +102,7 @@ I do not silently smooth data, remove outliers, invent peaks, derive error bars,
 | PL / TRPL | wavelength or time + emission intensity; optional supplied fits | multi-sample and multi-condition tables are accepted; fits and lifetimes must be supplied |
 | UV–Vis / Tauc | wavelength + absorbance/transmittance; optional supplied Tauc data | multi-sample tables are accepted; no photon-energy conversion, exponent choice, fitting, or band-gap calculation |
 
-For dense heatmaps I keep every matrix value and the original order while reducing only repeated display text. A 30×30 or 40×40 plan hides per-cell numbers, thins row and column labels, and separates the colorbar from the data field. The 40×40 case has passed Origin 2024b OPJU/PNG/PDF/TIF generation, axis and colorbar object readback, and human visual review.
+For dense heatmaps I keep every matrix value and the original order while reducing only repeated display text. Dense plans hide per-cell numbers, thin row and column labels, and separate the colorbar from the data field. The public page shows one real Origin-rendered 30×30 case, which has passed OPJU/PNG/PDF/TIF generation, axis and colorbar object readback, and human visual review. The former small matrix and 40×40 cases remain in the verification inventory for regression and audit history rather than being displayed again.
 
 ## Origin-rendered examples
 
@@ -117,9 +117,9 @@ I made and manually checked these examples with synthetic teaching data. Metadat
   <img src="assets/gallery/trajectory3d.png" alt="Multi-condition 3D Nyquist trajectory" width="31%">
 </div>
 
-➡️ [Browse all 44 reviewed examples](docs/gallery.md)
+➡️ [Browse the 43 public showcase examples](docs/gallery.md)
 
-The DSC, NMR, FTIR/IR, XPS comparison, multi-condition PL, multi-sample UV–Vis, and 40×40 heatmap routes have produced 2024b Origin artifacts and passed object readback, human visual review, and the public-asset audit. The gallery contains only PNGs that completed those gates.
+The current public capability set contains 38 Origin plotting routes. The repository retains 45 verification PNGs that passed live artifacts, object readback, human visual review, and the public-asset audit; 43 are displayed, while two hidden heatmap cases remain only as regression evidence. DSC, NMR, FTIR/IR, XPS comparison, multi-condition PL, multi-sample UV–Vis, and the 30×30 dense heatmap have all completed the Origin 2024b gate.
 
 ## Scientific palettes
 
@@ -140,7 +140,23 @@ I created these palettes as original abstractions and redraws. They do not copy 
 | Python | You need 64-bit Python 3.10–3.12; the launcher selects it automatically, so no manual setup is needed |
 | Input | You can use CSV, TXT, XLS, or XLSX, including Chinese headers and paths |
 
-You do not need to solve the Python environment first. I designed the root `editaplot.cmd` to find a compatible Python already on your computer and create an environment used only by this project. If none is available, it explains the change and waits for your consent before using official winget to install user-scope Python 3.12; without winget, it gives you the official python.org instructions. This setup does not install or modify Origin. Doctor performs read-only discovery; a real pre-render smoke test starts a dedicated Origin instance and validates the connection.
+You do not need to solve the Python environment first. I designed the root `editaplot.cmd` to find a compatible Python already on your computer and create an environment used only by this project. If none is available, the launcher returns a clear missing-Python diagnosis. Codex must then explain the separate system change and wait for your consent before using official winget to install user-scope Python 3.12; the installation guide provides the official python.org route when winget is unavailable. This setup does not install or modify Origin. Doctor performs read-only discovery; a real pre-render smoke test starts a dedicated Origin instance and validates the connection.
+
+### Minimum permissions for Codex
+
+I recommend approving only the task-scoped permissions below:
+
+| Allowed scope | Why it is needed |
+|---|---|
+| Read the complete EditaPlot repository, your table, and an optional reference image | Install the Skill, understand columns, and prepare the figure plan |
+| Write to the EditaPlot repository and the current user's `$HOME\.codex\skills\editaplot` | Create the project environment and install or update the Skill |
+| Write to the source data folder | Create one timestamped delivery folder beside the source without overwriting it |
+| Run local `editaplot.cmd`, PowerShell, and Python, and launch Origin in the same interactive Windows user session | Diagnose, run the Automation smoke, render, export, and read back objects |
+| Access GitHub and the Python package source during setup/update; request separate consent for winget if Python is absent | Download the public source and locked dependencies |
+
+Normal use does **not** require administrator rights, mouse control, whole-drive write access, or changes to DCOM, the registry, the firewall, or the Origin installation. If Windows Controlled Folder Access, an organization policy, OneDrive/cloud sync, or a read-only directory blocks output, allow only the repository and current data folder or explicitly select another writable destination.
+
+The bundled EditaPlot Python runtime and Origin automation do not initiate a network upload of your data. A file you explicitly provide through Codex is still governed by your Codex account, organization, and retention policies. Before providing medical data or reference images, follow your institution's rules, deidentify the material, and check burned-in text; EditaPlot does not promise automatic PHI detection. See [Privacy](PRIVACY.md).
 
 ### Install the Codex Skill
 
@@ -160,7 +176,10 @@ Open a new Codex task and invoke `$editaplot`. For a first dataset, run:
 
 If this is your first run, the easiest route is to attach the file in Codex and say, “Use `$editaplot` to make the right figure from this data.” I designed EditaPlot to handle the environment check, read-only inspection, chart suggestions, and a per-column use and figure-element checklist. You confirm the scientific purpose and that checklist; only unclear cases need a few extra details about roles, errors, or transformations. When you are comfortable with the command line, these commands are also available:
 
-When rendering begins, I have EditaPlot create a `<source_stem>_EditaPlot_<time>` folder directly beside your original data. The approved render plan, OPJU, PNG, PDF, TIF, readback, and verification files stay together there. Your source file is never overwritten, and the destination changes only when you explicitly request another location.
+When rendering begins, I have EditaPlot create a `<source_stem>_EditaPlot_<time>` folder in the same
+directory as your original CSV, TXT, XLS, or XLSX file. The approved render plan, OPJU, PNG, PDF,
+TIF, readback, and verification files stay together there. Your source file is never overwritten,
+and the destination changes only when you explicitly request another location.
 
 ```powershell
 .\editaplot.cmd doctor
@@ -169,11 +188,17 @@ When rendering begins, I have EditaPlot create a `<source_stem>_EditaPlot_<time>
 .\editaplot.cmd understand <data.csv> --template-id xrd --output data-understanding.json
 .\editaplot.cmd palettes
 .\editaplot.cmd plan <data.csv> --template-id bar --claim "Model A performs better" --evidence-role comparison --palette-id ocean_coral --semantic-confirmation-json semantic-confirmation.json --output render-plan.json
+$smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+.\editaplot.cmd origin-smoke --output-dir $smokeDir
 .\editaplot.cmd render render-plan.json
 .\editaplot.cmd verify <Origin-output-directory>
 ```
 
-The repository already contains the required `runtime/`. You can ignore `--engine-home` in normal use; it is needed only when you intentionally replace the built-in engine.
+The repository already contains the required `runtime/`. `origin-smoke` first starts an
+EditaPlot-owned isolated Origin instance and completes the minimal export loop; formal rendering
+follows only after that smoke succeeds. You can ignore `--engine-home` in normal use; it is needed
+only when you intentionally replace the built-in engine. Omit `render --output-dir` for ordinary
+work so the formal output is created beside the source data automatically.
 
 ### Prompt for Codex
 
@@ -205,7 +230,7 @@ I keep the public repository complete and runnable. To avoid mixing private data
 |---|---|
 | Apache-2.0 source, complete Skill, sanitized runtime | `DEVELOPMENT_LEDGER.md`, internal plans, development logs |
 | Neutral synthetic examples and original palette assets | Your original data, reference screenshots, material without redistribution rights |
-| 44 reviewed, metadata-sanitized PNG examples | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
+| 45 reviewed, metadata-sanitized verification PNGs; 43 are displayed across 38 plotting routes | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
 | Bilingual docs, tests, dependency locks, asset/runtime manifests | Absolute paths, caches, virtual environments, temporary outputs, secrets and tokens |
 
 To avoid publishing local material by mistake, I use an allowlist, secret scanning, PNG checks, and SHA-256 manifests. See [release and licensing boundaries](docs/release-boundaries.md).

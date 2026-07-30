@@ -114,3 +114,45 @@ def test_origin_safety_links_only_to_relevant_official_technical_sources() -> No
 
     assert "## Official technical references" in content
     assert all(url in content for url in expected_urls)
+
+
+def test_beginner_docs_define_scoped_codex_permissions_without_admin_recovery() -> None:
+    documents = (
+        PRODUCT_ROOT / "README.md",
+        PRODUCT_ROOT / "README.en.md",
+        PRODUCT_ROOT / "docs" / "installation.md",
+        PRODUCT_ROOT / "docs" / "quickstart.zh-CN.md",
+        PRODUCT_ROOT / "docs" / "quickstart.en.md",
+        PRODUCT_ROOT / "SUPPORT.md",
+        PRODUCT_ROOT / "SECURITY.md",
+        PRODUCT_ROOT / "skill" / "editaplot" / "SKILL.md",
+        PRODUCT_ROOT / "skill" / "editaplot" / "references" / "runtime.md",
+    )
+
+    for path in documents:
+        compact = " ".join(path.read_text(encoding="utf-8").split()).casefold()
+        assert ".codex" in compact or "codex skill" in compact
+        assert any(
+            token in compact
+            for token in ("source", "原始数据", "data folder", "selected-data")
+        )
+        assert "administrator" in compact or "管理员" in compact
+        assert "mouse" in compact or "鼠标" in compact
+        assert "dcom" in compact
+        assert "registry" in compact or "注册表" in compact
+
+
+def test_privacy_guidance_separates_local_runtime_from_codex_host_policy() -> None:
+    privacy = (PRODUCT_ROOT / "PRIVACY.md").read_text(encoding="utf-8").casefold()
+    skill = (
+        PRODUCT_ROOT / "skill" / "editaplot" / "SKILL.md"
+    ).read_text(encoding="utf-8").casefold()
+    readme = (PRODUCT_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "do not initiate a network upload" in privacy
+    assert "codex account or host" in privacy
+    assert "does not perform automatic phi detection" in privacy
+    assert "additional network service" in skill
+    assert "organization, and retention policies" in skill
+    assert "不会主动把你的数据上传到网络" in readme
+    assert "不承诺自动发现 PHI" in readme

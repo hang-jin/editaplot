@@ -85,7 +85,7 @@ Publication CSV 中已经带显示位置的 `Diff` 会按源值直接绘制，�
 | 领域 | 已覆盖图形与证据 |
 |---|---|
 | 材料与光谱 | XPS 扫描/拟合、XPS 多谱线对比、普通 XRD、GSAS/GSAS-II XRD Rietveld、XAS、FTIR/IR、NMR、DSC、PL/TRPL、UV–Vis/Tauc、EIS、CV、LSV、三维多条件 Nyquist |
-| 通用统计 | 柱状/条形、误差棒、堆叠/百分比堆叠、饼图、桑基、折线、趋势、散点、气泡、雷达、热力图（含 30×30/40×40 高密度布局） |
+| 通用统计 | 柱状/条形、误差棒、堆叠/百分比堆叠、饼图、桑基、折线、趋势、散点、气泡、雷达、热力图（支持高密度矩阵自适应布局） |
 | 分布与效应 | 原始点汇总、箱线、小提琴、Raincloud、直方图、森林效应图 |
 | 医学与深度学习 | ROC、PR、校准、DCA、混淆矩阵、Bland–Altman、配对纵向轨迹、分组箱线、预计算 SHAP、医学多面板规划 |
 
@@ -102,7 +102,7 @@ Publication CSV 中已经带显示位置的 `Diff` 会按源值直接绘制，�
 | PL / TRPL | 波长或时间 + 发光强度；拟合列可选 | 支持多样品/多条件；拟合和寿命必须由你提供 |
 | UV–Vis / Tauc | 波长 + 吸光度/透过率；Tauc 数据可选 | 支持多样品；不自动换算光子能量、选指数、拟合或计算带隙 |
 
-高密度热力图会保留矩阵中的每一个值和原始顺序，只减少屏幕上的重复刻度文字：30×30/40×40 时隐藏单元格数字、稀疏显示行列标签，并把 colorbar 与数据区分开。40×40 案例已完成 Origin 2024b 的 OPJU/PNG/PDF/TIF、轴与颜色条对象反读及人工视觉检查。
+高密度热力图会保留矩阵中的每一个值和原始顺序，只减少屏幕上的重复刻度文字：矩阵较密时隐藏单元格数字、稀疏显示行列标签，并把 colorbar 与数据区分开。公开页面只展示一张真实 Origin 生成的 30×30 案例；它已经完成 OPJU/PNG/PDF/TIF、轴与颜色条对象反读及人工视觉检查。原来的小矩阵和 40×40 案例仍保留在验证资产中，供回归与审计使用，不再重复展示。
 
 ## 真实 Origin 示例
 
@@ -117,9 +117,9 @@ Publication CSV 中已经带显示位置的 `Diff` 会按源值直接绘制，�
   <img src="assets/gallery/trajectory3d.png" alt="三维多条件 Nyquist 轨迹" width="31%">
 </div>
 
-➡️ [浏览全部 44 个图形案例与简要用途](docs/gallery.md)
+➡️ [浏览 43 个对外展示案例与简要用途](docs/gallery.md)
 
-DSC、NMR、FTIR/IR、XPS 多谱线对比、PL 多条件、UV–Vis 多样品与 40×40 高密度热力图都已生成 2024b 实机产物，通过对象反读、人工视觉检查和公开图片审计；图库只收录走完这些门禁的 PNG。
+当前公开能力包含 38 条 Origin 绘图路线。仓库保留 45 张通过实机产物、对象反读、人工视觉检查和公开图片审计的验证 PNG，其中 43 张进入页面展示；两个未展示案例只是热力图的历史回归证据。DSC、NMR、FTIR/IR、XPS 多谱线对比、PL 多条件、UV–Vis 多样品与 30×30 高密度热力图都已完成 Origin 2024b 实机门禁。
 
 ## 中文科研配色
 
@@ -140,7 +140,23 @@ DSC、NMR、FTIR/IR、XPS 多谱线对比、PL 多条件、UV–Vis 多样品与
 | Python | 需要 64 位 Python 3.10–3.12；启动器会自动选择，你无需手动配置 |
 | 数据 | 你可以使用 CSV、TXT、XLS 或 XLSX，也可以保留中文列名与中文路径 |
 
-你不必先弄懂 Python 环境。我让根目录的 `editaplot.cmd` 先寻找电脑上已有的兼容 Python，再创建只属于本项目的环境。如果完全找不到，它会先用中文说明接下来会发生什么，并等待你同意后再通过官方 winget 安装用户范围的 Python 3.12；没有 winget 时会给出 python.org 官方安装指引。这个过程不会安装或修改 Origin。Doctor 只做只读发现；正式绘图前的真实 smoke 才会自动启动专用 Origin 实例并验证连接。
+你不必先弄懂 Python 环境。我让根目录的 `editaplot.cmd` 先寻找电脑上已有的兼容 Python，再创建只属于本项目的环境。若完全找不到，启动器会返回明确的缺少 Python 诊断；此时 Codex 必须先用中文解释这项系统变更并等你同意，之后才可通过官方 winget 安装用户范围的 Python 3.12。没有 winget 时，我在安装指南中给出了 python.org 官方路径。这个过程不会安装或修改 Origin。Doctor 只做只读发现；正式绘图前的真实 smoke 才会自动启动专用 Origin 实例并验证连接。
+
+### Codex 需要哪些权限
+
+我建议按下面的最小范围批准，不需要把整台电脑交给 Codex：
+
+| 允许的范围 | 用途 |
+|---|---|
+| 读取完整 EditaPlot 仓库、你的数据文件和可选参考图 | 安装 Skill、理解列含义、制定绘图计划 |
+| 写入 EditaPlot 仓库和当前用户的 `$HOME\.codex\skills\editaplot` | 创建项目隔离环境并安装/更新 Skill |
+| 写入原始数据所在文件夹 | 在源文件旁新建时间戳交付文件夹；不会覆盖原文件 |
+| 运行本地 `editaplot.cmd`、PowerShell、Python，并在当前 Windows 用户会话启动 Origin | 完成环境检查、Automation smoke、绘图、导出和反读 |
+| 首次安装或更新时访问 GitHub、Python 包源；缺少 Python 时另行确认 winget | 下载公开源码和锁定依赖 |
+
+普通使用**不需要**管理员权限、鼠标控制、整个 C 盘写权限，也不需要修改 DCOM、注册表、防火墙或 Origin 安装。若 Windows“受控文件夹访问”、单位策略、OneDrive/网盘同步或只读目录阻止写入，请只放行当前仓库与当前数据文件夹，或明确选择另一个可写输出目录；不要把全局提权当作修复方法。
+
+EditaPlot 自带的 Python runtime 与 Origin 自动化不会主动把你的数据上传到网络；但你主动交给 Codex 的文件仍受你所使用的 Codex 账号、组织和数据保留策略约束。医学数据或参考图在交给 Codex 前必须按你所在机构的要求去标识化，并检查图像中是否烧录了身份信息；EditaPlot 不承诺自动发现 PHI。详见[隐私说明](PRIVACY.md)。
 
 ### 2. 安装 Codex Skill
 
@@ -160,7 +176,7 @@ Set-Location editaplot
 
 如果你是第一次使用，最简单的方法是把文件拖进 Codex，然后说：“请使用 `$editaplot` 帮我画这份数据。”我会让 EditaPlot 完成环境检查、只读识别与候选图推荐，再给出逐列用途和图形元素清单；你只需确认科学目的与这份清单，只有判断不够明确时才需要补充列义、误差或变换等关键细节。熟悉命令行后，也可以使用下面这些命令：
 
-正式绘图时，我会让 EditaPlot 在原始数据旁边新建 `<数据文件名>_EditaPlot_<时间>` 文件夹，并把 render-plan、OPJU、PNG、PDF、TIF、反读与验证结果集中放进去。它不会覆盖原始数据；只有你明确指定其他位置时，才会改变输出目录。
+正式绘图时，我会让 EditaPlot 在原始 CSV、TXT、XLS 或 XLSX 所在目录中，新建一个与源文件同级的 `<数据文件名>_EditaPlot_<时间>` 文件夹，并把 render-plan、OPJU、PNG、PDF、TIF、反读与验证结果集中放进去。它不会覆盖原始数据；只有你明确指定其他位置时，才会改变输出目录。
 
 ```powershell
 .\editaplot.cmd doctor
@@ -169,11 +185,16 @@ Set-Location editaplot
 .\editaplot.cmd understand <data.csv> --template-id xrd --output data-understanding.json
 .\editaplot.cmd palettes
 .\editaplot.cmd plan <data.csv> --template-id bar --claim "模型 A 指标更高" --evidence-role comparison --palette-id ocean_coral --semantic-confirmation-json semantic-confirmation.json --output render-plan.json
+$smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+.\editaplot.cmd origin-smoke --output-dir $smokeDir
 .\editaplot.cmd render render-plan.json
 .\editaplot.cmd verify <Origin-output-directory>
 ```
 
-仓库已经包含运行所需的 `runtime/`。日常使用可以忽略 `--engine-home`；只有你主动替换内置引擎时才需要它。
+仓库已经包含运行所需的 `runtime/`。`origin-smoke` 会先启动 EditaPlot 自有的隔离 Origin
+实例并完成最小导出闭环；只有 smoke 通过后才进入正式 render。日常使用可以忽略
+`--engine-home`；只有你主动替换内置引擎时才需要它。普通绘图请省略 `render` 的
+`--output-dir`，这样正式结果会自动保存到源数据同级的新文件夹。
 
 ### 3. 直接复制给 Codex 的提示词
 
@@ -210,7 +231,7 @@ Set-Location editaplot
 |---|---|
 | Apache-2.0 源码、完整 Skill、清理后的 runtime | `DEVELOPMENT_LEDGER.md`、内部计划与开发日志 |
 | 中性合成示例数据、原创配色资产 | 你的原始数据、参考截图、未获再分发许可的材料 |
-| 44 个已复核且清理元数据的 PNG | OPJU/PDF/TIF、RenderPlan、对象反读与验证 JSON |
+| 45 个已复核且清理元数据的验证 PNG，其中 43 个用于页面展示，覆盖 38 条绘图路线 | OPJU/PDF/TIF、RenderPlan、对象反读与验证 JSON |
 | 双语文档、测试、依赖锁、资产与 runtime 校验清单 | 本机绝对路径、缓存、虚拟环境、临时输出、私钥与 token |
 
 为了避免把本机资料误发到公开仓库，我给公开文件加了白名单、密钥扫描、PNG 检查和 SHA-256 清单。你可以在[发布与许可边界](docs/release-boundaries.md)查看完整规则。

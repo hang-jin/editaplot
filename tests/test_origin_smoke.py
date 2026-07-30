@@ -397,6 +397,29 @@ def test_smoke_outputs_stay_inside_requested_directory(
         assert Path(result[key]).resolve().parent == output_dir.resolve()
 
 
+def test_smoke_output_permission_failure_is_structured(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output_dir = tmp_path / "blocked-smoke"
+    original_mkdir = Path.mkdir
+
+    def deny_target(path: Path, *args: object, **kwargs: object) -> None:
+        if path == output_dir.resolve():
+            raise PermissionError(13, "injected smoke output denial")
+        original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", deny_target)
+
+    with pytest.raises(OriginEnvironmentError) as raised:
+        run_origin_smoke(output_dir)
+
+    assert raised.value.code == "smoke_output_write_permission_denied"
+    assert raised.value.stage == "prepare_output"
+    assert "injected smoke output denial" not in str(raised.value)
+    assert "another writable smoke directory" in str(raised.value)
+
+
 def test_smoke_forwards_keep_open_and_uses_isolated_session(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

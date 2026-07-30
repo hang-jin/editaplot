@@ -9,10 +9,13 @@ from .project_paths import resources_dir
 
 def main() -> int:
     try:
-        from PySide6.QtWidgets import QApplication
         from PySide6.QtGui import QIcon
+        from PySide6.QtWidgets import QApplication
     except ImportError as exc:  # pragma: no cover - user-facing startup guard
-        print("PySide6 is not installed. Run: python -m pip install -r requirements.txt")
+        print(
+            "PySide6 is not installed. From the runtime directory run: "
+            'python -m pip install ".[desktop]"'
+        )
         raise SystemExit(1) from exc
 
     from .main_window import MainWindow

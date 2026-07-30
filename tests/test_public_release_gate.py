@@ -103,6 +103,42 @@ def test_public_readmes_use_aggregate_star_badge_and_anonymous_trend() -> None:
         assert all(token not in content for token in forbidden)
 
 
+def test_gallery_inventory_and_display_selection_are_separate() -> None:
+    manifest = json.loads(
+        (
+            PRODUCT_ROOT / "assets" / "gallery" / "gallery-manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    policy = json.loads(
+        (PRODUCT_ROOT / "release" / "public-release-policy.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    records = {record["id"]: record for record in manifest["cases"]}
+    visible = {
+        case_id
+        for case_id, record in records.items()
+        if record["display_in_gallery"]
+    }
+
+    assert manifest["case_count"] == len(records)
+    assert manifest["display_case_count"] == len(visible)
+    assert manifest["case_count"] == policy["gallery"]["expected_case_count"]
+    assert (
+        manifest["display_case_count"]
+        == policy["gallery"]["expected_display_case_count"]
+    )
+    assert records["heatmap-results"]["display_in_gallery"] is False
+    assert records["heatmap-dense-40x40"]["display_in_gallery"] is False
+    assert records["heatmap-dense-30x30"]["display_in_gallery"] is True
+    gallery_document = (PRODUCT_ROOT / "docs" / "gallery.md").read_text(
+        encoding="utf-8"
+    )
+    assert "heatmap-dense-30x30.png" in gallery_document
+    assert "heatmap-results.png" not in gallery_document
+    assert "heatmap-dense-40x40.png" not in gallery_document
+
+
 def test_public_source_has_no_stargazer_identity_collection_path() -> None:
     assert not (PRODUCT_ROOT / ".github" / "workflows" / "star-history.yml").exists()
     assert not (PRODUCT_ROOT / "tools" / "build_star_history.py").exists()

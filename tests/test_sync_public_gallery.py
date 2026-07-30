@@ -73,6 +73,9 @@ def _write_public_manifest(root: Path, cases: list[dict[str, object]]) -> None:
         {
             "schema_version": "1.0",
             "case_count": len(cases),
+            "display_case_count": sum(
+                bool(case.get("display_in_gallery", True)) for case in cases
+            ),
             "cases": cases,
         },
     )
@@ -112,8 +115,49 @@ def test_new_case_is_not_blocked_by_the_old_manifest_and_uses_verified_output_02
     assert {record["id"] for record in records} == {"old-case", "new-case"}
     manifest = json.loads((public / "gallery-manifest.json").read_text(encoding="utf-8"))
     assert manifest["case_count"] == 2
+    assert manifest["display_case_count"] == 2
     assert {item["id"] for item in manifest["cases"]} == {"old-case", "new-case"}
     assert "新案例" in (tmp_path / "docs" / "gallery.md").read_text(encoding="utf-8")
+
+
+def test_hidden_verified_cases_remain_in_inventory_but_not_in_gallery_page(
+    tmp_path: Path,
+) -> None:
+    visible_id = "dense-30"
+    hidden_id = "annotated-small"
+    _prepare_verified_case(tmp_path, visible_id, embedded_manual_review=True)
+    _prepare_verified_case(tmp_path, hidden_id, embedded_manual_review=True)
+
+    records = gallery_sync.sync_gallery(
+        root=tmp_path,
+        selected_ids=(visible_id, hidden_id),
+        registered_titles={
+            visible_id: "30×30 高密度热力图",
+            hidden_id: "小矩阵热力图",
+        },
+        registered_visibility={
+            visible_id: True,
+            hidden_id: False,
+        },
+    )
+
+    manifest = json.loads(
+        (tmp_path / "assets" / "gallery" / "gallery-manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    document = (tmp_path / "docs" / "gallery.md").read_text(encoding="utf-8")
+    assert manifest["case_count"] == len(records) == 2
+    assert manifest["display_case_count"] == 1
+    assert {
+        record["id"]: record["display_in_gallery"] for record in records
+    } == {
+        hidden_id: False,
+        visible_id: True,
+    }
+    assert "30×30 高密度热力图" in document
+    assert "小矩阵热力图" not in document
+    assert (tmp_path / "assets" / "gallery" / f"{hidden_id}.png").is_file()
 
 
 def test_existing_case_accepts_the_path_bound_legacy_manual_review(

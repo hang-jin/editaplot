@@ -38,6 +38,11 @@ jobs:
         run: >-
           python -m ruff check --no-cache
           skill/editaplot/scripts
+          runtime/src/origin_sciplot/app.py
+          runtime/src/origin_sciplot/heatmap_layout.py
+          runtime/src/origin_sciplot/main_window.py
+          runtime/src/origin_sciplot/output_manager.py
+          runtime/src/origin_sciplot/project_paths.py
           runtime/src/origin_sciplot/origin_backend/capabilities.py
           runtime/src/origin_sciplot/origin_backend/safe_errors.py
           runtime/src/origin_sciplot/origin_backend/session.py

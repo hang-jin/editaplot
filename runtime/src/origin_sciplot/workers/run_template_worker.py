@@ -27,7 +27,13 @@ from origin_sciplot.origin_backend.template_capabilities import (
     get_template_capability_profile,
 )
 from origin_sciplot.origin_backend.verify_utils import require_nonempty
-from origin_sciplot.output_manager import RunOutput, create_run_output, write_json
+from origin_sciplot.output_manager import (
+    OutputDirectoryError,
+    RunOutput,
+    create_run_output,
+    output_preparation_error,
+    write_json,
+)
 from origin_sciplot.reference_style import (
     ReferenceStyleError,
     apply_reference_style,
@@ -229,9 +235,12 @@ def _record_template_compatibility(
 
     profile = get_template_capability_profile(manifest.id)
     activated = _activated_optional_capabilities(manifest.id, scientific_analysis)
+    origin_version = environment.get("origin_version", "")
+    if str(origin_version).strip().lower() == "unknown":
+        origin_version = environment.get("origin_version_raw", "")
     decision = evaluate_template_compatibility(
         manifest.id,
-        str(environment.get("origin_version", "")),
+        origin_version,
         profile.required | activated,
         activated_optional=activated,
     )
@@ -432,39 +441,47 @@ def main(argv: list[str] | None = None) -> int:
         proto.progress("load_template", "success", f"已读取模板：{manifest.name}")
 
         proto.progress("create_output_dir", "running", "正在创建输出文件夹")
-        output = create_run_output(args.input_csv, manifest, args.output_dir)
-        if render_plan_source is not None:
-            shutil.copy2(render_plan_source, output.render_plan_copy)
-        logger = RunLogger(output.run_log, output.output_dir)
-        logger.write(f"template={manifest.id} version={manifest.version}")
-        if xps_analysis is not None:
-            write_json(output.output_dir / "xps_analysis_report.json", xps_analysis.to_dict())
-            copied_source_sha256 = hashlib.sha256(output.input_copy.read_bytes()).hexdigest()
-            if copied_source_sha256 != xps_analysis.source_sha256:
-                logger.write("XPS source changed while creating the provenance copy")
-                proto.error(
-                    "analysis_changed",
-                    "The XPS analysis changed after preview. Refresh the preview and run again.",
-                )
-                return WorkerExitCode.VALIDATION_FAILED
-        elif scientific_analysis is not None:
-            write_json(
-                output.output_dir / f"{manifest.id}_analysis_report.json",
-                scientific_analysis.to_dict(),
-            )
-            copied_source_sha256 = hashlib.sha256(output.input_copy.read_bytes()).hexdigest()
-            if copied_source_sha256 != scientific_analysis.source_sha256:
-                logger.write("Scientific source changed while creating the provenance copy")
-                proto.error(
-                    "analysis_changed",
-                    "The scientific analysis changed after preview. Refresh the preview and run again.",
-                )
-                return WorkerExitCode.VALIDATION_FAILED
-            if reference_style_report is not None:
+        try:
+            output = create_run_output(args.input_csv, manifest, args.output_dir)
+            if render_plan_source is not None:
+                shutil.copy2(render_plan_source, output.render_plan_copy)
+            logger = RunLogger(output.run_log, output.output_dir)
+            logger.write(f"template={manifest.id} version={manifest.version}")
+            if xps_analysis is not None:
                 write_json(
-                    output.output_dir / "reference_style_report.json",
-                    reference_style_report,
+                    output.output_dir / "xps_analysis_report.json",
+                    xps_analysis.to_dict(),
                 )
+                copied_source_sha256 = hashlib.sha256(output.input_copy.read_bytes()).hexdigest()
+                if copied_source_sha256 != xps_analysis.source_sha256:
+                    logger.write("XPS source changed while creating the provenance copy")
+                    proto.error(
+                        "analysis_changed",
+                        "The XPS analysis changed after preview. Refresh the preview and run again.",
+                    )
+                    return WorkerExitCode.VALIDATION_FAILED
+            elif scientific_analysis is not None:
+                write_json(
+                    output.output_dir / f"{manifest.id}_analysis_report.json",
+                    scientific_analysis.to_dict(),
+                )
+                copied_source_sha256 = hashlib.sha256(output.input_copy.read_bytes()).hexdigest()
+                if copied_source_sha256 != scientific_analysis.source_sha256:
+                    logger.write("Scientific source changed while creating the provenance copy")
+                    proto.error(
+                        "analysis_changed",
+                        "The scientific analysis changed after preview. Refresh the preview and run again.",
+                    )
+                    return WorkerExitCode.VALIDATION_FAILED
+                if reference_style_report is not None:
+                    write_json(
+                        output.output_dir / "reference_style_report.json",
+                        reference_style_report,
+                    )
+        except OutputDirectoryError:
+            raise
+        except OSError as exc:
+            raise output_preparation_error(exc) from exc
         proto.progress("create_output_dir", "success", "输出文件夹已创建")
 
         if (
@@ -564,6 +581,9 @@ def main(argv: list[str] | None = None) -> int:
         if logger:
             logger.write("Scientific workflow error: " + safe)
         proto.error(exc.code, safe, column=exc.column, row=exc.row)
+        return WorkerExitCode.VALIDATION_FAILED
+    except OutputDirectoryError as exc:
+        proto.error(exc.code, str(exc), stage="create_output_dir")
         return WorkerExitCode.VALIDATION_FAILED
     except OriginEnvironmentError as exc:
         if logger:

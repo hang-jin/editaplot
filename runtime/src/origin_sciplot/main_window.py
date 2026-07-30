@@ -10,7 +10,13 @@ import sys
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, Qt, QTimer, QUrl
+from PySide6.QtCore import (
+    QProcess,
+    QProcessEnvironment,
+    Qt,
+    QTimer,
+    QUrl,
+)
 from PySide6.QtGui import QAction, QDesktopServices, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -19,23 +25,23 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QGroupBox,
-    QHeaderView,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QMainWindow,
     QMenuBar,
     QMessageBox,
-    QPushButton,
     QPlainTextEdit,
     QProgressBar,
+    QPushButton,
     QScrollArea,
     QSizePolicy,
     QSplitter,
     QStyle,
-    QToolButton,
     QTableWidget,
     QTableWidgetItem,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -50,7 +56,6 @@ from .template_service import (
 )
 from .workers.process_launcher import build_worker_command
 from .xps_workflow import XpsPreparation
-
 
 OUTPUT_ROWS = (
     ("opju", "Origin 项目 (*.opju)", "result.opju"),
@@ -104,6 +109,22 @@ def _named_label(text: str, object_name: str) -> QLabel:
     label = QLabel(text)
     label.setObjectName(object_name)
     return label
+
+
+def _worker_process_environment() -> QProcessEnvironment:
+    """Return a complete, UTF-8 Windows environment for the worker."""
+
+    environment = QProcessEnvironment.systemEnvironment()
+    if not getattr(sys, "frozen", False):
+        source_path = str(Path(__file__).resolve().parents[1])
+        inherited_pythonpath = environment.value("PYTHONPATH", "")
+        environment.insert(
+            "PYTHONPATH",
+            source_path
+            + (os.pathsep + inherited_pythonpath if inherited_pythonpath else ""),
+        )
+    environment.insert("PYTHONIOENCODING", "utf-8")
+    return environment
 
 
 class CsvDropLineEdit(QLineEdit):
@@ -714,7 +735,11 @@ class MainWindow(QMainWindow):
         self._set_run_available(False)
 
     def _set_template_route(self, template_id: str | None) -> TemplateManifest | None:
-        target = template_id or (str(self.template_combo.itemData(0)) if self.template_combo.count() else None)
+        target = template_id or (
+            str(self.template_combo.itemData(0))
+            if self.template_combo.count()
+            else None
+        )
         if target is None:
             return None
         index = self.template_combo.findData(target)
@@ -800,7 +825,8 @@ class MainWindow(QMainWindow):
             "<p style='margin:0 0 4px 0; color:#526070;'>"
             f"必需：<span style='color:#111827;'>{joined(guide.required_columns)}</span>"
             f" &nbsp;·&nbsp; 可选：<span style='color:#111827;'>{joined(guide.optional_columns)}</span>"
-            f" &nbsp;·&nbsp; 布局：<span style='color:#111827;'>{joined(guide.accepted_layouts, '矩形表格')}</span></p>"
+            " &nbsp;·&nbsp; 布局：<span style='color:#111827;'>"
+            f"{joined(guide.accepted_layouts, '矩形表格')}</span></p>"
             "<p style='margin:0 0 4px 0; color:#526070;'>"
             f"常见列名：<span style='color:#111827;'>{joined(guide.aliases, '参见数据合同')}</span></p>"
             "<p style='margin:0 0 4px 0; color:#526070;'>"
@@ -1254,11 +1280,7 @@ class MainWindow(QMainWindow):
         self._append_log("准备启动 Origin 绘图任务...")
 
         self.process = QProcess(self)
-        env = self.process.processEnvironment()
-        if not getattr(sys, "frozen", False):
-            source_path = str(Path(__file__).resolve().parents[1])
-            env.insert("PYTHONPATH", source_path + os.pathsep + env.value("PYTHONPATH", ""))
-        self.process.setProcessEnvironment(env)
+        self.process.setProcessEnvironment(_worker_process_environment())
         program, args = build_worker_command(
             sys.executable,
             prepared.template_id,
@@ -1270,6 +1292,7 @@ class MainWindow(QMainWindow):
         )
         self.process.readyReadStandardOutput.connect(self._read_worker_stdout)
         self.process.readyReadStandardError.connect(self._read_worker_stderr)
+        self.process.errorOccurred.connect(self._worker_error)
         self.process.finished.connect(self._worker_finished)
         self.process.start(program, args)
 
@@ -1340,6 +1363,26 @@ class MainWindow(QMainWindow):
             data = bytes(self.process.readAllStandardError()).decode("utf-8", errors="replace")
             if data.strip():
                 self._append_log(data.strip())
+
+    def _worker_error(self, error: QProcess.ProcessError) -> None:
+        if error == QProcess.FailedToStart:
+            self.stop_btn.setEnabled(False)
+            self.run_btn_set_enabled(
+                self.prepared_template is not None
+                and not self.prepared_template.requires_confirmation
+            )
+            self.progress.setValue(0)
+            self.result_values["verify"].setText("失败")
+            self._stdout_buffer = b""
+            self._run_started_at = None
+            self._set_status("失败", "Error")
+            self._append_log(
+                "[error] worker_start_failed：无法启动绘图任务。"
+                "请重新运行环境检查，并确认 Windows 安全软件没有阻止 EditaPlot。"
+            )
+            self.statusBar().showMessage("绘图任务未能启动；请运行环境检查后重试")
+        elif error == QProcess.Crashed:
+            self._append_log("[error] worker_crashed：绘图任务意外停止。")
 
     def _worker_finished(self, exit_code: int, _status) -> None:
         self.stop_btn.setEnabled(False)

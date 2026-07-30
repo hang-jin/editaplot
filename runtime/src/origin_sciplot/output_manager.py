@@ -13,6 +13,31 @@ from .project_paths import safe_filename
 from .template_registry import TemplateManifest
 
 
+class OutputDirectoryError(RuntimeError):
+    """A short, stable output-preparation failure for the worker protocol."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def output_preparation_error(error: OSError) -> OutputDirectoryError:
+    """Convert a delivery-folder filesystem failure into a stable user error."""
+
+    if isinstance(error, PermissionError):
+        return OutputDirectoryError(
+            "output_directory_write_permission_denied",
+            "EditaPlot could not write its delivery folder beside the source file. "
+            "Grant Codex write access to the source file's parent folder, or explicitly "
+            "choose another writable output folder.",
+        )
+    return OutputDirectoryError(
+        "output_directory_create_failed",
+        "EditaPlot could not prepare the delivery folder. Check free disk space, path "
+        "length, cloud-sync or security-software locks, and folder write access; then retry.",
+    )
+
+
 @dataclass
 class RunOutput:
     output_dir: Path
@@ -61,23 +86,28 @@ def create_run_output(
         if output_dir
         else default_output_dir(source, manifest.id, now)
     )
-    target_dir.mkdir(parents=True, exist_ok=False)
+    try:
+        target_dir.mkdir(parents=True, exist_ok=False)
 
-    input_copy = target_dir / f"input_copy{source.suffix.lower()}"
-    shutil.copy2(source, input_copy)
-    manifest_copy = target_dir / "template_manifest_copy.yaml"
-    schema_copy = target_dir / "schema_copy.json"
-    shutil.copy2(manifest.directory / "manifest.yaml", manifest_copy)
-    shutil.copy2(manifest.schema_path, schema_copy)
+        input_copy = target_dir / f"input_copy{source.suffix.lower()}"
+        shutil.copy2(source, input_copy)
+        manifest_copy = target_dir / "template_manifest_copy.yaml"
+        schema_copy = target_dir / "schema_copy.json"
+        shutil.copy2(manifest.directory / "manifest.yaml", manifest_copy)
+        shutil.copy2(manifest.schema_path, schema_copy)
 
-    readme_output = target_dir / "README_output.txt"
-    readme_output.write_text(
-        "EditaPlot output folder\n"
-        "Files here are a reproducible copy of the input, approved render plan (when invoked "
-        "through the Skill), template manifest, schema, validation report, environment report, "
-        "editable OPJU, and exported images.\n",
-        encoding="utf-8",
-    )
+        readme_output = target_dir / "README_output.txt"
+        readme_output.write_text(
+            "EditaPlot output folder\n"
+            "Files here are a reproducible copy of the input, approved render plan (when invoked "
+            "through the Skill), template manifest, schema, validation report, environment report, "
+            "editable OPJU, and exported images.\n",
+            encoding="utf-8",
+        )
+    except PermissionError as exc:
+        raise output_preparation_error(exc) from exc
+    except OSError as exc:
+        raise output_preparation_error(exc) from exc
 
     return RunOutput(
         output_dir=target_dir,
