@@ -366,9 +366,9 @@
   "gallery": {
     "directory": "assets/gallery",
     "manifest": "assets/gallery/gallery-manifest.json",
-    "expected_case_count": 46,
-    "expected_display_case_count": 44,
-    "expected_public_route_count": 39,
+    "expected_case_count": 47,
+    "expected_display_case_count": 45,
+    "expected_public_route_count": 40,
     "reject_nonempty_png_text": true
   },
   "palettes": {
@@ -389,7 +389,7 @@
     "inventory_generator": "tools/build_asset_provenance.py",
     "gallery_fixture_generator": "tools/generate_showcase_data.py",
     "required_review_decision": "approved_for_public_source_release",
-    "expected_asset_count": 225,
+    "expected_asset_count": 229,
     "require_synthetic_or_generated": true,
     "require_contains_phi_false": true
   }

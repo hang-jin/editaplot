@@ -315,6 +315,39 @@ class ScientificTemplateService:
                 components=spec.group_order,
                 warnings=preparation.warnings,
             )
+        if spec.plot_kind == "density_ridgeline3d":
+            assigned = dict(preparation.assignments)
+
+            def column_for(role: str) -> str:
+                return next(
+                    (column for column, assigned_role in assigned.items() if assigned_role == role),
+                    "—",
+                )
+
+            return TemplateSummary(
+                heading=f"{self.manifest.name} · {len(spec.group_order)} 个有序条件",
+                facts=(
+                    ("绘图模式", spec.plot_mode),
+                    ("图形类型", spec.plot_kind),
+                    ("X 轴", spec.x_title),
+                    ("Y 轴（条件位置）", spec.y_title),
+                    ("Z 轴", spec.z_title or "Density"),
+                    (
+                        "Baseline focal locator / 基线焦点定位点",
+                        "用户提供的 X；Z 固定在基线 0（需确认）",
+                    ),
+                ),
+                roles=(
+                    ("Condition", spec.category_column or "—"),
+                    ("Condition position", spec.y_column or "—"),
+                    ("Density X", spec.x_column or "—"),
+                    ("Solid density", column_for("density_solid")),
+                    ("Dashed density", column_for("density_dashed")),
+                    ("Focal X", spec.focal_x_column or "—"),
+                ),
+                components=spec.group_order,
+                warnings=preparation.warnings,
+            )
         if spec.plot_kind == "circular_network":
             layout = spec.network_layout
             panel_count = len(layout.panel_order) if layout is not None else 0

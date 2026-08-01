@@ -149,8 +149,8 @@ def test_gallery_inventory_and_display_selection_are_separate() -> None:
     assert "heatmap-dense-40x40.png" not in gallery_document
     assert "circular-network.png" in gallery_document
     assert "circular-network.png" in english_gallery
-    assert gallery_document.count("<img ") == 44
-    assert english_gallery.count("<img ") == 44
+    assert gallery_document.count("<img ") == 45
+    assert english_gallery.count("<img ") == 45
 
 
 def test_public_source_has_no_stargazer_identity_collection_path() -> None:

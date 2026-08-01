@@ -10,8 +10,10 @@ is the current fully verified baseline.
 
 ## Verified V1 routes
 
-The registry exposes 39 public plotting routes. Some table rows group closely related candidates,
+The registry exposes 40 public plotting routes. Some table rows group closely related candidates,
 so the number of rows is not the route count.
+我已验证 `density_ridgeline3d` 的完整 Origin 路线；它仍只接受冻结的六角色表，并遵守下面的
+数据与焦点边界。
 
 | Question/evidence | Candidate | Required shape | Cautions |
 |---|---|---|---|
@@ -47,6 +49,7 @@ so the number of rows is not the route count.
 | Steady-state or time-resolved photoluminescence | `pl` | Wavelength or Time + one or more PL series; optional explicitly paired Fit columns | Preserve multi-condition order; TRPL uses log Y; never calculate lifetime or fit curves |
 | UV–Vis spectrum with optional Tauc evidence | `uv_vis` | Wavelength + one or more comparable Absorbance or Transmittance series; optional Photon energy + Tauc value/fit/Eg | Do not mix signal definitions without an explicit axis contract; never calculate photon energy, exponent, fit, or band gap |
 | Multi-condition 3D Nyquist trajectory | `trajectory3d` | Long table: explicit Zreal + real third variable with meaning/unit + explicit -Zimag + Series; 1–6 groups | Never create decorative depth, fit circuits, or infer the third variable |
+| Ordered 3D dual-density comparison with supplied baseline locators | `density_ridgeline3d` | Mixed-wide six-role table: Condition ID + unit-bearing Condition Position + unit-bearing Density X + paired nonnegative Solid/Dashed Density + one Focal X per group; 2–6 groups | Density profiles and focal values must be supplied upstream; never run KDE, infer peaks/intersections/thresholds, or lift focal markers off Z=0 |
 
 ## Verified materials routes
 
@@ -108,6 +111,8 @@ readback, SHA-bound human visual QA, and the sanitized public-gallery audit.
 - Recommend `trajectory3d` only when all four long-table roles are explicit, the third-axis header
   includes scientific meaning and unit, `-Zimag` is supplied rather than inferred, and Series has
   1–6 groups. Otherwise require mapping confirmation or reject the 3D route.
+- 我只在六个 mixed-wide 角色全部明确、两条密度曲线同行且单位一致、每组恰好一个 `Focal X`
+  时推荐 `density_ridgeline3d`。缺角色、缺单位、焦点数量冲突或焦点越界时停止自动选择。
 
 ## Automatic selection gate
 

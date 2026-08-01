@@ -75,6 +75,7 @@ ScientificTemplateId = Literal[
     "pl",
     "uv_vis",
     "trajectory3d",
+    "density_ridgeline3d",
 ]
 AxisScale = Literal["linear", "log10"]
 SeriesAxis = Literal["left", "right"]
@@ -120,6 +121,7 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "pl",
         "uv_vis",
         "trajectory3d",
+        "density_ridgeline3d",
     }
 )
 
@@ -259,6 +261,8 @@ class ScientificPlotSpec:
     inset_annotation: str | None = None
     phase_tick_columns: tuple[str, ...] = ()
     source_profile: str | None = None
+    focal_x_column: str | None = None
+    condition_positions: tuple[tuple[str, float], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -345,6 +349,19 @@ def apply_scientific_text_overrides(
                 "trajectory3d_third_axis_unit_missing",
                 "The trajectory3d Y-axis title must retain its scientific meaning and unit.",
             )
+    elif preparation.template_id == "density_ridgeline3d":
+        if _density_ridgeline3d_semantic_axis(resolved_x_title, condition_axis=False) is None:
+            raise ScientificWorkflowError(
+                "density_ridgeline3d_x_axis_semantics_missing",
+                "The Density X title must retain its scientific meaning and unit or "
+                "explicit dimensionless status.",
+            )
+        if _density_ridgeline3d_semantic_axis(resolved_y_title, condition_axis=True) is None:
+            raise ScientificWorkflowError(
+                "density_ridgeline3d_condition_axis_semantics_missing",
+                "The condition-axis title must retain a scientific meaning and unit or "
+                "explicit Year semantics.",
+            )
     overridden = replace(
         spec,
         x_title=resolved_x_title,
@@ -386,6 +403,7 @@ _PALETTE_OVERRIDE_MODE_BY_TEMPLATE: dict[str, str] = {
     "pl": "qualitative",
     "uv_vis": "qualitative",
     "trajectory3d": "qualitative",
+    "density_ridgeline3d": "qualitative",
 }
 
 
@@ -425,6 +443,8 @@ def apply_scientific_palette_override(
     elif preparation.template_id == "grouped_box":
         category_count = len(spec.group_order)
     elif preparation.template_id == "circular_network":
+        category_count = max(1, len(spec.group_order))
+    elif preparation.template_id == "density_ridgeline3d":
         category_count = max(1, len(spec.group_order))
     else:
         category_count = len(spec.series)
@@ -759,6 +779,83 @@ _TRAJECTORY3D_SERIES_ALIASES = (
     "组别",
 )
 
+_DENSITY3D_CONDITION_ID_ALIASES = (
+    "condition",
+    "conditionid",
+    "condition id",
+    "conditionlabel",
+    "condition label",
+    "groupid",
+    "group",
+    "sample",
+    "条件编号",
+    "条件名称",
+    "条件标签",
+    "组别",
+    "样品",
+)
+_DENSITY3D_CONDITION_POSITION_ALIASES = (
+    "conditionposition",
+    "condition position",
+    "position",
+    "year",
+    "followuptime",
+    "follow-up time",
+    "timepoint",
+    "time point",
+    "temperature",
+    "concentration",
+    "条件位置",
+    "位置",
+    "年份",
+    "时间点",
+    "温度",
+    "浓度",
+)
+_DENSITY3D_X_ALIASES = (
+    "densityx",
+    "density x",
+    "score",
+    "responsescore",
+    "response score",
+    "hscore",
+    "metric",
+    "measurement",
+    "密度横坐标",
+    "得分",
+    "评分",
+    "指标值",
+    "测量值",
+)
+_DENSITY3D_SOLID_ALIASES = (
+    "densitysolid",
+    "solid density",
+    "solidprofile",
+    "solid profile",
+    "primarydensity",
+    "实线密度",
+    "实线曲线",
+    "主密度",
+)
+_DENSITY3D_DASHED_ALIASES = (
+    "densitydashed",
+    "dashed density",
+    "dashedprofile",
+    "dashed profile",
+    "secondarydensity",
+    "虚线密度",
+    "虚线曲线",
+    "次密度",
+)
+_DENSITY3D_FOCAL_X_ALIASES = (
+    "focalx",
+    "focal x",
+    "focusx",
+    "focus x",
+    "焦点横坐标",
+    "焦点",
+)
+
 _CATEGORY_ALIASES = (
     "category",
     "actualclass",
@@ -1007,6 +1104,12 @@ _ROLE_LABELS: dict[str, str] = {
     "y3d": "Y = real condition / 真实第三变量（带单位）",
     "z3d": "Z = -Zimag / 负阻抗虚部",
     "series_id": "Series / 轨迹组名",
+    "condition_id": "Condition / 条件组名",
+    "condition_position": "Condition position / 条件位置",
+    "density_x": "Density X / 密度横坐标",
+    "density_solid": "Solid density / 实线密度",
+    "density_dashed": "Dashed density / 虚线密度",
+    "focal_x": "Focal X / 焦点横坐标",
     "ignored": "忽略",
 }
 
@@ -1033,6 +1136,17 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
     elif template_id == "trajectory3d":
         keys = ("x3d", "y3d", "z3d", "series_id", "ignored")
         unique = {"x3d", "y3d", "z3d", "series_id"}
+    elif template_id == "density_ridgeline3d":
+        keys = (
+            "condition_id",
+            "condition_position",
+            "density_x",
+            "density_solid",
+            "density_dashed",
+            "focal_x",
+            "ignored",
+        )
+        unique = set(keys) - {"ignored"}
     elif template_id == "eis":
         keys = ("z_real", "z_imag", "frequency", "magnitude", "phase", "ignored")
         unique = set(keys) - {"ignored"}
@@ -1643,6 +1757,224 @@ def _trajectory3d_semantic_axis(header: str) -> tuple[str, str] | None:
     return meaning, unit
 
 
+def _density_ridgeline3d_semantic_axis(
+    header: str,
+    *,
+    condition_axis: bool,
+) -> tuple[str, str] | None:
+    """Require an interpretable axis name plus unit for scientific 3D use."""
+
+    canonical = _canonical(header)
+    if condition_axis and (
+        canonical in {"year", "年份", "年度"}
+        or canonical.endswith("year")
+        or canonical.endswith("年份")
+    ):
+        return header.strip(), "year"
+
+    match = re.search(r"[\(\[]\s*([^\)\]]+)\s*[\)\]]\s*$", header)
+    if match is None:
+        dimensionless_tokens = ("unitless", "dimensionless", "无量纲")
+        if condition_axis or not any(token in canonical for token in dimensionless_tokens):
+            return None
+        meaning = header
+        for token in dimensionless_tokens:
+            meaning = re.sub(re.escape(token), "", meaning, flags=re.IGNORECASE)
+        meaning = meaning.strip(" _-/()[]")
+        unit = "dimensionless"
+    else:
+        meaning = header[: match.start()].strip(" _-/")
+        unit = match.group(1).strip()
+    if not meaning or not unit:
+        return None
+    generic_meanings = (
+        {"y", "axisy", "index", "condition", "value", "variable", "纵轴", "序号", "条件", "数值"}
+        if condition_axis
+        else {"x", "axisx", "index", "coordinate", "value", "variable", "横轴", "序号", "坐标", "数值"}
+    )
+    if _canonical(meaning) in generic_meanings:
+        return None
+    if _canonical(unit) in {"unit", "units", "单位"}:
+        return None
+    return meaning, unit
+
+
+def _density_ridgeline3d_density_unit(header: str) -> tuple[str, str] | None:
+    """Return a comparison key and frozen display unit for a density column."""
+
+    semantic = _density_ridgeline3d_semantic_axis(header, condition_axis=False)
+    if semantic is None:
+        return None
+    meaning, unit = semantic
+    if not any(token in _canonical(meaning) for token in ("density", "密度")):
+        return None
+    canonical_unit = _canonical(unit)
+    if canonical_unit in {"dimensionless", "unitless", "无量纲"}:
+        return "dimensionless", "dimensionless"
+    if canonical_unit in {
+        "au",
+        "arbunit",
+        "arbunits",
+        "arbitraryunit",
+        "arbitraryunits",
+    }:
+        return "au", "a.u."
+    if not canonical_unit:
+        return None
+    return canonical_unit, _format_unit(unit)
+
+
+def density_ridgeline3d_contract_issues(
+    frame: pd.DataFrame,
+    role_columns: dict[str, str],
+) -> tuple[str, ...]:
+    """Return deterministic strict-detection issues for the density 3D route.
+
+    This helper is deliberately read-only and mirrors the scientific contract
+    enforced by :func:`_build_density_ridgeline3d_spec`.  The public Skill CLI
+    imports it after bootstrapping the bundled runtime so inspection and actual
+    preparation cannot drift into two different definitions of "strict".
+    """
+
+    required_roles = (
+        "condition_id",
+        "condition_position",
+        "density_x",
+        "density_solid",
+        "density_dashed",
+        "focal_x",
+    )
+    issues: list[str] = []
+
+    missing_roles = [role for role in required_roles if role not in role_columns]
+    if missing_roles:
+        return tuple(f"{role}_role_not_unique" for role in missing_roles)
+    selected_columns = [role_columns[role] for role in required_roles]
+    if len(set(selected_columns)) != len(selected_columns):
+        return ("density_role_columns_not_distinct",)
+    missing_columns = [column for column in selected_columns if column not in frame.columns]
+    if missing_columns:
+        return tuple(f"{column}_column_missing" for column in missing_columns)
+
+    position_column = role_columns["condition_position"]
+    x_column = role_columns["density_x"]
+    solid_column = role_columns["density_solid"]
+    dashed_column = role_columns["density_dashed"]
+    condition_id_column = role_columns["condition_id"]
+
+    if _density_ridgeline3d_semantic_axis(position_column, condition_axis=True) is None:
+        issues.append("condition_position_semantic_name_or_unit_missing")
+    if _density_ridgeline3d_semantic_axis(x_column, condition_axis=False) is None:
+        issues.append("density_x_semantic_name_or_unit_missing")
+    solid_unit = _density_ridgeline3d_density_unit(solid_column)
+    dashed_unit = _density_ridgeline3d_density_unit(dashed_column)
+    if solid_unit is None:
+        issues.append("density_solid_semantic_name_or_unit_missing")
+    if dashed_unit is None:
+        issues.append("density_dashed_semantic_name_or_unit_missing")
+    if solid_unit is not None and dashed_unit is not None and solid_unit[0] != dashed_unit[0]:
+        issues.append("density_units_mismatch")
+
+    converted: dict[str, pd.Series] = {}
+    numeric_invalid = False
+    for role in (
+        "condition_position",
+        "density_x",
+        "density_solid",
+        "density_dashed",
+        "focal_x",
+    ):
+        column = role_columns[role]
+        raw = frame[column]
+        blank = _blank_mask(raw)
+        numeric = pd.to_numeric(raw.where(~blank, np.nan), errors="coerce").astype(float)
+        finite_or_blank = numeric.isna() | np.isfinite(numeric)
+        invalid = (~blank & numeric.isna()) | ~finite_or_blank
+        if bool(invalid.any()):
+            issues.append(f"{role}_contains_non_numeric_or_nonfinite_values")
+            numeric_invalid = True
+        converted[role] = numeric
+
+    condition_blank = _blank_mask(frame[condition_id_column])
+    if bool(condition_blank.any()):
+        issues.append("condition_id_contains_empty_values")
+    if numeric_invalid or bool(condition_blank.any()):
+        return tuple(dict.fromkeys(issues))
+
+    for role in ("condition_position", "density_x", "density_solid", "density_dashed"):
+        if bool(converted[role].isna().any()):
+            issues.append(f"{role}_contains_missing_values")
+    if any(
+        bool(converted[role].isna().any())
+        for role in ("condition_position", "density_x", "density_solid", "density_dashed")
+    ):
+        return tuple(dict.fromkeys(issues))
+
+    audited = pd.DataFrame(
+        {
+            "condition_id": frame[condition_id_column].astype(str).str.strip(),
+            "condition_position": converted["condition_position"],
+            "density_x": converted["density_x"],
+            "density_solid": converted["density_solid"],
+            "density_dashed": converted["density_dashed"],
+            "focal_x": converted["focal_x"],
+        },
+        index=frame.index,
+    )
+    group_order = tuple(dict.fromkeys(audited["condition_id"].tolist()))
+    if not 2 <= len(group_order) <= 6:
+        issues.append("condition_count_outside_2_to_6")
+    if bool((audited[["density_solid", "density_dashed"]] < 0.0).any().any()):
+        issues.append("density_contains_negative_values")
+
+    id_to_positions = audited.groupby("condition_id", sort=False)["condition_position"].nunique()
+    position_to_ids = audited.groupby("condition_position", sort=False)["condition_id"].nunique()
+    positions_are_unique = True
+    if bool((id_to_positions != 1).any()):
+        issues.append("condition_id_maps_to_multiple_positions")
+        positions_are_unique = False
+    if bool((position_to_ids != 1).any()):
+        issues.append("condition_position_maps_to_multiple_ids")
+        positions_are_unique = False
+
+    direction: int | None = None
+    first_positions: list[float] = []
+    for condition in group_order:
+        group = audited.loc[audited["condition_id"] == condition]
+        if len(group) < 5:
+            issues.append("fewer_than_5_points_per_condition")
+        if positions_are_unique:
+            first_positions.append(float(group["condition_position"].iloc[0]))
+
+        differences = np.diff(group["density_x"].to_numpy(dtype=float, copy=True))
+        increasing = bool(np.all(differences > 0.0))
+        decreasing = bool(np.all(differences < 0.0))
+        if not (increasing or decreasing):
+            issues.append("density_x_not_strictly_monotonic_in_source_order")
+        else:
+            current_direction = 1 if increasing else -1
+            if direction is None:
+                direction = current_direction
+            elif direction != current_direction:
+                issues.append("density_x_direction_mismatch_between_conditions")
+
+        focal_values = group["focal_x"].dropna().to_numpy(dtype=float, copy=True)
+        if focal_values.size != 1:
+            issues.append("focal_x_must_have_exactly_one_finite_value_per_condition")
+        elif not (
+            float(group["density_x"].min())
+            <= float(focal_values[0])
+            <= float(group["density_x"].max())
+        ):
+            issues.append("focal_x_outside_condition_density_x_range")
+
+    if positions_are_unique and len(first_positions) >= 2:
+        if not bool(np.all(np.diff(np.asarray(first_positions, dtype=float)) > 0.0)):
+            issues.append("condition_positions_not_strictly_increasing_in_first_appearance_order")
+
+    return tuple(dict.fromkeys(issues))
+
+
 def _automatic_trajectory3d_mapping(loaded: LoadedTable) -> _AutoMapping:
     """Recognize only explicit long-table evidence for a scientific 3D trajectory."""
     frame = loaded.frame
@@ -1713,6 +2045,106 @@ def _automatic_trajectory3d_mapping(loaded: LoadedTable) -> _AutoMapping:
         assignments,
         "multi_condition_nyquist",
         confidence,
+        unique_reasons,
+        unique_reasons,
+    )
+
+
+def _automatic_density_ridgeline3d_mapping(loaded: LoadedTable) -> _AutoMapping:
+    """Recognize the six-column, precomputed 3D density-focus contract.
+
+    Weak fallbacks only propose a mapping and therefore keep the confirmation
+    gate active.  This route never computes a density, threshold, normalization,
+    interpolation, or smoothed replacement for a source column.
+    """
+
+    frame = loaded.frame
+    assignments = {str(column): "ignored" for column in frame.columns}
+    aliases = {
+        "condition_id": _DENSITY3D_CONDITION_ID_ALIASES,
+        "condition_position": _DENSITY3D_CONDITION_POSITION_ALIASES,
+        "density_solid": _DENSITY3D_SOLID_ALIASES,
+        "density_dashed": _DENSITY3D_DASHED_ALIASES,
+        "focal_x": _DENSITY3D_FOCAL_X_ALIASES,
+        "density_x": _DENSITY3D_X_ALIASES,
+    }
+    selected: dict[str, str] = {}
+    reasons: list[str] = []
+    for role, role_aliases in aliases.items():
+        scored = [
+            (str(column), _alias_score(str(column), role_aliases))
+            for column in frame.columns
+            if str(column) not in selected.values()
+        ]
+        best = max((score for _column, score in scored), default=0)
+        winners = [column for column, score in scored if score == best and score > 0]
+        if len(winners) == 1:
+            selected[role] = winners[0]
+            if best < 2:
+                reasons.append(f"{role}_role_weak")
+        elif len(winners) > 1:
+            selected[role] = winners[0]
+            reasons.append(f"{role}_role_ambiguous")
+
+    remaining = [
+        str(column) for column in frame.columns if str(column) not in selected.values()
+    ]
+    if "condition_id" not in selected:
+        nonnumeric = [column for column in remaining if not _numeric_compatible(frame[column])]
+        if nonnumeric:
+            selected["condition_id"] = nonnumeric[0]
+            remaining.remove(nonnumeric[0])
+            reasons.append("condition_id_role_inferred")
+
+    if "focal_x" not in selected:
+        sparse_numeric = []
+        for column in remaining:
+            if not _numeric_compatible(frame[column]):
+                continue
+            nonmissing = int(_coerce_numeric(frame[column], column).notna().sum())
+            if 1 <= nonmissing <= 6 and nonmissing < len(frame):
+                sparse_numeric.append(column)
+        if len(sparse_numeric) == 1:
+            selected["focal_x"] = sparse_numeric[0]
+            remaining.remove(sparse_numeric[0])
+            reasons.append("focal_x_role_inferred")
+
+    remaining_numeric = [column for column in remaining if _numeric_compatible(frame[column])]
+    for role in (
+        "condition_position",
+        "density_x",
+        "density_solid",
+        "density_dashed",
+        "focal_x",
+    ):
+        if role not in selected and remaining_numeric:
+            column = remaining_numeric.pop(0)
+            selected[role] = column
+            reasons.append(f"{role}_role_inferred")
+
+    required = {
+        "condition_id",
+        "condition_position",
+        "density_x",
+        "density_solid",
+        "density_dashed",
+        "focal_x",
+    }
+    if set(selected) != required or len(set(selected.values())) != len(required):
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_roles_missing",
+            "density_ridgeline3d needs six distinct columns: condition ID, "
+            "condition position, density X, solid density, dashed density, and focal X.",
+        )
+    for role, column in selected.items():
+        assignments[column] = role
+    if any(role == "ignored" for role in assignments.values()):
+        reasons.append("additional_columns_retained_not_rendered")
+    unique_reasons = tuple(dict.fromkeys(reasons))
+    return _AutoMapping(
+        assignments,
+        "ordered_dual_profile_focus",
+        0.98 if not unique_reasons else 0.62,
         unique_reasons,
         unique_reasons,
     )
@@ -2604,6 +3036,11 @@ def _coerced_selected_frame(
         "x3d",
         "y3d",
         "z3d",
+        "condition_position",
+        "density_x",
+        "density_solid",
+        "density_dashed",
+        "focal_x",
     }
     for column, role in assignments.items():
         if role in numeric_roles:
@@ -3167,6 +3604,257 @@ def _build_trajectory3d_spec(
             y_column=y_column,
             z_title=z_column,
             group_order=group_order,
+        ),
+        (),
+    )
+
+
+def _build_density_ridgeline3d_spec(
+    frame: pd.DataFrame,
+    assignments: dict[str, str],
+) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    """Freeze supplied dual density profiles and one baseline focus per condition.
+
+    All six scientific columns remain source-bound.  In particular, this
+    function performs no KDE, normalization, smoothing, interpolation,
+    threshold search, or focus-point inference.
+    """
+
+    condition_column = _require_one(assignments, "condition_id")
+    position_column = _require_one(assignments, "condition_position")
+    x_column = _require_one(assignments, "density_x")
+    solid_column = _require_one(assignments, "density_solid")
+    dashed_column = _require_one(assignments, "density_dashed")
+    focal_column = _require_one(assignments, "focal_x")
+    if _density_ridgeline3d_semantic_axis(position_column, condition_axis=True) is None:
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_condition_axis_semantics_missing",
+            "Condition Position must state a real scientific meaning and unit, or explicitly be Year/年份.",
+            column=position_column,
+        )
+    if _density_ridgeline3d_semantic_axis(x_column, condition_axis=False) is None:
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_x_axis_semantics_missing",
+            "Density X must state a scientific meaning and unit, or explicitly be "
+            "unitless/dimensionless/无量纲.",
+            column=x_column,
+        )
+    solid_unit = _density_ridgeline3d_density_unit(solid_column)
+    if solid_unit is None:
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_density_semantics_missing",
+            "Solid density must identify density/密度 and state a unit or explicit dimensionless status.",
+            column=solid_column,
+        )
+    dashed_unit = _density_ridgeline3d_density_unit(dashed_column)
+    if dashed_unit is None:
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_density_semantics_missing",
+            "Dashed density must identify density/密度 and state a unit or explicit dimensionless status.",
+            column=dashed_column,
+        )
+    if solid_unit[0] != dashed_unit[0]:
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_density_unit_mismatch",
+            "Solid and dashed density columns must use the same normalized unit.",
+        )
+    density_unit = solid_unit[1]
+
+    blank_condition = _blank_mask(frame[condition_column])
+    if bool(blank_condition.any()):
+        index = int(np.flatnonzero(blank_condition.to_numpy())[0])
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_condition_empty",
+            f"Condition is empty at data row {index + 2}.",
+            column=condition_column,
+            row=index + 2,
+        )
+    conditions = frame[condition_column].astype(str).str.strip()
+    group_order = tuple(dict.fromkeys(conditions.tolist()))
+    if not 2 <= len(group_order) <= 6:
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_condition_count",
+            "density_ridgeline3d requires 2–6 condition groups.",
+            column=condition_column,
+        )
+
+    required_numeric = (position_column, x_column, solid_column, dashed_column)
+    for column in required_numeric:
+        missing = frame[column].isna()
+        if bool(missing.any()):
+            index = int(np.flatnonzero(missing.to_numpy())[0])
+            raise ScientificWorkflowError(
+                "density_ridgeline3d_required_value_missing",
+                f"Column {column!r} has a missing plotted value at data row {index + 2}.",
+                column=column,
+                row=index + 2,
+            )
+
+    condition_positions: list[tuple[str, float]] = []
+    direction: int | None = None
+    for condition in group_order:
+        mask = conditions == condition
+        row_indices = np.flatnonzero(mask.to_numpy())
+        if row_indices.size < 5:
+            raise ScientificWorkflowError(
+                "density_ridgeline3d_condition_too_short",
+                f"Condition {condition!r} needs at least five supplied profile points.",
+                column=condition_column,
+            )
+
+        position = frame.loc[mask, position_column].to_numpy(dtype=float, copy=True)
+        if not bool(np.all(position == position[0])):
+            raise ScientificWorkflowError(
+                "density_ridgeline3d_position_not_constant",
+                f"Condition position must be constant within {condition!r}.",
+                column=position_column,
+            )
+        condition_positions.append((condition, float(position[0])))
+
+        x = frame.loc[mask, x_column].to_numpy(dtype=float, copy=True)
+        differences = np.diff(x)
+        increasing = bool(np.all(differences > 0.0))
+        decreasing = bool(np.all(differences < 0.0))
+        if not (increasing or decreasing):
+            raise ScientificWorkflowError(
+                "density_ridgeline3d_x_not_strict_monotonic",
+                f"Density X must be strictly monotonic with no duplicates in {condition!r}.",
+                column=x_column,
+            )
+        current_direction = 1 if increasing else -1
+        if direction is None:
+            direction = current_direction
+        elif direction != current_direction:
+            raise ScientificWorkflowError(
+                "density_ridgeline3d_x_direction_mismatch",
+                "All condition groups must use the same Density X direction.",
+                column=x_column,
+            )
+
+        for density_column in (solid_column, dashed_column):
+            values = frame.loc[mask, density_column].to_numpy(dtype=float, copy=True)
+            if bool(np.any(values < 0.0)):
+                local_index = int(np.flatnonzero(values < 0.0)[0])
+                source_index = int(row_indices[local_index])
+                raise ScientificWorkflowError(
+                    "density_ridgeline3d_density_negative",
+                    f"Density values must be nonnegative at data row {source_index + 2}.",
+                    column=density_column,
+                    row=source_index + 2,
+                )
+
+        focal = frame.loc[mask, focal_column]
+        supplied_focus = focal[focal.notna()].to_numpy(dtype=float, copy=True)
+        if supplied_focus.size != 1:
+            raise ScientificWorkflowError(
+                "density_ridgeline3d_focal_count",
+                f"Condition {condition!r} needs exactly one supplied Focal X value and blanks elsewhere.",
+                column=focal_column,
+            )
+        focal_value = float(supplied_focus[0])
+        x_lower = float(np.min(x))
+        x_upper = float(np.max(x))
+        if not x_lower <= focal_value <= x_upper:
+            raise ScientificWorkflowError(
+                "density_ridgeline3d_focal_out_of_range",
+                f"Focal X for {condition!r} must lie inside its supplied Density X range.",
+                column=focal_column,
+            )
+
+    positions = np.asarray([position for _condition, position in condition_positions], dtype=float)
+    if not bool(np.all(np.diff(positions) > 0.0)):
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_condition_order_invalid",
+            "Condition first-appearance order must follow strictly increasing condition positions.",
+            column=position_column,
+        )
+
+    parity_issues = density_ridgeline3d_contract_issues(
+        frame,
+        {
+            "condition_id": condition_column,
+            "condition_position": position_column,
+            "density_x": x_column,
+            "density_solid": solid_column,
+            "density_dashed": dashed_column,
+            "focal_x": focal_column,
+        },
+    )
+    if parity_issues:
+        raise ScientificWorkflowError(
+            "density_ridgeline3d_contract_parity_failed",
+            "The density_ridgeline3d strict-detection contract diverged from runtime preparation: "
+            + ", ".join(parity_issues),
+        )
+
+    series = (
+        ScientificSeries(
+            source_column=solid_column,
+            label=solid_column,
+            group="solid",
+            series_role="density_solid",
+        ),
+        ScientificSeries(
+            source_column=dashed_column,
+            label=dashed_column,
+            group="dashed",
+            series_role="density_dashed",
+        ),
+    )
+    x_axis = _nice_axis(
+        frame[x_column].to_numpy(dtype=float),
+        include_zero=False,
+        padding_fraction=0.04,
+    )
+    y_axis = _nice_axis(positions, include_zero=False, padding_fraction=0.08)
+    density_values = np.concatenate(
+        (
+            frame[solid_column].to_numpy(dtype=float, copy=True),
+            frame[dashed_column].to_numpy(dtype=float, copy=True),
+        )
+    )
+    z_axis = _nice_axis(density_values, include_zero=True, padding_fraction=0.06)
+    style = resolve_adaptive_style(
+        template_id="density_ridgeline3d",
+        plot_kind="density_ridgeline3d",
+        row_count=len(frame),
+        series_count=len(group_order),
+    )
+    return (
+        ScientificPlotSpec(
+            plot_kind="density_ridgeline3d",
+            plot_mode="ordered_dual_profile_focus",
+            x_column=x_column,
+            category_column=condition_column,
+            series=series,
+            x_title=x_column,
+            y_title=position_column,
+            y2_title=None,
+            x_scale="linear",
+            y_scale="linear",
+            display_transform="identity",
+            display_plan=ScientificDisplayPlan(
+                marker_size_pt=9.0,
+                bar_group_span=0.8,
+                bar_inner_width=0.72,
+                figure_style=style,
+            ),
+            axis_plan=ScientificAxisPlan(
+                x_from=x_axis[0],
+                x_to=x_axis[1],
+                x_step=x_axis[2],
+                y_from=y_axis[0],
+                y_to=y_axis[1],
+                y_step=y_axis[2],
+                z_from=z_axis[0],
+                z_to=z_axis[1],
+                z_step=z_axis[2],
+            ),
+            y_column=position_column,
+            z_title=f"Density ({density_unit})",
+            group_order=group_order,
+            focal_x_column=focal_column,
+            condition_positions=tuple(condition_positions),
         ),
         (),
     )
@@ -5048,6 +5736,8 @@ def _build_plot_spec(
         )
     if template_id == "trajectory3d":
         return _build_trajectory3d_spec(frame, assignments)
+    if template_id == "density_ridgeline3d":
+        return _build_density_ridgeline3d_spec(frame, assignments)
     if template_id == "eis":
         return _build_eis_spec(frame, assignments, plot_mode)
     if template_id == "sankey":
@@ -5088,6 +5778,8 @@ def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
         return _automatic_xrd_mapping(loaded)
     if template_id == "trajectory3d":
         return _automatic_trajectory3d_mapping(loaded)
+    if template_id == "density_ridgeline3d":
+        return _automatic_density_ridgeline3d_mapping(loaded)
     if template_id == "eis":
         return _automatic_eis_mapping(loaded)
     if template_id == "sankey":

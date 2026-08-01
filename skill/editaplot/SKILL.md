@@ -167,6 +167,10 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
 - Reject decorative 3D. Require a scientifically meaningful third axis; keep a new 3D route
   experimental until Z-axis, camera, OpenGL type, source mapping, four exports, editable OPJU,
   readback, and visual QA pass.
+- 对于已验证的 `density_ridgeline3d`，我只接受 2–6 个真实带单位条件的 mixed-wide
+  六角色表：上游提供同语义同单位的实线/虚线预计算密度，并为每组提供恰好一个 `Focal X`。
+  焦点固定为 Z=0 基线 locator；不要计算 KDE、峰值、阈值、交点或焦点。当前主机还必须先通过
+  实时 smoke 与 `OPEN_GL_3D` 能力检查，不能只凭模板已验证就跳过主机门禁。
 - Do not send selected files to any additional network service or include them in public artifacts.
   A file explicitly provided through Codex remains subject to the user's Codex account,
   organization, and retention policies; do not claim the Skill can override those policies.

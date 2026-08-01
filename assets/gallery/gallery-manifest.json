@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "asset_policy": "programmatically verified and explicitly manually reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
-  "case_count": 46,
-  "display_case_count": 44,
+  "case_count": 47,
+  "display_case_count": 45,
   "cases": [
     {
       "id": "bar-error-groups",
@@ -35,6 +35,14 @@
       "display_in_gallery": true,
       "sha256": "aa833fcc1c84bcd1228c0503a349121e5e62eb5faaf3644872faff6fb2c15fb4",
       "size_bytes": 45041
+    },
+    {
+      "id": "density-ridgeline3d",
+      "title_zh": "三维双密度曲线与基线焦点",
+      "title_en": "3D dual-density ridgeline with supplied baseline focal locators",
+      "display_in_gallery": true,
+      "sha256": "14ae5b08257482a018902aa547151c827e5c8fe76f718b4c90f3c32bd4b47bbc",
+      "size_bytes": 164155
     },
     {
       "id": "diverging-effects",

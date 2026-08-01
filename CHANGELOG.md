@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-01 — Verified 3D dual-density ridgeline and baseline locators
+
+- Added the public `density_ridgeline3d` route for a frozen six-role mixed-wide table: condition ID,
+  real unit-bearing condition position, unit-bearing density X, paired upstream solid/dashed density,
+  and exactly one supplied focal X per condition.
+- Kept the scientific boundary explicit: EditaPlot does not run KDE, smooth or normalize the
+  profiles, infer peaks/intersections/thresholds, or move the supplied focal marker away from Z=0.
+- Completed the Origin 2024b / 10.15 gate with editable OPJU, PNG/PDF/TIF, OpenGL 3D object readback,
+  immutable-source verification, and hash-bound human visual QA.
+- Expanded the promoted release target to 40 public plotting routes, 47 retained verification PNGs,
+  and 45 displayed showcase cases. The two non-displayed heatmaps remain regression evidence.
+
 ## 2026-08-01 — Flexible, verified XPS visual styling
 
 - Split the XPS contract into an immutable scientific layer and an independently confirmed visual

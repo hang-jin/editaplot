@@ -10,8 +10,8 @@ redistribution boundaries.
 The manifest also binds the inventory builder and gallery fixture generator by SHA-256; changing
 either script requires regenerating and manually reviewing the manifest.
 
-The gallery inventory retains 45 verified PNG assets across 38 public plotting routes. The public
-page displays 43 cases. The two non-displayed heatmap PNGs remain only as regression and audit
+The promoted release inventory retains 47 verified PNG assets across 40 public plotting routes. The public
+page displays 45 cases. The two non-displayed heatmap PNGs remain only as regression and audit
 history; they are not alternate public showcase entries.
 
 - Every distributed CSV is synthetic. It is not experimental, patient, clinical, or production
@@ -23,7 +23,8 @@ history; they are not alternate public showcase entries.
   PDF, or TIF evidence.
 - The PL/TRPL example uses neutral project-generated sample names and lifetimes; it does not copy
   the material labels or numeric values from the visual reference that motivated the chart family.
-- The DSC, NMR, FTIR/IR, XPS comparison, UV–Vis, PL temperature-series, 3D trajectory, and dense
+- The DSC, NMR, FTIR/IR, XPS comparison, UV–Vis, PL temperature-series, 3D trajectory,
+  3D dual-density baseline-locator, and dense
   matrix fixtures are deterministic project-authored teaching data. The public gallery displays
   the real Origin-rendered 30×30 matrix only; the smaller annotated matrix and 40×40 matrix remain
   in the retained verification inventory. None reproduces values, labels, conclusions, arrows,

@@ -45,6 +45,11 @@ _PRIMARY_ROLES = frozenset(
         "y3d",
         "z3d",
         "series_id",
+        "condition_id",
+        "condition_position",
+        "density_x",
+        "density_solid",
+        "density_dashed",
         "photon_energy",
         "tauc",
     }
@@ -71,6 +76,7 @@ _SECONDARY_ROLES = frozenset(
         "source_group",
         "target_group",
         "edge_label",
+        "focal_x",
     }
 )
 _SUPPORT_ROLES = frozenset({"frequency", "count"})
@@ -106,6 +112,7 @@ def _element_kind(plot_kind: str, series_role: str) -> str:
         "circular_network": "directed_weighted_network",
         "paired_trajectory": "line_symbol",
         "trajectory3d": "line_symbol",
+        "density_ridgeline3d": "line",
     }.get(plot_kind, "line")
 
 
@@ -293,7 +300,65 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
             )
         )
 
-    scientific_series = () if plot_kind == "circular_network" else spec.series
+    if plot_kind == "density_ridgeline3d":
+        condition_column = getattr(spec, "category_column", None)
+        position_column = getattr(spec, "y_column", None)
+        x_column = getattr(spec, "x_column", None)
+        focal_column = getattr(spec, "focal_x_column", None)
+        profile_bindings = _unique_existing(
+            (condition_column, position_column, x_column),
+            item_ids,
+        )
+        for index, series in enumerate(spec.series):
+            source_column = str(series.source_column)
+            if source_column not in item_ids:
+                continue
+            elements.append(
+                FigureElement(
+                    element_id=f"density_profile_{index:02d}",
+                    element_kind="line",
+                    data_item_ids=(*profile_bindings, item_ids[source_column]),
+                    required=True,
+                    axis="density_3d",
+                    legend_label=str(getattr(series, "label", source_column)),
+                )
+            )
+        if focal_column in item_ids:
+            baseline_id = "derived_density_focus_baseline_zero"
+            derived_items.append(
+                DerivedDataItem(
+                    item_id=baseline_id,
+                    semantic_role="focus_baseline_z_zero",
+                    disposition=DataDisposition.RENDER_SECONDARY,
+                    operation_id="scale_by_constant",
+                    input_item_ids=(item_ids[focal_column],),
+                    confidence=1.0,
+                    parameters=(("factor", 0.0),),
+                    evidence_codes=("density_ridgeline3d_baseline_locator_contract",),
+                )
+            )
+            elements.append(
+                FigureElement(
+                    element_id="density_focus_points",
+                    element_kind="symbol",
+                    data_item_ids=(
+                        *_unique_existing(
+                            (condition_column, position_column, focal_column),
+                            item_ids,
+                        ),
+                        baseline_id,
+                    ),
+                    required=True,
+                    axis="baseline_z_zero",
+                    legend_label="Baseline focal locator / 基线焦点定位点",
+                )
+            )
+
+    scientific_series = (
+        ()
+        if plot_kind in {"circular_network", "density_ridgeline3d"}
+        else spec.series
+    )
     for index, series in enumerate(scientific_series):
         source_column = str(series.source_column)
         if source_column not in item_ids:

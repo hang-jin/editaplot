@@ -124,6 +124,53 @@ def generate_trajectory3d() -> None:
     )
 
 
+def generate_density_ridgeline3d() -> None:
+    """Create original, already-computed dual-density teaching profiles."""
+
+    rows = []
+    conditions = (
+        ("Visit A", 0, 0.41, 0.52, 0.47, 2.55, 2.20),
+        ("Visit B", 4, 0.45, 0.56, 0.50, 2.70, 2.35),
+        ("Visit C", 8, 0.50, 0.60, 0.54, 2.82, 2.48),
+        ("Visit D", 12, 0.55, 0.65, 0.58, 2.68, 2.62),
+    )
+    for condition_id, position, solid_center, dashed_center, focal_x, solid_amp, dashed_amp in conditions:
+        for index in range(31):
+            density_x = 0.18 + index * 0.02
+            solid = (
+                0.012
+                + _gaussian(density_x, solid_center, 0.065, solid_amp)
+                + _gaussian(density_x, solid_center - 0.105, 0.030, 0.18 * solid_amp)
+            )
+            dashed = (
+                0.012
+                + _gaussian(density_x, dashed_center, 0.075, dashed_amp)
+                + _gaussian(density_x, dashed_center + 0.095, 0.034, 0.14 * dashed_amp)
+            )
+            rows.append(
+                (
+                    condition_id,
+                    position,
+                    f"{density_x:.3f}",
+                    f"{solid:.6f}",
+                    f"{dashed:.6f}",
+                    f"{focal_x:.3f}" if index == 15 else "",
+                )
+            )
+    _write(
+        "density_ridgeline3d.csv",
+        [
+            "Condition ID",
+            "Follow-up Time (week)",
+            "Response Score (a.u.)",
+            "Solid Density (a.u.)",
+            "Dashed Density (a.u.)",
+            "Focal X (a.u.)",
+        ],
+        rows,
+    )
+
+
 def generate_cv() -> None:
     forward = [-0.50 + index * 0.01 for index in range(131)]
     reverse = [0.80 - index * 0.01 for index in range(131)]
@@ -733,6 +780,7 @@ def main() -> None:
     generate_xrd()
     generate_eis()
     generate_trajectory3d()
+    generate_density_ridgeline3d()
     generate_cv()
     generate_lsv()
     generate_xas()

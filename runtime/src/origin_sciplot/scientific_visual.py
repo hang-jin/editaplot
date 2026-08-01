@@ -476,6 +476,22 @@ def resolve_adaptive_style(
         line = 2.2
         palette = "trajectory3d_family"
         transparency = 0.0
+    elif plot_kind == "density_ridgeline3d":
+        # Ordered condition colours identify the scientific third axis; line
+        # style distinguishes the two supplied profiles within each condition.
+        width = min(34.0, max(27.0, 25.0 + series * 0.85))
+        height = 20.5
+        left = 16.0
+        top = 4.5
+        layer_height = 74.0
+        layer_width_override = 68.0
+        axis_title = 22.0
+        tick = 18.0
+        legend = 18.0
+        line = 2.4
+        frame = 1.8
+        palette = "trajectory3d_family"
+        transparency = 0.0
     elif plot_kind == "diagnostic_curve":
         width = min(34.0, max(23.5, 22.5 + series * 0.85))
         height = width

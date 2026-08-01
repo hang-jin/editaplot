@@ -103,7 +103,7 @@ I store only the date and aggregate repository count. I do not read or store use
 |---|---|
 | Materials and spectra | XPS scan/fit, XPS multi-spectrum comparison, ordinary XRD, GSAS/GSAS-II XRD Rietveld, XAS, FTIR/IR, NMR, DSC, PL/TRPL, UV–Vis/Tauc, EIS, CV, LSV, multi-condition 3D Nyquist |
 | General statistics | bars, horizontal bars, error bars, stacked/percentage composition, pie, Sankey, multi-panel circular directed weighted networks, line, trend, scatter, bubble, radar, and adaptive dense-matrix heatmaps |
-| Distributions and effects | raw summaries, box, violin, Raincloud, histogram, forest plot |
+| Distributions and effects | raw summaries, box, violin, Raincloud, histogram, forest plot, and 3D dual-density ridgelines with supplied baseline focal locators |
 | Medical and deep learning | ROC, PR, calibration, DCA, confusion matrix, Bland–Altman, paired longitudinal trajectories, grouped boxes, precomputed SHAP, medical panel planning |
 
 I do not silently smooth data, remove outliers, invent peaks, derive error bars, fit curves, identify phases, or train models. Lifetime, band-gap, SHAP, and similar analysis results are drawn only when you explicitly provide them.
@@ -120,6 +120,7 @@ I do not silently smooth data, remove outliers, invent peaks, derive error bars,
 | UV–Vis / Tauc | wavelength + absorbance/transmittance; optional supplied Tauc data | multi-sample tables are accepted; no photon-energy conversion, exponent choice, fitting, or band-gap calculation |
 | Sankey | positive `Source + Target + Value` edge list | represents flow or composition transfer; no invented nodes or missing flows |
 | Circular directed weighted network | [`Panel + Source + Target + Weight`](examples/gallery/circular_network.csv); optional `Sign` and up to four node groups | compares directed relationships across panels with shared node positions and one width scale; panels above 12 edges retain but hide edge labels; no causal interpretation |
+| 3D dual-density ridgeline with baseline locators | [`Condition ID + Condition Position + Density X + Solid Density + Dashed Density + Focal X`](examples/gallery/density_ridgeline3d.csv); 2–6 real conditions | both density profiles and exactly one focal value per group must be supplied upstream; focal markers stay at Z=0, with no KDE, peak, intersection, or threshold inference |
 
 For dense heatmaps I keep every matrix value and the original order while reducing only repeated display text. Dense plans hide per-cell numbers, thin row and column labels, and separate the colorbar from the data field. The public page shows one real Origin-rendered 30×30 case, which has passed OPJU/PNG/PDF/TIF generation, axis and colorbar object readback, and human visual review. The former small matrix and 40×40 cases remain in the verification inventory for regression and audit history rather than being displayed again.
 
@@ -136,9 +137,9 @@ I made and manually checked these examples with synthetic teaching data. Metadat
   <img src="assets/gallery/circular-network.png" alt="Multi-panel circular directed weighted network" width="31%">
 </div>
 
-➡️ [Browse the 44 public showcase examples](docs/gallery.en.md)
+➡️ [Browse the 45 public showcase examples](docs/gallery.en.md)
 
-The current public capability set contains 39 Origin plotting routes. The repository retains 46 verification PNGs that passed live artifacts, object readback, human visual review, and the public-asset audit; 44 are displayed, while two hidden heatmap cases remain only as regression evidence. DSC, NMR, FTIR/IR, XPS comparison, multi-condition PL, multi-sample UV–Vis, the 30×30 dense heatmap, and the multi-period circular directed weighted network have all completed the Origin 2024b gate.
+The current public capability set contains 40 Origin plotting routes. The repository retains 47 verification PNGs that passed live artifacts, object readback, human visual review, and the public-asset audit; 45 are displayed, while two hidden heatmap cases remain only as regression evidence. DSC, NMR, FTIR/IR, XPS comparison, multi-condition PL, multi-sample UV–Vis, the 30×30 dense heatmap, the multi-period circular directed weighted network, and the 3D dual-density baseline-locator route have all completed the Origin 2024b gate.
 
 ### How long should one run take?
 
@@ -274,7 +275,7 @@ I keep the public repository complete and runnable. To avoid mixing private data
 |---|---|
 | Apache-2.0 source, complete Skill, sanitized runtime | `DEVELOPMENT_LEDGER.md`, internal plans, development logs |
 | Neutral synthetic examples and original palette assets | Your original data, reference screenshots, material without redistribution rights |
-| 46 reviewed, metadata-sanitized verification PNGs; 44 are displayed across 39 plotting routes | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
+| 47 reviewed, metadata-sanitized verification PNGs; 45 are displayed across 40 plotting routes | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
 | Bilingual docs, tests, dependency locks, asset/runtime manifests | Absolute paths, caches, virtual environments, temporary outputs, secrets and tokens |
 
 To avoid publishing local material by mistake, I use an allowlist, secret scanning, PNG checks, and SHA-256 manifests. See [release and licensing boundaries](docs/release-boundaries.md).

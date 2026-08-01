@@ -10,7 +10,7 @@
 
 Keep the original file read-only.
 
-These contracts cover the 39 registered public plotting routes. The data contract is independent
+These contracts cover the 40 registered public plotting routes. The data contract is independent
 of the installed Origin version. After semantic confirmation and plan creation, run the isolated
 `origin-smoke` before formal rendering. Rendering starts a dedicated EditaPlot-owned Origin
 instance and then checks the selected template against the detected host. Target Origin/OriginPro
@@ -202,6 +202,20 @@ complete points. EditaPlot may split the long table into XYZ helper triplets onl
 editable Origin workbook. It does not invent a third axis, negate a generic Z column, fit an
 equivalent circuit, interpolate, or add resistance annotations. Generic `X/Y/Z`, an index-only Y,
 or a third-axis header without a unit is insufficient.
+
+### 我已验证的三维双密度 mixed-wide 表
+
+对于 `density_ridgeline3d`，我只接受六个明确角色：`Condition ID`、带科学含义和单位的
+`Condition Position`、带科学含义和单位的 `Density X`、同为非负有限数且使用一致密度语义/
+单位的 `Solid Density` 与 `Dashed Density`，以及稀疏 `Focal X`。同一行同时提供两列密度；
+不接受拆成 `Profile`/`Line Role` 的另一套长表格式。
+
+我要求 2–6 个条件；每个 ID 与一个真实 position 一一对应，每组至少 5 行，X 按源顺序严格
+单调。每组 `Focal X` 必须恰好一行非空并落在本组 X 范围内，其余行留空。焦点只显示在
+`Z=0` 基线上，不代表软件推断的峰、阈值、交点或最优点。用户必须在上游提供两列预计算密度
+和焦点；我不会在绘图流程中运行 KDE、平滑、插值、归一化或焦点计算。该路线已在 Origin
+2024b / 10.15 基线上完成 OPJU、PNG/PDF/TIF、对象反读和人工视觉验收；其他主机仍须通过
+实时 smoke 与 `OPEN_GL_3D` 能力检查。
 
 ## Repair guidance
 

@@ -38,16 +38,19 @@ def test_every_public_implemented_manifest_has_exactly_one_profile() -> None:
     )
 
 
-def test_missing_open_gl_blocks_only_the_3d_template() -> None:
+def test_missing_open_gl_blocks_only_the_3d_templates() -> None:
     without_3d = ALL_ORIGIN_CAPABILITIES - {OriginCapability.OPEN_GL_3D}
 
     scatter = evaluate_template_compatibility("scatter", 10.15, without_3d)
     trajectory = evaluate_template_compatibility("trajectory3d", 10.15, without_3d)
+    ridgeline = evaluate_template_compatibility("density_ridgeline3d", 10.15, without_3d)
 
     assert scatter.status == "verified"
     assert scatter.missing_required == ()
     assert trajectory.status == "blocked"
     assert trajectory.missing_required == (OriginCapability.OPEN_GL_3D,)
+    assert ridgeline.status == "blocked"
+    assert ridgeline.missing_required == (OriginCapability.OPEN_GL_3D,)
 
 
 @pytest.mark.parametrize(
@@ -58,6 +61,7 @@ def test_missing_open_gl_blocks_only_the_3d_template() -> None:
         ("confusion_matrix", OriginCapability.MATRIX_HEATMAP),
         ("sankey", OriginCapability.SANKEY),
         ("trajectory3d", OriginCapability.OPEN_GL_3D),
+        ("density_ridgeline3d", OriginCapability.OPEN_GL_3D),
     ],
 )
 def test_special_templates_are_blocked_without_their_required_capability(
@@ -174,12 +178,16 @@ def test_incomplete_probe_keeps_unprobed_special_route_experimental() -> None:
 
     scatter = evaluate_template_compatibility("scatter", 10.25, probe)
     trajectory = evaluate_template_compatibility("trajectory3d", 10.25, probe)
+    ridgeline = evaluate_template_compatibility("density_ridgeline3d", 10.25, probe)
 
     assert scatter.status == "compatible_unverified"
     assert scatter.unprobed_required == ()
     assert trajectory.status == "experimental"
     assert trajectory.missing_required == ()
     assert trajectory.unprobed_required == (OriginCapability.OPEN_GL_3D,)
+    assert ridgeline.status == "experimental"
+    assert ridgeline.missing_required == ()
+    assert ridgeline.unprobed_required == (OriginCapability.OPEN_GL_3D,)
 
 
 def test_basic_smoke_does_not_overclaim_unprobed_xps_fill() -> None:
