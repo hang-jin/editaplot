@@ -10,7 +10,7 @@ is the current fully verified baseline.
 
 ## Verified V1 routes
 
-The registry exposes 38 public plotting routes. Some table rows group closely related candidates,
+The registry exposes 39 public plotting routes. Some table rows group closely related candidates,
 so the number of rows is not the route count.
 
 | Question/evidence | Candidate | Required shape | Cautions |
@@ -29,6 +29,7 @@ so the number of rows is not the route count.
 | Comparable multimetric profile | `radar` | metric labels + >=2 nonnegative series; >=3 metrics | Confirm scales are comparable; never auto-normalize |
 | Category × series result matrix | `heatmap` | row labels + >=2 numeric columns; >=2 rows | Keep all matrix values; dense plans hide cell numbers, thin labels, and detach the colorbar. The public gallery displays the verified real-Origin 30×30 case only; the smaller and 40×40 cases are retained regression history |
 | Flow | `sankey` | source + target + positive value | Avoid self-links and excessive nodes |
+| Directed relationships across panels | `circular_network` | Panel + Source + Target + positive Weight; optional Sign/up to four groups/EdgeLabel | Preserve shared node positions and one global width scale; panels above 12 edges retain but hide edge labels; do not infer causality, correlation, centrality, or missing edges |
 | Preserve every observation | `raw_summary` | one or more raw numeric group columns | Show raw points and an explicit median; do not infer error bars |
 | Compare distribution shape | `violin` | one or more raw numeric group columns | Use only when sample density supports a distribution view |
 | One-variable frequency distribution | `histogram` | one raw continuous numeric column | Freeze the bin rule; do not add an unrequested fitted curve |
@@ -75,7 +76,9 @@ readback, SHA-bound human visual QA, and the sanitized public-gallery audit.
   ambiguous between line and scatter without scientific intent.
 - A metric-wide table plus radar intent favors `radar`, but scale comparability must be confirmed.
 - A rectangular category × numeric matrix plus heatmap intent favors `heatmap`.
-- `source/target/value` strongly favors `sankey`.
+- `source/target/value` without a panel dimension strongly favors `sankey`.
+- `Panel/Source/Target/Weight` strongly favors `circular_network`; preserve panel, direction,
+  optional sign, and stable node-position semantics instead of collapsing it into Sankey.
 - A single raw numeric column plus histogram intent strongly favors `histogram`.
 - A numeric group-wide table favors `raw_summary` for small evidence sets and `violin` when
   distribution shape is the explicit question.

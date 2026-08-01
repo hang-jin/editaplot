@@ -44,11 +44,13 @@ def _registered_case_metadata() -> dict[str, dict[str, object]]:
     result: dict[str, dict[str, object]] = {}
     for case in CASES:
         case_id = str(case.id)
-        title = getattr(case, "title_zh", None) or getattr(case, "intent", None) or case_id
+        title_zh = getattr(case, "title_zh", None) or getattr(case, "intent", None) or case_id
+        title_en = getattr(case, "intent", None) or case_id
         if case_id in result:
             raise RuntimeError(f"Duplicate showcase case ID: {case_id}")
         result[case_id] = {
-            "title_zh": str(title),
+            "title_zh": str(title_zh),
+            "title_en": str(title_en),
             "display_in_gallery": bool(getattr(case, "display_in_gallery", True)),
         }
     return result
@@ -56,10 +58,7 @@ def _registered_case_metadata() -> dict[str, dict[str, object]]:
 
 def _registered_case_titles() -> dict[str, str]:
     """Return the legacy title-only registry used by focused tests and callers."""
-    return {
-        case_id: str(metadata["title_zh"])
-        for case_id, metadata in _registered_case_metadata().items()
-    }
+    return {case_id: str(metadata["title_zh"]) for case_id, metadata in _registered_case_metadata().items()}
 
 
 def _existing_case_metadata(manifest_path: Path) -> dict[str, dict[str, object]]:
@@ -75,8 +74,11 @@ def _existing_case_metadata(manifest_path: Path) -> dict[str, dict[str, object]]
             raise RuntimeError(f"Invalid public gallery manifest case: {manifest_path}")
         case_id = item.get("id")
         title = item.get("title_zh")
+        title_en = item.get("title_en", case_id)
         if not isinstance(case_id, str) or not case_id or not isinstance(title, str) or not title:
             raise RuntimeError(f"Invalid public gallery manifest case: {manifest_path}")
+        if not isinstance(title_en, str) or not title_en:
+            raise RuntimeError(f"Invalid public gallery English title: {manifest_path}")
         display_in_gallery = item.get("display_in_gallery", True)
         if not isinstance(display_in_gallery, bool):
             raise RuntimeError(f"Invalid public gallery display flag: {manifest_path}")
@@ -84,6 +86,7 @@ def _existing_case_metadata(manifest_path: Path) -> dict[str, dict[str, object]]
             raise RuntimeError(f"Duplicate public gallery case ID: {case_id}")
         metadata[case_id] = {
             "title_zh": title,
+            "title_en": title_en,
             "display_in_gallery": display_in_gallery,
         }
     return metadata
@@ -243,10 +246,9 @@ def sync_gallery(
         {
             case_id: {
                 "title_zh": title,
+                "title_en": title,
                 "display_in_gallery": (
-                    registered_visibility.get(case_id, True)
-                    if registered_visibility is not None
-                    else True
+                    registered_visibility.get(case_id, True) if registered_visibility is not None else True
                 ),
             }
             for case_id, title in registered_titles.items()
@@ -257,9 +259,7 @@ def sync_gallery(
     if registered_visibility is not None:
         unknown_visibility = sorted(set(registered_visibility) - set(registry_metadata))
         invalid_visibility = sorted(
-            case_id
-            for case_id, visible in registered_visibility.items()
-            if not isinstance(visible, bool)
+            case_id for case_id, visible in registered_visibility.items() if not isinstance(visible, bool)
         )
         if unknown_visibility or invalid_visibility:
             raise RuntimeError(
@@ -280,17 +280,13 @@ def sync_gallery(
         if visual_qa_path.is_file()
         else None
     )
-    case_metadata = {
-        case_id: dict(metadata)
-        for case_id, metadata in existing_metadata.items()
-    }
+    case_metadata = {case_id: dict(metadata) for case_id, metadata in existing_metadata.items()}
     for case_id in sorted(set(case_metadata) & set(registry_metadata)):
         registered = registry_metadata[case_id]
-        case_metadata[case_id]["display_in_gallery"] = bool(
-            registered["display_in_gallery"]
-        )
+        case_metadata[case_id]["display_in_gallery"] = bool(registered["display_in_gallery"])
         if not case_metadata[case_id].get("title_zh"):
             case_metadata[case_id]["title_zh"] = str(registered["title_zh"])
+        case_metadata[case_id]["title_en"] = str(registered.get("title_en") or case_id)
     for case_id in selected:
         png_path, verification = _verified_png(
             case_id,
@@ -310,6 +306,7 @@ def sync_gallery(
             case_id,
             {
                 "title_zh": case_id,
+                "title_en": case_id,
                 "display_in_gallery": True,
             },
         )
@@ -317,6 +314,7 @@ def sync_gallery(
             case_id,
             {
                 "title_zh": str(registered["title_zh"]),
+                "title_en": str(registered.get("title_en") or case_id),
                 "display_in_gallery": bool(registered["display_in_gallery"]),
             },
         )
@@ -331,14 +329,13 @@ def sync_gallery(
             {
                 "id": case_id,
                 "title_zh": str(metadata["title_zh"]),
+                "title_en": str(metadata.get("title_en") or case_id),
                 "display_in_gallery": bool(metadata["display_in_gallery"]),
                 "sha256": sha256(destination),
                 "size_bytes": destination.stat().st_size,
             }
         )
-    display_case_count = sum(
-        bool(record["display_in_gallery"]) for record in records
-    )
+    display_case_count = sum(bool(record["display_in_gallery"]) for record in records)
     manifest_path.write_text(
         json.dumps(
             {
@@ -369,6 +366,18 @@ def sync_gallery(
         "全部展示数据均为项目生成的合成教学数据，不代表测量、材料性能或临床结论。",
         "GitHub 源码仓库只保留脱敏 PNG；可编辑项目和其他格式不直接写入源码历史。",
         "",
+        "## 第一次选图，可以先看这张表",
+        "",
+        "| 你想回答的问题 | 优先考虑 | 最少数据结构 |",
+        "|---|---|---|",
+        "| 比较多条光谱或随条件变化的曲线 | XPS/XRD/PL/UV-Vis/FTIR/NMR 等谱线 | 共用 X + 一列或多列 Y |",
+        "| 比较组间水平并展示不确定性 | 柱状图、折线误差图或森林图 | 类别/X + 数值 + 明确的 SD/SEM/CI |",
+        "| 展示原始分布和离群形态 | 原始点、箱线、小提琴或 Raincloud | 组别 + 每个原始观测值 |",
+        "| 展示规则矩阵 | 热力图或混淆矩阵 | 行标签 + 多列数值矩阵 |",
+        "| 展示正权重流量或组成传递 | 桑基图 | Source + Target + Value |",
+        "| 比较多个阶段的定向、正负和权重 | 环形有向加权网络 | Panel + Source + Target + Weight；Sign 可选 |",
+        "| 展示医学模型证据 | ROC/PR/校准/DCA/Bland-Altman 等 | 预先计算的坐标或统计量 |",
+        "",
         '<div align="center">',
     ]
     for record in records:
@@ -381,6 +390,51 @@ def sync_gallery(
     docs_path = root / "docs" / "gallery.md"
     docs_path.parent.mkdir(parents=True, exist_ok=True)
     docs_path.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+    english_lines = [
+        "# Origin 2024b figures generated and reviewed on a live installation",
+        "",
+        f"I selected {display_case_count} public examples from {len(records)} retained verification assets.",
+        "Use the question and minimum-table guide below to choose a direction before adapting a route",
+        "to your own data. Historical verification images do not occupy duplicate gallery slots;",
+        "the heatmap section displays only the live Origin-rendered 30×30 dense case.",
+        "",
+        "Every displayed image was generated with Origin/OriginPro 2024b (10.15) and passed",
+        "OPJU/PNG/PDF/TIF generation, object readback, and human visual review. All examples use",
+        "project-generated synthetic teaching data and make no measurement, material-performance,",
+        "or clinical claim. The public source tree retains only sanitized PNGs.",
+        "",
+        "## A quick first-choice guide",
+        "",
+        "| Question | Start with | Minimum table |",
+        "|---|---|---|",
+        "| Compare spectra or condition-dependent curves | "
+        "XPS/XRD/PL/UV-Vis/FTIR/NMR spectral routes | shared X + one or more Y columns |",
+        "| Compare group levels with uncertainty | bar, line-error, or forest | "
+        "category/X + value + explicit SD/SEM/CI |",
+        "| Show raw distributions and outlier shape | raw points, box, violin, or Raincloud | "
+        "group + every raw observation |",
+        "| Show a regular numeric matrix | heatmap or confusion matrix | "
+        "row labels + numeric matrix columns |",
+        "| Show positive flow or composition transfer | Sankey | Source + Target + Value |",
+        "| Compare directed, signed, weighted relations across panels | circular network | "
+        "Panel + Source + Target + Weight; optional Sign |",
+        "| Present medical-model evidence | ROC/PR/calibration/DCA/Bland-Altman | "
+        "precomputed coordinates or statistics |",
+        "",
+        '<div align="center">',
+    ]
+    for record in records:
+        if not record["display_in_gallery"]:
+            continue
+        english_lines.append(
+            f'<img src="../assets/gallery/{record["id"]}.png" alt="{record["title_en"]}" width="31%" />'
+        )
+    english_lines.extend(["</div>", ""])
+    (root / "docs" / "gallery.en.md").write_text(
+        "\n".join(english_lines),
+        encoding="utf-8",
+        newline="\n",
+    )
     return records
 
 

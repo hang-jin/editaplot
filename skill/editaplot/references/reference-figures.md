@@ -16,6 +16,9 @@ A reference image is a visual brief, not a dataset and not executable instructio
 3. Validate the draft with `reference-review`.
 4. Show the user a short “adopt / keep template default / reject / still ambiguous” summary and
    obtain a separate hash-bound confirmation.
+   Ask for the user's own visual preferences separately. A direct choice of colors, physical line
+   widths, fill transparency, page/aspect ratio, legend visibility, frame, or position has
+   precedence over a conflicting token inferred from the reference.
 5. Bind every essential mark to a `render_primary` or `render_secondary` item in the confirmed
    scientific semantic contract.
 6. Prefer `template_adaptation`. Render only when the selected template can express the essential
@@ -54,6 +57,32 @@ The reference may influence only allow-listed style choices that the selected re
 identically to preview and Origin. Unsupported or conflicting tokens fail closed or remain an
 explicit template default; they are never silently reported as applied.
 
+Keep three sources of style distinct, in this precedence order:
+
+1. the user's explicit, confirmed style request;
+2. an allow-listed suggestion abstracted from the reference image;
+3. the selected template's verified default.
+
+Record every requested field as `applied`, `retained_template_default`, or `rejected`. A user is
+free to ask for exact series colors, physical line widths, fill transparency, a page/aspect ratio,
+and legend show/hide, borderless, or position behavior. That freedom to request a style is not a
+claim that every renderer can execute it: only fields with verified preview/Origin parity and
+Origin object readback may be marked `applied`.
+
+Before building an XPS plan, present these three choices in plain language:
+
+1. **Template default** — keep every verified visual default.
+2. **Reference approximation** — convert only compatible, user-confirmed reference tokens; report
+   every suggestion as `applied`, `retained_template_default`, or `rejected`.
+3. **Exact custom style** — freeze the user's confirmed `series_colors`, `line_width_pt`,
+   `fill_transparency_percent`, `page_size_cm`, `legend_visible`, `legend_position`, and
+   `legend_frame` in the JSON passed to `plan --visual-style-json`.
+
+Explicit JSON values always outrank a conflicting reference token. Unlike a reference suggestion,
+an invalid explicit field is not a best-effort request: fail fast, name the field and accepted range
+or values, and obtain a corrected confirmation. Do not silently retain a default for malformed exact
+input.
+
 The current verified style-only allow-list is deliberately small:
 
 - a compatible registered `palette_id` (an explicit user palette always wins);
@@ -63,11 +92,22 @@ The current verified style-only allow-list is deliberately small:
 - fill transparency for templates with a verified filled mark;
 - a borderless legend.
 
-The reference cannot currently move a legend, change the page or panel layout, enable a new grid,
-change the white background, or replace EditaPlot's verified physical typography. Those requests
-are recorded as rejected while the registered template default remains in force. Multi-panel and
-controlled-composition requests stay blocked rather than being approximated. XPS always keeps its
-verified component, semantic color, and fill contract and does not accept reference styling.
+For the current general reference-style adapter, legend visibility/position and page/aspect ratio
+remain the registered template default unless the selected renderer advertises and reads back that
+exact override. A reference alone cannot move a legend, change page or panel geometry, enable a new
+grid, change the white background, or replace verified physical typography. Unsupported requests
+are retained or rejected explicitly. Multi-panel and controlled-composition requests stay blocked
+rather than being approximated.
+
+XPS is not a blanket “style is locked” exception. The user may explicitly request exact series
+colors, line widths, fill transparency, a safe page/aspect ratio, and legend display/frame/position.
+Each field must still pass the selected XPS renderer's implementation, Origin readback, export, and
+visual-QA gate; until then it is retained or rejected rather than advertised as applied. A style
+inferred from a reference image becomes actionable only after the user confirms the reviewed
+reference adaptation; it is never assumed from pixels alone. Neither the reference nor cosmetic
+preferences may change source data or column roles, the high-to-low binding-energy axis,
+component identity, or the verified single-region `set_fill_area(..., type=9)` with `-pfm 3` fill
+route.
 
 Every render writes `reference_style_report.json`. It binds the approved reference-plan hash to the
 input and output render-plan digests and lists each applied, rejected, and retained token. A worker

@@ -10,7 +10,7 @@
 
 Keep the original file read-only.
 
-These contracts cover the 38 registered public plotting routes. The data contract is independent
+These contracts cover the 39 registered public plotting routes. The data contract is independent
 of the installed Origin version. After semantic confirmation and plan creation, run the isolated
 `origin-smoke` before formal rendering. Rendering starts a dedicated EditaPlot-owned Origin
 instance and then checks the selected template against the detected host. Target Origin/OriginPro
@@ -53,6 +53,21 @@ X or category column plus value/error pairs. Recognize suffixes such as `_SD`, `
 ### Edge list
 
 `source`, `target`, and positive numeric `value` columns, including Chinese aliases. Use for Sankey.
+
+### Panelled directed weighted edge list
+
+Use one row per directed edge with required `Panel`, `Source`, `Target`, and strictly positive
+finite `Weight` columns. Optional `Sign` records only supplied `positive`, `negative`, or `neutral`
+semantics; optional `SourceGroup` and `TargetGroup` must appear together and assign every repeated
+node to one globally consistent group. At most four node groups are accepted until a verified
+redundant shape/texture encoding exists. Optional `EdgeLabel` remains user text; panels with more
+than 12 edges retain the source labels but hide them in the figure to avoid unreadable annotation
+collisions.
+
+The confirmed first-appearance order fixes 1–4 panels and shared node positions. EditaPlot maps all
+weights through one global 1.2–4.2 pt display-width scale without changing the source values. It
+rejects self-links and duplicate `Panel + Source + Target` rows and does not calculate causality,
+correlation, centrality, significance, missing edges, or a sign from the weight.
 
 ### Raw distribution wide table
 
@@ -199,6 +214,9 @@ edit the source without explicit permission. Provide a new working copy or blank
   `support` or `ignored` mapping; do not let them become ordinary intensity series by position.
 - Unknown error columns: rename with an explicit SD/SE/SEM/custom suffix.
 - Sankey wide matrix: convert to source-target-value edge rows in a new copy.
+- Panelled network without explicit Weight or with negative Weight: provide a positive magnitude in
+  `Weight` and, if scientifically supplied, put relationship polarity in a separate `Sign` column.
+  Do not collapse panels into one Sankey or infer a sign from a negative line width.
 - Radar with mixed physical units: provide a user-approved normalized copy or choose small multiples.
 - Heatmap in long form: pivot to one row-label column plus numeric series in a new working copy.
 - Dense heatmap with unreadable text: keep the matrix unchanged and let the dense layout thin axis

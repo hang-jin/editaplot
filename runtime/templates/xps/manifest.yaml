@@ -1,7 +1,7 @@
 id: xps
 name: XPS
 category: spectroscopy/xps
-version: 0.2.0
+version: 0.3.0
 description: 通用 XPS 扫描与拟合数据自动识别、预览和 Origin 可编辑绘图
 requires_origin: true
 runner: runner.py

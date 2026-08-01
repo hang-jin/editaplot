@@ -12,6 +12,7 @@ import math
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 
+from .circular_network_layout import NETWORK_NODE_GROUP_COLORS
 from .palette_catalog import list_palettes
 
 PALETTES: dict[str, tuple[str, ...]] = {
@@ -95,6 +96,9 @@ PALETTES: dict[str, tuple[str, ...]] = {
         "#D2A3AE",
         "#D6B66F",
     ),
+    # Soft categorical node fills for circular directed networks.  Edge signs
+    # retain their own semantic teal/coral/neutral colours in the renderer.
+    "network_nodes": NETWORK_NODE_GROUP_COLORS,
     "distribution_family": (
         "#285D7A",
         "#4F829B",
@@ -363,6 +367,33 @@ def resolve_adaptive_style(
         legend = 15.0
         palette = "flow_family"
         transparency = 18.0
+    elif plot_kind == "circular_network":
+        # ``series`` carries panel count for this axis-free route.  One and
+        # two panels remain presentation-friendly; four panels use a 2×2 page
+        # instead of shrinking type or locking every dataset to one canvas.
+        if series == 1:
+            width = min(34.0, max(26.0, 24.0 + label_len * 0.18))
+            height = 20.5
+        elif series == 2:
+            width = min(48.0, max(40.0, 38.0 + label_len * 0.22))
+            height = 20.5
+        elif series == 3:
+            width = min(50.0, max(45.0, 43.0 + label_len * 0.20))
+            height = 21.0
+        else:
+            width = min(46.0, max(39.0, 37.0 + label_len * 0.18))
+            height = 32.0
+        left = 4.0
+        top = 5.0
+        layer_height = 77.0
+        layer_width_override = 92.0
+        axis_title = 20.0
+        tick = 17.0
+        legend = 17.0
+        line = 2.2
+        frame = 1.4
+        palette = "network_nodes"
+        transparency = 8.0
     elif plot_kind == "radar":
         width = min(36.0, max(28.0, 24.0 + rows * 0.70))
         height = min(26.0, max(18.5, 15.0 + rows * 0.70))

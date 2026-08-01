@@ -79,12 +79,24 @@ rendering, exporting, and readback.
    `template_adaptation`; keep `controlled_composition` blocked until that exact composition has
    passed the full Origin evidence gate. A reference cannot add missing evidence or change the
    confirmed scientific element list.
+   Treat style inferred from the reference as a suggestion, not as the user's instruction. Ask
+   the user to choose one of three modes: keep the verified template default; use a confirmed,
+   allow-listed approximation suggested by the reference; or provide exact custom values. For the
+   exact mode, ask separately for colors, physical line width, fill transparency, page size, and
+   legend visibility, frame, or position. An explicit user choice has precedence over a conflicting
+   reference token. Freeze each reference suggestion as `applied`,
+   `retained_template_default`, or `rejected`; never claim a request was applied unless the selected
+   template has the same verified preview/Origin route and the required Origin object readback.
 11. When color is user-selectable, run `editaplot.cmd palettes`, show
    `assets/palettes/palette-selector-public.zh-CN.png`, and recommend no more than two compatible
    `palette_id` values. Read `references/palettes.md` before freezing one.
 12. Internally freeze the confirmed choice with `editaplot.cmd plan`; never hand-edit a plan or write
-   a decision back to the source file. The render command copies this approved plan into the final
-   output folder as `render-plan.json`.
+   a decision back to the source file. For an exact XPS request, write the confirmed values to a
+   separate JSON object and pass its path with `--visual-style-json`. The supported exact fields are
+   `series_colors`, `line_width_pt`, `fill_transparency_percent`, `page_size_cm`, `legend_visible`,
+   `legend_position`, and `legend_frame`. Invalid explicit fields or values must fail fast and be
+   corrected with the user; never silently discard them or fall back to a reference/default style.
+   The render command copies this approved plan into the final output folder as `render-plan.json`.
 13. Treat Origin readiness as technical state only. Doctor performs read-only discovery of
     `Origin.Application`, `Origin.ApplicationSI`, installed candidates, Python, `originpro`, and
     `OriginExt`; it never launches Origin and `ready_for_render` never means a live connection
@@ -135,6 +147,13 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
 - For GSAS/GSAS-II Rietveld data, distinguish Observed, Calculated, optional Background, supplied
   Difference, explicit Phase positions, and non-rendering control/diagnostic columns. Preserve an
   upstream Publication `Diff` exactly; never apply a second display offset.
+- For XPS, keep cosmetic preferences separate from the scientific contract. A user may explicitly
+  request exact series colors, physical line widths, fill transparency, a safe page/aspect ratio,
+  and legend show/hide, borderless, or position choices. Apply only fields supported and read back
+  by the selected verified XPS renderer; otherwise retain the default or reject the field visibly.
+  Neither a user style request nor a reference image may change source values or column roles, the
+  high-to-low binding-energy axis contract, component identity, residual disposition, or the
+  verified single-region `set_fill_area(..., type=9)` / `-pfm 3` fill implementation.
 - For SHAP, accept only externally precomputed per-sample contributions. Never train a model,
   invoke SHAP, infer feature importance, or silently reorder features inside the drawing workflow.
 - Confirm unknown units, error semantics, percentage denominators, meaningful order, dual axes,
@@ -167,8 +186,13 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
   font values directly into Origin API fields; read back the resulting axis and text objects.
 - Keep each condition's color consistent across related panels. Freeze palette IDs and exact HEX
   values, allowed modes, safe category count, and accessibility constraints into the plan.
-- Do not let cosmetic preferences override semantic color contracts for XPS components, signed
-  effects, heatmaps, diagnostic lines, confusion matrices, or similar evidence.
+- Let an explicit user style request outrank a style token inferred from a reference image. Color,
+  line-width, transparency, page/aspect, and legend requests are still capability-gated and must be
+  classified as applied, retained default, or rejected before rendering.
+- Do not let a reference image or unverified cosmetic preference silently redefine semantic color
+  mappings for XPS components, signed effects, heatmaps, diagnostic lines, confusion matrices, or
+  similar evidence. An explicit replacement is allowed only through that route's independently
+  verified override with exact series mapping and readback.
 - Give every medical panel one distinct evidence role. Freeze a shared condition-to-color map before
   composing quantitative panels; require explicit semantic confirmation for a shared legend.
 - Prefer editable labels and Origin objects. A Python preview or embedded bitmap is not an Origin

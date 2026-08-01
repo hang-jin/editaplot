@@ -7,14 +7,14 @@
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
-    "sha256": "7fa2806f9dfef24e700427aecd007915c48051a5e9c66a38fd4ea2a09653ee39"
+    "sha256": "7aa983fbdee32e56bcd4b744059785637b35cd018c01bab19ed99a567e9e007b"
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
     "reviewed_on": "2026-07-30",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, payment-identifier intent, and redistribution boundary"
   },
-  "asset_count": 221,
+  "asset_count": 225,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
@@ -41,6 +41,26 @@
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 46132,
       "sha256": "e3c27979e9dbae196dc700a1a7da40178d55aa2ec339f64754f86d4dc6ff7e49",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/circular-network.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 65143,
+      "sha256": "339dd5ef282ff5d0d2d3638468dead02e8c8cfac4d7919fd5c8d4bb714db8999",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -1084,6 +1104,14 @@
       "contains_phi": false
     },
     {
+      "path": "examples/gallery/circular_network.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 1744,
+      "sha256": "21c72d3ab4a245ace671f477687268b0e74dc613cbde09e3d270c06e23f35f65",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "examples/gallery/cv_cycles.csv",
       "kind": "synthetic_public_example",
       "size_bytes": 5638,
@@ -1537,6 +1565,22 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 182,
       "sha256": "bedfabf3c8083afb9f2a098e83e538c4c8f42c628b5a52eca47728d3642d8f65",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/circular_network/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 66,
+      "sha256": "6f298ba60d46426dcdba763639ace98df3d49867327814e342252cf6d07bce01",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/circular_network/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 1744,
+      "sha256": "21c72d3ab4a245ace671f477687268b0e74dc613cbde09e3d270c06e23f35f65",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

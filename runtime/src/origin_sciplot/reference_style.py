@@ -138,7 +138,7 @@ class ReferenceStyleError(ValueError):
 class ReferenceStyleApplication:
     """A frozen preparation plus its auditable reference-style decision."""
 
-    preparation: ScientificPreparation
+    preparation: Any
     report: dict[str, Any]
 
 
@@ -233,7 +233,7 @@ def _verified_grid(preparation: ScientificPreparation) -> str:
 
 
 def _finish_report(
-    preparation: ScientificPreparation,
+    preparation: Any,
     *,
     adaptation: dict[str, Any],
     input_digest: str,
@@ -242,6 +242,7 @@ def _finish_report(
     retained: list[dict[str, object]],
     execution_allowed: bool,
     blocking_reasons: list[str],
+    layout_changed: bool = False,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "report_version": REFERENCE_STYLE_REPORT_VERSION,
@@ -261,7 +262,7 @@ def _finish_report(
             "scientific_elements_changed": False,
             "series_visibility_changed": False,
             "marker_points_sampled_or_removed": 0,
-            "layout_changed": False,
+            "layout_changed": layout_changed,
             "reference_pixels_used_by_renderer": False,
             "origin_commands_embedded": False,
         },
@@ -271,22 +272,36 @@ def _finish_report(
 
 
 def apply_reference_style(
-    preparation: ScientificPreparation,
+    preparation: Any,
     adaptation_payload: Mapping[str, Any],
     *,
     locked_palette_id: str | None = None,
+    locked_style_tokens: Mapping[str, Any] | None = None,
 ) -> ReferenceStyleApplication:
     """Apply only renderer-shared style tokens and report every decision.
 
     Unsupported cosmetic requests are rejected while the verified template
     default is retained.  Structural mismatches, XPS, and controlled
-    composition remain blocking.
+    composition remains blocking.  XPS uses the same report envelope but a
+    separate visual contract so its roles, axes, helpers, and component basis
+    cannot be changed by reference styling.
     """
 
-    if not isinstance(preparation, ScientificPreparation):
+    from .xps_workflow import XpsPreparation
+
+    is_xps = isinstance(preparation, XpsPreparation)
+    if not is_xps and not isinstance(preparation, ScientificPreparation):
         raise ReferenceStyleError(
             "reference_style_preparation_invalid",
             "Reference style adaptation requires a scientific preparation.",
+        )
+    # A generic scientific plan is not a valid substitute for the dedicated
+    # XPS preparation.  Keeping this guard also prevents legacy callers from
+    # bypassing the role/axis invariants carried only by XpsPreparation.
+    if not is_xps and preparation.template_id == "xps":
+        raise ReferenceStyleError(
+            "reference_style_xps_unsupported",
+            "Reference styling for XPS requires the dedicated XPS preparation.",
         )
     adaptation = _validated_adaptation(adaptation_payload)
     input_digest = preparation.plan_digest
@@ -318,17 +333,12 @@ def apply_reference_style(
             "reference_style_route_invalid",
             "Only template_adaptation can reach the style adapter.",
         )
-    if adaptation.get("template_id") != preparation.template_id:
+    preparation_template_id = "xps" if is_xps else preparation.template_id
+    if adaptation.get("template_id") != preparation_template_id:
         raise ReferenceStyleError(
             "reference_style_template_mismatch",
             "The reference style belongs to a different registered template.",
         )
-    if preparation.template_id == "xps":
-        raise ReferenceStyleError(
-            "reference_style_xps_unsupported",
-            "XPS keeps its verified component and fill style contract.",
-        )
-
     layout = adaptation.get("layout")
     if not isinstance(layout, Mapping):
         raise ReferenceStyleError(
@@ -360,6 +370,147 @@ def apply_reference_style(
                 resolved="registered_template_layout",
                 reason="template_geometry_remains_frozen",
             )
+        )
+
+    if is_xps:
+        if not execution_allowed:
+            return ReferenceStyleApplication(
+                preparation,
+                _finish_report(
+                    preparation,
+                    adaptation=adaptation,
+                    input_digest=input_digest,
+                    applied=applied,
+                    rejected=rejected,
+                    retained=retained,
+                    execution_allowed=False,
+                    blocking_reasons=blocking_reasons,
+                ),
+            )
+        from .xps_visual_style import apply_xps_visual_style
+
+        tokens = adaptation["style_tokens"]
+        palette_family = tokens["palette_family"]
+        if palette_family is not None:
+            rejected.append(
+                _item(
+                    "palette_family",
+                    palette_family,
+                    resolved=preparation.visual_contract.palette_id,
+                    reason="palette_family_is_descriptive_only_use_palette_id",
+                )
+            )
+        else:
+            retained.append(
+                _item(
+                    "palette_family",
+                    None,
+                    resolved=preparation.visual_contract.palette_id,
+                    reason="registered_xps_palette_retained",
+                )
+            )
+        marker_density = str(tokens["marker_density"])
+        if marker_density == "adaptive":
+            retained.append(
+                _item(
+                    "marker_density",
+                    marker_density,
+                    resolved="xps_role_specific",
+                    reason="xps_role_specific_marker_contract_retained",
+                )
+            )
+        else:
+            rejected.append(
+                _item(
+                    "marker_density",
+                    marker_density,
+                    resolved="xps_role_specific",
+                    reason="xps_marker_visibility_is_semantic",
+                )
+            )
+        for style_key, requested, resolved, reason in (
+            ("grid", tokens["grid"], "none", "verified_xps_grid_retained"),
+            ("background", tokens["background"], "white", "verified_xps_background_retained"),
+            (
+                "typography_hierarchy",
+                tokens["typography_hierarchy"],
+                preparation.visual_contract.figure_style.profile_name,
+                "verified_xps_typography_retained",
+            ),
+        ):
+            allowed = (
+                (style_key == "grid" and requested == "none")
+                or (style_key == "background" and requested == "white")
+                or (
+                    style_key == "typography_hierarchy"
+                    and requested in {"publication_informed", "adaptive"}
+                )
+            )
+            target = retained if allowed else rejected
+            target.append(
+                _item(
+                    style_key,
+                    requested,
+                    resolved=resolved,
+                    reason=(
+                        reason
+                        if allowed
+                        else f"reference_{style_key}_not_verified_for_xps"
+                    ),
+                )
+            )
+
+        xps_tokens = {
+            "palette_id": tokens["palette_id"],
+            "line_weight": tokens["line_weight"],
+            "fill_transparency": tokens["fill_transparency"],
+            "aspect_ratio_class": layout.get("aspect_ratio_class", "adaptive"),
+            "legend_position": tokens["legend_position"],
+            "legend_frame": tokens["legend_frame"],
+        }
+        locked = dict(locked_style_tokens or {})
+        if locked_palette_id is not None:
+            locked["palette_id"] = locked_palette_id
+        if "series_colors" in locked:
+            locked["palette_id"] = "explicit_series_colors"
+        # Exact user fields lock their corresponding coarse reference token.
+        if "line_width_pt" in locked:
+            locked["line_weight"] = locked["line_width_pt"]
+        if "fill_transparency_percent" in locked:
+            locked["fill_transparency"] = locked["fill_transparency_percent"]
+        if "page_size_cm" in locked:
+            locked["aspect_ratio_class"] = locked["page_size_cm"]
+        if "legend_visible" in locked or "legend_position" in locked:
+            locked["legend_position"] = locked.get(
+                "legend_position",
+                "inside" if locked.get("legend_visible") else "none",
+            )
+        application = apply_xps_visual_style(
+            preparation,
+            xps_tokens,
+            source="reference_figure",
+            locked_tokens=locked,
+        )
+        applied.extend(application.report["applied"])
+        rejected.extend(application.report["rejected"])
+        retained.extend(application.report["retained_template_default"])
+        layout_changed = any(
+            item["token"] in {"aspect_ratio_class", "legend_position"}
+            for item in application.report["applied"]
+        )
+        return ReferenceStyleApplication(
+            application.preparation,
+            _finish_report(
+                application.preparation,
+                adaptation=adaptation,
+                input_digest=input_digest,
+                applied=applied,
+                rejected=rejected,
+                retained=retained,
+                execution_allowed=True,
+                blocking_reasons=blocking_reasons,
+                layout_changed=layout_changed,
+            ),
         )
 
     tokens = adaptation["style_tokens"]

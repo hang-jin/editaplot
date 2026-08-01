@@ -8,8 +8,7 @@ import importlib.util
 import json
 import shutil
 import traceback
-from collections.abc import Mapping
-from dataclasses import asdict
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +59,9 @@ from origin_sciplot.xps_workflow import (
 
 from . import progress_protocol as proto
 
+MAX_SUMMARY_TEXT_CHARS = 160
+MAX_SUMMARY_ITEMS = 16
+
 
 def _load_runner(runner_path: Path):
     spec = importlib.util.spec_from_file_location("origin_sciplot_template_runner", runner_path)
@@ -72,6 +74,59 @@ def _load_runner(runner_path: Path):
     return module
 
 
+def _load_template_manifest(template_id: str) -> TemplateManifest:
+    """Load only the manifest while the manifest progress stage is active."""
+
+    proto.progress("load_template", "running", "正在读取模板 manifest")
+    manifest = TemplateRegistry().get(template_id)
+    proto.progress("load_template", "success", f"已读取模板：{manifest.name}")
+    return manifest
+
+
+def _run_data_analysis(
+    analyzer: Callable[[], Any],
+    *,
+    success_text: str,
+) -> Any:
+    """Wrap the data-analysis call without inventing unobservable sub-stages."""
+
+    proto.progress("analyze_data", "running", "正在分析数据与绘图语义")
+    result = analyzer()
+    proto.progress("analyze_data", "success", success_text)
+    return result
+
+
+def _run_origin_draw_export_verify(
+    runner_call: Callable[[], Any],
+    verifier: Callable[[Any], Mapping[str, Any]],
+) -> tuple[Any, Mapping[str, Any]]:
+    """Report the renderer as one observable call, then verify its evidence."""
+
+    proto.progress(
+        "launch_origin_draw_export_verify",
+        "running",
+        "正在启动 Origin、绘图、导出并执行 Origin 反读",
+    )
+    result = runner_call()
+    proto.progress(
+        "launch_origin_draw_export_verify",
+        "success",
+        "Origin 绘图、导出与反读调用已返回",
+    )
+    proto.progress(
+        "verify_outputs",
+        "running",
+        "正在核对导出文件与 Origin 反读报告",
+    )
+    compatibility = verifier(result)
+    proto.progress(
+        "verify_outputs",
+        "success",
+        "导出文件与 Origin 反读报告校验通过",
+    )
+    return result, compatibility
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run an EditaPlot template")
     parser.add_argument("--template-id", default="auto")
@@ -82,6 +137,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--column-mapping-json")
     parser.add_argument("--text-overrides-json")
     parser.add_argument("--palette-id")
+    parser.add_argument("--visual-style-json")
     parser.add_argument("--reference-style-json")
     parser.set_defaults(keep_origin_open=True)
     parser.add_argument("--keep-origin-open", dest="keep_origin_open", action="store_true")
@@ -99,11 +155,18 @@ def _parse_reference_style_request(raw: str | None) -> dict[str, Any] | None:
             "reference_style_json_invalid",
             "The frozen reference-style request is not valid JSON.",
         ) from exc
-    if not isinstance(payload, dict) or set(payload) != {
-        "adaptation",
-        "expected_report_hash",
-        "locked_palette_id",
-    }:
+    allowed_keys = {
+        frozenset({"adaptation", "expected_report_hash", "locked_palette_id"}),
+        frozenset(
+            {
+                "adaptation",
+                "expected_report_hash",
+                "locked_palette_id",
+                "locked_style_tokens",
+            }
+        ),
+    }
+    if not isinstance(payload, dict) or frozenset(payload) not in allowed_keys:
         raise ScientificWorkflowError(
             "reference_style_json_invalid",
             "The frozen reference-style request has an invalid structure.",
@@ -122,6 +185,38 @@ def _parse_reference_style_request(raw: str | None) -> dict[str, Any] | None:
             "reference_style_json_invalid",
             "The locked palette identifier is invalid.",
         )
+    locked_tokens = payload.get("locked_style_tokens", {})
+    if not isinstance(locked_tokens, dict):
+        raise ScientificWorkflowError(
+            "reference_style_json_invalid",
+            "The locked visual style is invalid.",
+        )
+    payload["locked_style_tokens"] = locked_tokens
+    return payload
+
+
+def _parse_visual_style_request(raw: str | None) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ScientificWorkflowError(
+            "xps_visual_style_json_invalid",
+            "The frozen XPS visual-style request is not valid JSON.",
+        ) from exc
+    if not isinstance(payload, dict) or set(payload) != {"tokens", "expected_report_hash"}:
+        raise ScientificWorkflowError(
+            "xps_visual_style_json_invalid",
+            "The frozen XPS visual-style request has an invalid structure.",
+        )
+    if not isinstance(payload["tokens"], dict) or not isinstance(
+        payload["expected_report_hash"], str
+    ):
+        raise ScientificWorkflowError(
+            "xps_visual_style_json_invalid",
+            "The frozen XPS visual-style request is incomplete.",
+        )
     return payload
 
 
@@ -136,6 +231,7 @@ def _apply_reference_style_request(
             preparation,
             request["adaptation"],
             locked_palette_id=request["locked_palette_id"],
+            locked_style_tokens=request.get("locked_style_tokens", {}),
         )
     except ReferenceStyleError as exc:
         raise ScientificWorkflowError(exc.code, str(exc)) from exc
@@ -151,6 +247,33 @@ def _apply_reference_style_request(
             "The worker reference-style decision differs from the approved plan.",
         )
     return application.preparation, report
+
+
+def _apply_xps_visual_style_request(
+    preparation: Any,
+    request: dict[str, Any] | None,
+) -> tuple[Any, dict[str, Any] | None]:
+    if request is None:
+        return preparation, None
+    from origin_sciplot.xps_visual_style import (
+        XpsVisualStyleError,
+        apply_xps_visual_style,
+    )
+
+    try:
+        application = apply_xps_visual_style(
+            preparation,
+            request["tokens"],
+            source="explicit_user",
+        )
+    except XpsVisualStyleError as exc:
+        raise ScientificWorkflowError(exc.code, str(exc)) from exc
+    if application.report["report_hash"] != request["expected_report_hash"]:
+        raise ScientificWorkflowError(
+            "xps_visual_style_report_mismatch",
+            "The worker XPS visual-style decision differs from the approved plan.",
+        )
+    return application.preparation, application.report
 
 
 def _validate_runner_result(
@@ -286,6 +409,220 @@ def _record_reference_style(
         result["verify"]["reference_style"] = report
 
 
+def _record_xps_visual_style(
+    output: RunOutput,
+    result: Any,
+    report: dict[str, Any] | None,
+) -> None:
+    """Bind the frozen explicit XPS style decision into render evidence."""
+
+    if report is None:
+        return
+    report_path = output.output_dir / "xps_visual_style_report.json"
+    write_json(report_path, report)
+    try:
+        verify_report = json.loads(
+            output.origin_verify_report.read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        raise OriginDrawError(
+            "Origin XPS visual-style evidence could not be read",
+            code="xps_visual_style_report_invalid",
+            stage="xps_visual_style_report",
+        ) from exc
+    if not isinstance(verify_report, dict):
+        raise OriginDrawError(
+            "Origin XPS visual-style evidence is invalid",
+            code="xps_visual_style_report_invalid",
+            stage="xps_visual_style_report",
+        )
+    verify_report["xps_visual_style"] = report
+    write_json(output.origin_verify_report, verify_report)
+    if isinstance(result, dict) and isinstance(result.get("verify"), dict):
+        result["verify"]["xps_visual_style"] = report
+
+
+def _summary_text(value: Any) -> str:
+    text = "" if value is None else str(value)
+    if len(text) <= MAX_SUMMARY_TEXT_CHARS:
+        return text
+    suffix = "[truncated]"
+    return text[: MAX_SUMMARY_TEXT_CHARS - len(suffix)] + suffix
+
+
+def _summary_items(values: Any) -> tuple[list[str], int, bool]:
+    items = tuple(values or ())
+    return (
+        [_summary_text(value) for value in items[:MAX_SUMMARY_ITEMS]],
+        len(items),
+        len(items) > MAX_SUMMARY_ITEMS,
+    )
+
+
+def _compact_plot_spec_payload(
+    scientific_analysis: Any,
+    analysis_report: Path,
+) -> dict[str, Any]:
+    """Return a bounded plot-spec summary; the full spec stays in its report."""
+
+    spec = scientific_analysis.plot_spec
+    series = tuple(getattr(spec, "series", ()) or ())
+    labels, series_count, series_truncated = _summary_items(
+        getattr(item, "label", "") for item in series
+    )
+    roles = sorted(
+        {
+            _summary_text(getattr(item, "series_role", "data"))
+            for item in series
+        }
+    )
+    payload: dict[str, Any] = {
+        "plot_kind": _summary_text(getattr(spec, "plot_kind", "")),
+        "plot_mode": _summary_text(getattr(spec, "plot_mode", "")),
+        "x_title": _summary_text(getattr(spec, "x_title", "")),
+        "y_title": _summary_text(getattr(spec, "y_title", "")),
+        "y2_title": (
+            _summary_text(spec.y2_title)
+            if getattr(spec, "y2_title", None) is not None
+            else None
+        ),
+        "x_scale": _summary_text(getattr(spec, "x_scale", "")),
+        "y_scale": _summary_text(getattr(spec, "y_scale", "")),
+        "series": {
+            "count": series_count,
+            "labels": labels,
+            "roles": roles[:MAX_SUMMARY_ITEMS],
+            "truncated": series_truncated or len(roles) > MAX_SUMMARY_ITEMS,
+        },
+        "full_plot_spec": str(analysis_report),
+    }
+    if getattr(spec, "plot_kind", None) != "circular_network":
+        return payload
+
+    layout = getattr(spec, "network_layout", None)
+    if layout is None:
+        payload["network_layout"] = None
+        return payload
+    panel_order, panel_count, panel_order_truncated = _summary_items(layout.panel_order)
+    node_order, node_count, node_order_truncated = _summary_items(layout.node_order)
+    panels = tuple(layout.panels)
+    edge_counts = {
+        _summary_text(panel.panel): len(panel.edges)
+        for panel in panels[:MAX_SUMMARY_ITEMS]
+    }
+    payload["network_layout"] = {
+        "panel_order": panel_order,
+        "panel_count": panel_count,
+        "panel_order_truncated": panel_order_truncated,
+        "node_order": node_order,
+        "node_count": node_count,
+        "node_order_truncated": node_order_truncated,
+        "edge_counts": edge_counts,
+        "edge_counts_truncated": len(panels) > MAX_SUMMARY_ITEMS,
+        "total_edge_count": sum(len(panel.edges) for panel in panels),
+        "weight_scale": layout.weight_scale.to_dict(),
+        "sample_count": layout.sample_count,
+        "node_radius": layout.node_radius,
+        "full_geometry_report": str(analysis_report),
+    }
+    return payload
+
+
+def _compact_reference_style_payload(
+    report: Mapping[str, Any] | None,
+    report_path: Path,
+) -> dict[str, Any] | None:
+    if report is None:
+        return None
+    return {
+        "route": _summary_text(report.get("route")),
+        "template_id": _summary_text(report.get("template_id")),
+        "report_hash": _summary_text(report.get("report_hash")),
+        "execution_allowed": report.get("execution_allowed"),
+        "applied_count": len(report.get("applied", ())),
+        "rejected_count": len(report.get("rejected", ())),
+        "retained_template_default_count": len(
+            report.get("retained_template_default", ())
+        ),
+        "full_report": str(report_path),
+    }
+
+
+def _compact_xps_visual_style_payload(
+    report: Mapping[str, Any] | None,
+    report_path: Path,
+) -> dict[str, Any] | None:
+    if report is None:
+        return None
+    return {
+        "source": _summary_text(report.get("source")),
+        "report_hash": _summary_text(report.get("report_hash")),
+        "execution_allowed": report.get("execution_allowed"),
+        "applied_count": len(report.get("applied", ())),
+        "rejected_count": len(report.get("rejected", ())),
+        "retained_template_default_count": len(
+            report.get("retained_template_default", ())
+        ),
+        "full_report": str(report_path),
+    }
+
+
+def _compact_runner_result(
+    result: Mapping[str, Any],
+    output: RunOutput,
+    compatibility: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Emit a small success event while keeping full readback on disk.
+
+    Renderer ``verify`` payloads contain every Origin object and can grow to
+    tens of thousands of characters.  They are required for audit, but sending
+    them through the terminal makes the beginner workflow look stalled or
+    noisy.  The authoritative report remains ``origin_verify_report.json``.
+    """
+
+    payload = {
+        key: result[key]
+        for key in ("opju", "png", "pdf", "tif")
+        if isinstance(result.get(key), str)
+    }
+    payload["origin_verify_report"] = str(output.origin_verify_report)
+    origin_version = result.get("origin_version")
+    if origin_version is None:
+        version_payload = compatibility.get("origin_version")
+        if isinstance(version_payload, Mapping):
+            origin_version = (
+                version_payload.get("product_label")
+                or version_payload.get("numeric")
+                or version_payload.get("raw_numeric")
+            )
+    if origin_version is not None:
+        payload["origin_version"] = origin_version
+
+    verify = result.get("verify")
+    if isinstance(verify, Mapping):
+        exports = verify.get("exports")
+        export_summary = {}
+        if isinstance(exports, Mapping):
+            export_summary = {
+                key: exports[key]
+                for key in ("opju", "png", "pdf", "tif")
+                if key in exports
+                and (
+                    exports[key] is None
+                    or isinstance(exports[key], (bool, int, float, str))
+                )
+            }
+        payload["verification_summary"] = {
+            "template_id": _summary_text(verify.get("template_id")),
+            "page_width_cm": verify.get("width_cm"),
+            "page_height_cm": verify.get("height_cm"),
+            "source_data_modified": verify.get("source_data_modified"),
+            "exports": export_summary,
+            "full_readback": str(output.origin_verify_report),
+        }
+    return payload
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     output = None
@@ -293,6 +630,7 @@ def main(argv: list[str] | None = None) -> int:
     xps_analysis = None
     scientific_analysis = None
     reference_style_report: dict[str, Any] | None = None
+    xps_visual_style_report: dict[str, Any] | None = None
     try:
         render_plan_source = None
         if args.render_plan_file:
@@ -307,6 +645,7 @@ def main(argv: list[str] | None = None) -> int:
         reference_style_request = _parse_reference_style_request(
             args.reference_style_json
         )
+        visual_style_request = _parse_visual_style_request(args.visual_style_json)
         column_mapping = None
         scientific_mapping = None
         scientific_text_overrides: dict[str, str] | None = None
@@ -377,24 +716,57 @@ def main(argv: list[str] | None = None) -> int:
                     "mapping_json_invalid", "The confirmed column mapping is invalid."
                 ) from exc
         if args.template_id in {"auto", "xps"}:
-            if reference_style_request is not None:
-                raise ScientificWorkflowError(
-                    "reference_style_xps_unsupported",
-                    "XPS keeps its verified component and fill style contract.",
-                )
             if scientific_text_overrides:
                 raise ScientificWorkflowError(
                     "text_overrides_unsupported",
                     "Axis-title overrides are currently available for scientific-table templates only.",
                 )
-            if args.palette_id:
+            if args.palette_id and visual_style_request is not None:
+                requested_palette = visual_style_request["tokens"].get("palette_id")
+                if requested_palette not in {None, args.palette_id}:
+                    raise ScientificWorkflowError(
+                        "visual_style_conflict",
+                        "The frozen XPS palette requests conflict.",
+                    )
+            elif args.palette_id:
                 raise ScientificWorkflowError(
-                    "palette_override_unsupported",
-                    "XPS keeps its verified component-colour contract.",
+                    "xps_visual_style_report_missing",
+                    "An XPS palette must come from a frozen visual-style plan.",
                 )
-            xps_analysis = prepare_xps(args.input_csv, column_mapping=column_mapping)
-            selected_template_id = select_xps_template_id(xps_analysis)
-            selected_renderer_template_id = select_xps_renderer_template_id(xps_analysis)
+
+            def analyze_xps() -> tuple[Any, str, str, Any, Any]:
+                analysis = prepare_xps(
+                    args.input_csv,
+                    column_mapping=column_mapping,
+                )
+                visual_report = None
+                if visual_style_request is not None:
+                    analysis, visual_report = _apply_xps_visual_style_request(
+                        analysis,
+                        visual_style_request,
+                    )
+                analysis, reference_report = _apply_reference_style_request(
+                    analysis,
+                    reference_style_request,
+                )
+                return (
+                    analysis,
+                    select_xps_template_id(analysis),
+                    select_xps_renderer_template_id(analysis),
+                    visual_report,
+                    reference_report,
+                )
+
+            (
+                xps_analysis,
+                selected_template_id,
+                selected_renderer_template_id,
+                xps_visual_style_report,
+                reference_style_report,
+            ) = _run_data_analysis(
+                analyze_xps,
+                success_text="XPS 数据与绘图语义分析完成",
+            )
             if xps_analysis.requires_confirmation:
                 proto.error(
                     "mapping_confirmation_required",
@@ -403,30 +775,39 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return WorkerExitCode.VALIDATION_FAILED
 
-        proto.progress("load_template", "running", "正在读取模板 manifest")
-        registry = TemplateRegistry()
-        manifest = registry.get(selected_template_id)
+        manifest = _load_template_manifest(selected_template_id)
         if manifest.workflow == "scientific_table":
-            scientific_analysis = prepare_scientific(
-                args.input_csv,
-                manifest.id,
-                column_mapping=scientific_mapping,
-            )
-            if scientific_text_overrides:
-                scientific_analysis = apply_scientific_text_overrides(
-                    scientific_analysis,
-                    x_title=scientific_text_overrides.get("x_title"),
-                    y_title=scientific_text_overrides.get("y_title"),
+            if visual_style_request is not None:
+                raise ScientificWorkflowError(
+                    "visual_style_template_unsupported",
+                    "Exact visual-style JSON is currently implemented for XPS only.",
                 )
-            if args.palette_id:
-                scientific_analysis = apply_scientific_palette_override(
-                    scientific_analysis,
-                    palette_id=args.palette_id,
+            def analyze_scientific() -> tuple[Any, dict[str, Any] | None]:
+                analysis = prepare_scientific(
+                    args.input_csv,
+                    manifest.id,
+                    column_mapping=scientific_mapping,
                 )
-            scientific_analysis, reference_style_report = (
-                _apply_reference_style_request(
-                    scientific_analysis,
+                if scientific_text_overrides:
+                    analysis = apply_scientific_text_overrides(
+                        analysis,
+                        x_title=scientific_text_overrides.get("x_title"),
+                        y_title=scientific_text_overrides.get("y_title"),
+                    )
+                if args.palette_id:
+                    analysis = apply_scientific_palette_override(
+                        analysis,
+                        palette_id=args.palette_id,
+                    )
+                return _apply_reference_style_request(
+                    analysis,
                     reference_style_request,
+                )
+
+            scientific_analysis, reference_style_report = (
+                _run_data_analysis(
+                    analyze_scientific,
+                    success_text="数据角色与绘图语义分析完成",
                 )
             )
             selected_renderer_template_id = manifest.id
@@ -438,7 +819,6 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 return WorkerExitCode.VALIDATION_FAILED
         schema = load_schema(manifest.schema_path)
-        proto.progress("load_template", "success", f"已读取模板：{manifest.name}")
 
         proto.progress("create_output_dir", "running", "正在创建输出文件夹")
         try:
@@ -460,6 +840,16 @@ def main(argv: list[str] | None = None) -> int:
                         "The XPS analysis changed after preview. Refresh the preview and run again.",
                     )
                     return WorkerExitCode.VALIDATION_FAILED
+                if xps_visual_style_report is not None:
+                    write_json(
+                        output.output_dir / "xps_visual_style_report.json",
+                        xps_visual_style_report,
+                    )
+                if reference_style_report is not None:
+                    write_json(
+                        output.output_dir / "reference_style_report.json",
+                        reference_style_report,
+                    )
             elif scientific_analysis is not None:
                 write_json(
                     output.output_dir / f"{manifest.id}_analysis_report.json",
@@ -527,23 +917,47 @@ def main(argv: list[str] | None = None) -> int:
             return WorkerExitCode.VALIDATION_FAILED
         proto.progress("validate_csv", "success", "绘图数据校验通过")
 
-        proto.progress("launch_origin", "running", "正在启动 Origin 并写入工作簿")
         runner = _load_runner(manifest.runner_path)
         runner_options = {"keep_origin_open": args.keep_origin_open}
         if xps_analysis is not None:
             runner_options["preparation"] = xps_analysis
         elif scientific_analysis is not None:
             runner_options["preparation"] = scientific_analysis
-        result = runner.run(manifest, validation_frame, output, logger, **runner_options)
-        _record_reference_style(output, result, reference_style_report)
-        compatibility = _record_template_compatibility(
-            output,
-            manifest,
-            scientific_analysis,
+
+        def verify_runner_result(result_payload: Any) -> Mapping[str, Any]:
+            _record_xps_visual_style(
+                output,
+                result_payload,
+                xps_visual_style_report,
+            )
+            _record_reference_style(
+                output,
+                result_payload,
+                reference_style_report,
+            )
+            compatibility_payload = _record_template_compatibility(
+                output,
+                manifest,
+                scientific_analysis,
+            )
+            _validate_runner_result(
+                manifest,
+                output,
+                result_payload,
+            )
+            return compatibility_payload
+
+        result, compatibility = _run_origin_draw_export_verify(
+            lambda: runner.run(
+                manifest,
+                validation_frame,
+                output,
+                logger,
+                **runner_options,
+            ),
+            verify_runner_result,
         )
-        _validate_runner_result(manifest, output, result)
-        proto.progress("export", "success", "OPJU/PNG/PDF/TIFF 导出流程完成")
-        done_payload = dict(result)
+        done_payload = _compact_runner_result(result, output, compatibility)
         done_payload.update(
             {
                 "output_dir": str(output.output_dir),
@@ -557,15 +971,32 @@ def main(argv: list[str] | None = None) -> int:
                     "plan_digest": xps_analysis.plan_digest,
                     "detection": xps_analysis.detection.to_dict(),
                     "selected_renderer_template_id": selected_renderer_template_id,
+                    "xps_visual_style_summary": _compact_xps_visual_style_payload(
+                        xps_visual_style_report,
+                        output.output_dir / "xps_visual_style_report.json",
+                    ),
+                    "reference_style_summary": _compact_reference_style_payload(
+                        reference_style_report,
+                        output.output_dir / "reference_style_report.json",
+                    ),
                 }
             )
         elif scientific_analysis is not None:
+            analysis_report = (
+                output.output_dir / f"{manifest.id}_analysis_report.json"
+            )
             done_payload.update(
                 {
                     "plan_digest": scientific_analysis.plan_digest,
-                    "plot_spec": asdict(scientific_analysis.plot_spec),
+                    "plot_spec_summary": _compact_plot_spec_payload(
+                        scientific_analysis,
+                        analysis_report,
+                    ),
                     "selected_renderer_template_id": selected_renderer_template_id,
-                    "reference_style": reference_style_report,
+                    "reference_style_summary": _compact_reference_style_payload(
+                        reference_style_report,
+                        output.output_dir / "reference_style_report.json",
+                    ),
                 }
             )
         proto.done(**done_payload)

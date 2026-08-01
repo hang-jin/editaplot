@@ -44,7 +44,7 @@ Origin 2020b 及更早版本不在当前外部 `originpro` 路线的支持范围
 
 如果仓库仍在 ZIP 压缩包里、位于 `Program Files` 等只读目录，先完整解压或移动到当前用户可写
 目录。若 Windows“受控文件夹访问”、单位安全策略、OneDrive/网盘同步或杀毒软件阻止在数据旁
-创建文件夹，请只放行当前仓库和当前数据目录，或由用户明确指定另一个可写输出目录。不要为了省事
+创建文件夹，请只放行当前仓库和当前数据目录，或由你明确指定另一个可写输出目录。不要为了省事
 把 Codex、PowerShell 或 Origin 全部改成管理员运行。
 
 EditaPlot 的本地 runtime 与 Origin 自动化不会主动上传数据，但交给 Codex 的文件仍受你当前
@@ -136,12 +136,20 @@ PNG、JPEG 或 TIFF 参考图只作为视觉简报。我会让 Codex 先总结�
 数据编码和有限的视觉风格，再分别告诉你哪些可以采用、哪些保持模板默认、哪些必须拒绝、哪些仍需
 确认。只有已经通过数据语义确认、且当前模板能够安全表达的部分，才会进入绘图计划。
 
+参考图中的样式只是候选，不替你做决定。你可以另外明确选择系列颜色、线宽、填充透明度、画幅
+比例，以及图例是否显示、是否无框和放置位置；你的明确选择优先。Codex 会把每一项标为采用、
+保留模板默认或拒绝。只有当前模板已经实现、通过 Origin 实机验证并能对象反读的字段才会标为采用。
+对 XPS，这些外观请求也不能改写原始数据、列用途、结合能轴方向、峰组分身份或稳定的单区域渐变
+填充 API。
+
 这项功能不会从像素提取实验数值，不复制参考图中的文字、拟合、物相、Logo 或水印，不把图片嵌入
 OPJU，也不承诺任意图 1:1 复刻。你可以直接这样说：
 
 ```text
 请把这张参考图只当作视觉简报，先总结可安全采用的图形语法和风格，不要复制图中数据或文字。
-把“采用、保留模板默认、拒绝、仍需确认”分别列给我，等我确认后再适配到我的数据。
+另外询问并记录我明确选择的系列颜色、线宽、填充透明度、画幅比例和图例显示/无框/位置；
+我的明确选择优先于参考图。把“采用、保留模板默认、拒绝、仍需确认”分别列给我，只有当前模板
+已验证并能反读的字段才算采用，等我确认后再适配到我的数据。
 ```
 
 ## Doctor：知道哪里还没准备好
@@ -161,7 +169,7 @@ OPJU，也不承诺任意图 1:1 复刻。你可以直接这样说：
 - `ready_for_render`：已具备尝试默认独立启动的技术前提，不代表连接或模板能力已通过；
 - `manual_blockers`：只能由用户处理的事项，不会被伪造为成功。
 
-普通用户不需要阅读 CLSID、注册表视图或多版本候选列表。Codex 应只用一到三句说明
+你不需要阅读 CLSID、注册表视图或多版本候选列表。我会让 Codex 只用一到三句说明
 “能否分析、是否发现默认启动入口、下一步是什么”；完整字段保留在 JSON 诊断中。
 
 如仅缺项目级 Python 依赖，可运行：
@@ -175,7 +183,7 @@ Origin Automation 入口未检测到或实际连接失败，都不能由 Python 
 
 ## 真实 smoke、正式绘图与输出目录
 
-Doctor 只读发现环境，不代替真实连接。获得用户确认的 RenderPlan 后，命令顺序必须是
+Doctor 只读发现环境，不代替真实连接。等你确认 RenderPlan 后，命令顺序必须是
 `origin-smoke → render → verify`：
 
 ```powershell
@@ -189,7 +197,7 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 只有 smoke 通过后才能运行正式 render。普通 render 不要指定 `--output-dir`：runtime 会在
 原始 CSV、TXT、XLS 或 XLSX 所在目录中新建
 `<source_stem>_EditaPlot_<timestamp>` 同级文件夹，将 RenderPlan、OPJU、PNG、PDF、TIF、
-对象反读、验证与 provenance 集中保存。源文件不会被覆盖。只有用户明确要求其他目的地时，
+对象反读、验证与 provenance 集中保存。源文件不会被覆盖。只有你明确要求其他目的地时，
 才可为 render 指定 `--output-dir`。
 
 ## 如果电脑完全没有兼容 Python
@@ -202,7 +210,7 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 winget show --exact --id Python.Python.3.12 --source winget
 ```
 
-向用户说明发布者、来源与协议，并再次得到明确同意后，才可执行：
+Codex 会先向你说明发布者、来源与协议，并再次得到你的明确同意后，才可执行：
 
 ```powershell
 winget install --exact --id Python.Python.3.12 --source winget --scope user --architecture x64 --silent --disable-interactivity --accept-package-agreements --accept-source-agreements
@@ -215,16 +223,56 @@ winget install --exact --id Python.Python.3.12 --source winget --scope user --ar
 .\editaplot.cmd doctor
 ```
 
-若 winget 不存在或安装失败，停止自动安装并引导用户使用
+若 winget 不存在或安装失败，我会让 Codex 停止自动安装并带你使用
 [python.org 官方 Windows 下载页](https://www.python.org/downloads/windows/)安装 64 位 Python
 3.12，然后重跑 `setup`。winget 的参数含义可查阅
 [Microsoft 官方 install 文档](https://learn.microsoft.com/windows/package-manager/winget/install)。
 
-不得在未确认时安装 Python，不得改用来历不明的镜像或安装包，也不得因为 Python 已就绪而
+我不会让 Codex 在未确认时安装 Python，不会改用来历不明的镜像或安装包，也不会因为 Python 已就绪而
 宣称 Origin 已可调用。Doctor 只读枚举 `Origin.Application`、`Origin.ApplicationSI` 和安装
 候选；真实 smoke 才会启动专用实例、读取实际版本并验证连接。
 
 ## 常见问题
+
+<a id="runtime-duration"></a>
+
+### 一次绘图要多久？为什么有人会等三四十分钟甚至一个小时？
+
+我把“首次下载与安装”和“已经配置好以后画一张图”分开看。环境已经准备好、普通数据的科学含义
+也已经确认后，从本地数据识别、Origin smoke、正式绘图导出到验证，完整流程在 **4–5 分钟内**
+可以视为正常范围；这是一条排障参考线，不是对所有电脑和所有复杂数据的硬性承诺。
+
+首次克隆或更新仓库、`setup` 下载锁定依赖、`doctor --repair`、等待用户回答科学含义，以及
+Codex 对话受网络影响的等待时间，都要单独统计。EditaPlot 正常的 `--diagnose`、`doctor`、
+`start`、`understand`、`origin-smoke`、`render` 和 `verify` 是本地流程；因此不能只看到总时间长，
+就直接认定是网络慢。
+
+如果在没有等待你确认的情况下，**30–60 分钟**都没有新的本地进度，这属于异常。不要连续重跑，
+先看最后停在哪一类：
+
+| 最后阶段 | 主要检查对象 |
+| --- | --- |
+| 仓库下载、`setup`、依赖修复 | 网络、包源、项目环境锁 |
+| `--diagnose`、`doctor` | Python 发现、runtime、依赖和只读注册发现 |
+| `start`、`understand`、`plan`、render 的 `analyze_data` | 数据读取、列用途、语义确认与绘图计划；不要把等待回复算作程序耗时 |
+| `origin_smoke` | Origin 独立实例启动、握手、初始化和最小导出闭环 |
+| `load_template` / `create_output_dir` / `validate_csv` | Origin 启动前的模板、目录或数据校验 |
+| `launch_origin_draw_export_verify` | Origin 启动、工作簿/图形创建、导出和对象反读的诚实组合阶段 |
+| `verify_outputs` | Origin 已返回，正在核对产物、源文件哈希和终端摘要 |
+
+smoke 和 render 的 JSONL 进度事件会包含从各自 worker 启动起计算的 `elapsed_seconds`。两个 worker
+会分别从零计时，这个值也不包含 Codex 对话和人工确认。终端单条事件限制在 32 KiB 内，完整
+绘图计划和 Origin 对象反读保存在输出报告中，不会为了“看起来详细”把数万字符塞回对话。
+需要保留现场时，可以运行：
+
+```powershell
+.\editaplot.cmd render .\render-plan.json 2>&1 |
+  Tee-Object -FilePath .\render-progress.jsonl
+```
+
+反馈问题时，请一并提供运行的命令、最后一条事件的 `type`、`step` 和 `elapsed_seconds`、是否首次
+安装，以及当时是否正在等待确认。这样我能判断是下载、环境、数据理解、Origin 连接，还是绘图
+导出阶段，而不是靠猜测。
 
 ### 为什么不能只复制 Skill 文件夹？
 
@@ -303,4 +351,7 @@ or XLSX file and keeps all formal artifacts there.
 For a GSAS/GSAS-II XRD refinement table, this understanding stage separates Observed, Calculated,
 optional Background, supplied Difference, explicit Phase ticks, and non-rendering control columns.
 For a supplied reference image, EditaPlot abstracts only safe figure grammar and style, asks for a
-separate confirmation, and neither copies reference content nor promises an arbitrary one-to-one replica.
+separate confirmation, and neither copies reference content nor promises an arbitrary one-to-one
+replica. A separately confirmed user choice of colors, widths, transparency, page/aspect ratio, and
+legend behavior takes precedence; every field remains capability-gated and is reported as applied,
+default retained, or rejected.

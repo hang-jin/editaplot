@@ -492,6 +492,41 @@ class ReleaseAudit:
                 f"Gallery must display exactly {expected_display_count} cases.",
                 str(spec["manifest"]),
             )
+        expected_route_count = int(spec["expected_public_route_count"])
+        template_root = self.root / "runtime" / "templates"
+        public_route_ids: list[str] = []
+        for template_manifest in sorted(template_root.glob("*/manifest.yaml")):
+            text = template_manifest.read_text(encoding="utf-8")
+            scalars: dict[str, str | None] = {}
+            for key in ("id", "status", "visibility"):
+                match = re.search(
+                    rf"(?m)^{re.escape(key)}:\s*([A-Za-z0-9_.-]+)\s*$",
+                    text,
+                )
+                scalars[key] = match.group(1) if match is not None else None
+
+            if scalars["status"] == "implemented" and scalars["visibility"] == "public":
+                route_id = scalars["id"]
+                if route_id is None:
+                    self.fail(
+                        "public_route_id_missing",
+                        "A public implemented template lacks a scalar id.",
+                        template_manifest.relative_to(self.root).as_posix(),
+                    )
+                else:
+                    public_route_ids.append(route_id)
+        if len(public_route_ids) != len(set(public_route_ids)):
+            self.fail(
+                "public_route_id_duplicate",
+                "Public implemented template IDs must be unique.",
+                "runtime/templates",
+            )
+        if len(public_route_ids) != expected_route_count:
+            self.fail(
+                "public_route_count_mismatch",
+                f"Public release must expose exactly {expected_route_count} implemented routes.",
+                "runtime/templates",
+            )
         actual = {path.stem: path for path in directory.glob("*.png") if path.is_file()}
         if set(records) != set(actual):
             missing = sorted(set(records) - set(actual))

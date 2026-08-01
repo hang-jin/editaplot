@@ -19,6 +19,12 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
+from .circular_network_layout import (
+    MAX_NODE_GROUP_COUNT,
+    CircularNetworkEdgeRecord,
+    CircularNetworkLayoutPlan,
+    resolve_circular_network_layout,
+)
 from .data_loader import DataLoadError, LoadedTable, load_table
 from .heatmap_layout import heatmap_cell_labels_enabled
 from .palette_catalog import get_palette
@@ -42,6 +48,7 @@ ScientificTemplateId = Literal[
     "percent_stacked_bar",
     "pie",
     "sankey",
+    "circular_network",
     "scatter",
     "line_error",
     "trend",
@@ -86,6 +93,7 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "percent_stacked_bar",
         "pie",
         "sankey",
+        "circular_network",
         "scatter",
         "line_error",
         "trend",
@@ -222,6 +230,14 @@ class ScientificPlotSpec:
     z_title: str | None = None
     source_column: str | None = None
     target_column: str | None = None
+    panel_column: str | None = None
+    weight_column: str | None = None
+    sign_column: str | None = None
+    source_group_column: str | None = None
+    target_group_column: str | None = None
+    edge_label_column: str | None = None
+    node_groups: tuple[tuple[str, str], ...] = ()
+    network_layout: CircularNetworkLayoutPlan | None = None
     aggregate_error_column: str | None = None
     reference_value: float | None = None
     reference_values: tuple[float, ...] = ()
@@ -355,6 +371,7 @@ _PALETTE_OVERRIDE_MODE_BY_TEMPLATE: dict[str, str] = {
     "percent_stacked_bar": "qualitative",
     "pie": "qualitative",
     "sankey": "qualitative",
+    "circular_network": "qualitative",
     "scatter": "accent",
     "line_error": "qualitative",
     "trend": "sequential",
@@ -407,6 +424,8 @@ def apply_scientific_palette_override(
         category_count = len(spec.category_order)
     elif preparation.template_id == "grouped_box":
         category_count = len(spec.group_order)
+    elif preparation.template_id == "circular_network":
+        category_count = max(1, len(spec.group_order))
     else:
         category_count = len(spec.series)
     if required_mode == "qualitative" and category_count > palette.max_qualitative_categories:
@@ -767,6 +786,57 @@ _CATEGORY_ALIASES = (
 _SOURCE_ALIASES = ("source", "from", "origin", "起点", "来源", "源节点")
 _TARGET_ALIASES = ("target", "to", "destination", "终点", "目标", "目标节点")
 _VALUE_ALIASES = ("value", "weight", "flow", "amount", "数值", "权重", "流量")
+_PANEL_ALIASES = (
+    "panel",
+    "period",
+    "timeperiod",
+    "time window",
+    "window",
+    "stage",
+    "面板",
+    "子图",
+    "时期",
+    "时段",
+    "时间段",
+    "阶段",
+    "窗口",
+)
+_SIGN_ALIASES = (
+    "sign",
+    "direction",
+    "polarity",
+    "association",
+    "edge sign",
+    "符号",
+    "方向",
+    "正负",
+    "关系方向",
+)
+_SOURCE_GROUP_ALIASES = (
+    "sourcegroup",
+    "source group",
+    "fromgroup",
+    "起点组",
+    "来源组",
+    "源节点组",
+)
+_TARGET_GROUP_ALIASES = (
+    "targetgroup",
+    "target group",
+    "togroup",
+    "终点组",
+    "目标组",
+    "目标节点组",
+)
+_EDGE_LABEL_ALIASES = (
+    "edgelabel",
+    "edge label",
+    "linklabel",
+    "relationlabel",
+    "边标签",
+    "连线标签",
+    "关系标签",
+)
 _SIZE_ALIASES = (
     "size",
     "magnitude",
@@ -907,6 +977,11 @@ _ROLE_LABELS: dict[str, str] = {
     "source": "Source / 起点",
     "target": "Target / 终点",
     "value": "Value / 权重",
+    "panel": "Panel / 面板或时期",
+    "sign": "Sign / 边的正负方向",
+    "source_group": "Source group / 起点类别",
+    "target_group": "Target group / 终点类别",
+    "edge_label": "Edge label / 原始边标签",
     "size": "Size / 大小",
     "estimate": "Estimate / 估计值",
     "lower": "CI lower / 区间下限",
@@ -964,6 +1039,19 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
     elif template_id == "sankey":
         keys = ("source", "target", "value", "ignored")
         unique = {"source", "target", "value"}
+    elif template_id == "circular_network":
+        keys = (
+            "panel",
+            "source",
+            "target",
+            "value",
+            "sign",
+            "source_group",
+            "target_group",
+            "edge_label",
+            "ignored",
+        )
+        unique = set(keys) - {"ignored"}
     elif template_id in {"raw_summary", "violin", "histogram", "raincloud", "grouped_box"}:
         keys = ("series", "ignored")
         unique = set()
@@ -1411,6 +1499,93 @@ def _automatic_sankey_mapping(loaded: LoadedTable) -> _AutoMapping:
     for role, column in selected.items():
         assignments[column] = role
     confidence = 0.97 if not reasons else 0.66
+    return _AutoMapping(
+        assignments,
+        "default",
+        confidence,
+        tuple(dict.fromkeys(reasons)),
+        tuple(dict.fromkeys(reasons)),
+    )
+
+
+def _automatic_circular_network_mapping(loaded: LoadedTable) -> _AutoMapping:
+    """Map a temporal directed edge list without inventing missing columns."""
+
+    frame = loaded.frame
+    assignments = {str(column): "ignored" for column in frame.columns}
+    aliases_by_role = {
+        "panel": _PANEL_ALIASES,
+        # Match the more specific optional headers before generic Source and
+        # Target aliases, so SourceGroup can never be stolen as a source node.
+        "source_group": _SOURCE_GROUP_ALIASES,
+        "target_group": _TARGET_GROUP_ALIASES,
+        "edge_label": _EDGE_LABEL_ALIASES,
+        "sign": _SIGN_ALIASES,
+        "source": _SOURCE_ALIASES,
+        "target": _TARGET_ALIASES,
+        "value": _VALUE_ALIASES,
+    }
+    selected: dict[str, str] = {}
+    reasons: list[str] = []
+    used_columns: set[str] = set()
+    for role, aliases in aliases_by_role.items():
+        scored = [
+            (str(column), _alias_score(str(column), aliases))
+            for column in frame.columns
+            if str(column) not in used_columns
+        ]
+        best = max((score for _, score in scored), default=0)
+        winners = [column for column, score in scored if score == best and score > 0]
+        if len(winners) == 1:
+            selected[role] = winners[0]
+            used_columns.add(winners[0])
+            if best < 3:
+                reasons.append(f"{role}_role_inferred")
+        elif len(winners) > 1:
+            selected[role] = winners[0]
+            used_columns.add(winners[0])
+            reasons.append(f"{role}_role_ambiguous")
+
+    if "value" not in selected:
+        numeric = [
+            str(column)
+            for column in frame.columns
+            if str(column) not in used_columns and _numeric_compatible(frame[column])
+        ]
+        if numeric:
+            selected["value"] = numeric[0]
+            used_columns.add(numeric[0])
+            reasons.append("value_role_inferred")
+
+    remaining_text = [
+        str(column)
+        for column in frame.columns
+        if str(column) not in used_columns and not _numeric_compatible(frame[column])
+    ]
+    for role in ("panel", "source", "target"):
+        if role not in selected and remaining_text:
+            selected[role] = remaining_text.pop(0)
+            used_columns.add(selected[role])
+            reasons.append(f"{role}_role_inferred")
+
+    required = {"panel", "source", "target", "value"}
+    if not required.issubset(selected):
+        missing = ", ".join(sorted(required - set(selected)))
+        raise ScientificWorkflowError(
+            "circular_network_roles_missing",
+            (
+                "Circular network data needs Panel, Source, Target, and a positive "
+                f"numeric Weight column. Missing role(s): {missing}."
+            ),
+        )
+    if len({selected[role] for role in required}) != len(required):
+        raise ScientificWorkflowError(
+            "circular_network_roles_conflict",
+            "Panel, Source, Target, and Weight must use four different columns.",
+        )
+    for role, column in selected.items():
+        assignments[column] = role
+    confidence = 0.98 if not reasons else 0.66
     return _AutoMapping(
         assignments,
         "default",
@@ -4381,6 +4556,339 @@ def _build_sankey_spec(
     )
 
 
+def _normalize_circular_network_sign(
+    value: object,
+    *,
+    column: str,
+    row: int,
+) -> tuple[str, bool]:
+    if pd.isna(value) or str(value).strip() == "":
+        return "neutral", True
+    text = unicodedata.normalize("NFKC", str(value)).casefold().strip()
+    compact = re.sub(r"\s+", "", text).replace("−", "-")
+    positive = {
+        "positive",
+        "pos",
+        "plus",
+        "+",
+        "+1",
+        "1",
+        ">0",
+        "p>0",
+        "正",
+        "正向",
+        "正相关",
+        "正效应",
+        "促进",
+        "增加",
+        "↑",
+    }
+    negative = {
+        "negative",
+        "neg",
+        "minus",
+        "-",
+        "-1",
+        "<0",
+        "p<0",
+        "负",
+        "负向",
+        "负相关",
+        "负效应",
+        "抑制",
+        "减少",
+        "↓",
+    }
+    neutral = {
+        "neutral",
+        "none",
+        "zero",
+        "0",
+        "unknown",
+        "na",
+        "n/a",
+        "中性",
+        "无方向",
+        "无显著关系",
+        "未知",
+        "不显著",
+    }
+    if compact in positive:
+        return "positive", False
+    if compact in negative:
+        return "negative", False
+    if compact in neutral:
+        return "neutral", False
+    raise ScientificWorkflowError(
+        "circular_network_sign_unknown",
+        (
+            f"Sign column {column!r} has an unsupported value {value!r} at "
+            f"data row {row}. Use positive/negative/neutral, +/−, p>0/p<0, "
+            "or the corresponding Chinese wording."
+        ),
+        column=column,
+        row=row,
+    )
+
+
+def _build_circular_network_spec(
+    frame: pd.DataFrame,
+    assignments: dict[str, str],
+) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    panel_column = _require_one(assignments, "panel")
+    source_column = _require_one(assignments, "source")
+    target_column = _require_one(assignments, "target")
+    weight_column = _require_one(assignments, "value")
+
+    def optional_role(role: str) -> str | None:
+        matches = [column for column, assigned in assignments.items() if assigned == role]
+        return matches[0] if matches else None
+
+    sign_column = optional_role("sign")
+    source_group_column = optional_role("source_group")
+    target_group_column = optional_role("target_group")
+    edge_label_column = optional_role("edge_label")
+    if (source_group_column is None) != (target_group_column is None):
+        raise ScientificWorkflowError(
+            "circular_network_group_pair_incomplete",
+            "SourceGroup and TargetGroup must either both be mapped or both be omitted.",
+        )
+
+    text_columns = (panel_column, source_column, target_column)
+    for column in text_columns:
+        blank = _blank_mask(frame[column])
+        if bool(blank.any()):
+            index = int(np.flatnonzero(blank.to_numpy())[0])
+            raise ScientificWorkflowError(
+                "circular_network_text_empty",
+                f"Column {column!r} is empty at data row {index + 2}.",
+                column=column,
+                row=index + 2,
+            )
+        for index, value in enumerate(frame[column]):
+            text = str(value)
+            if text != text.strip():
+                raise ScientificWorkflowError(
+                    "circular_network_text_whitespace",
+                    (
+                        f"Column {column!r} contains leading or trailing whitespace "
+                        f"at data row {index + 2}."
+                    ),
+                    column=column,
+                    row=index + 2,
+                )
+
+    weight_values = frame[weight_column].to_numpy(dtype=float, copy=True)
+    invalid_weight = ~np.isfinite(weight_values) | (weight_values <= 0.0)
+    if bool(np.any(invalid_weight)):
+        index = int(np.flatnonzero(invalid_weight)[0])
+        raise ScientificWorkflowError(
+            "circular_network_weight_invalid",
+            f"Circular-network weights must be finite and greater than zero at data row {index + 2}.",
+            column=weight_column,
+            row=index + 2,
+        )
+
+    panels: list[str] = []
+    nodes: list[str] = []
+    seen_panels: set[str] = set()
+    seen_nodes: set[str] = set()
+    seen_edges: set[tuple[str, str, str]] = set()
+    edges_per_panel: dict[str, int] = {}
+    node_group_map: dict[str, str] = {}
+    records: list[CircularNetworkEdgeRecord] = []
+    blank_sign_seen = False
+
+    for index, row_values in frame.iterrows():
+        panel = str(row_values[panel_column])
+        source = str(row_values[source_column])
+        target = str(row_values[target_column])
+        data_row = int(index) + 2 if isinstance(index, (int, np.integer)) else len(records) + 2
+        if panel not in seen_panels:
+            seen_panels.add(panel)
+            panels.append(panel)
+        for node in (source, target):
+            if node not in seen_nodes:
+                seen_nodes.add(node)
+                nodes.append(node)
+        if source == target:
+            raise ScientificWorkflowError(
+                "circular_network_self_link",
+                f"Source and target are identical at data row {data_row}.",
+                row=data_row,
+            )
+        edge_key = (panel, source, target)
+        if edge_key in seen_edges:
+            raise ScientificWorkflowError(
+                "circular_network_duplicate_edge",
+                (
+                    f"Duplicate directed edge {source!r} → {target!r} occurs in "
+                    f"panel {panel!r} at data row {data_row}."
+                ),
+                row=data_row,
+            )
+        seen_edges.add(edge_key)
+        edges_per_panel[panel] = edges_per_panel.get(panel, 0) + 1
+
+        sign = "neutral"
+        if sign_column is not None:
+            sign, was_blank = _normalize_circular_network_sign(
+                row_values[sign_column],
+                column=sign_column,
+                row=data_row,
+            )
+            blank_sign_seen = blank_sign_seen or was_blank
+
+        if source_group_column is not None and target_group_column is not None:
+            for node, group_column in (
+                (source, source_group_column),
+                (target, target_group_column),
+            ):
+                group_value = row_values[group_column]
+                if pd.isna(group_value) or str(group_value).strip() == "":
+                    raise ScientificWorkflowError(
+                        "circular_network_group_empty",
+                        f"Node group is empty in column {group_column!r} at data row {data_row}.",
+                        column=group_column,
+                        row=data_row,
+                    )
+                group = str(group_value)
+                if group != group.strip():
+                    raise ScientificWorkflowError(
+                        "circular_network_group_whitespace",
+                        (
+                            f"Node group in column {group_column!r} contains leading "
+                            f"or trailing whitespace at data row {data_row}."
+                        ),
+                        column=group_column,
+                        row=data_row,
+                    )
+                existing_group = node_group_map.get(node)
+                if existing_group is not None and existing_group != group:
+                    raise ScientificWorkflowError(
+                        "circular_network_node_group_conflict",
+                        (
+                            f"Node {node!r} is assigned to both {existing_group!r} "
+                            f"and {group!r}; every node must keep one group."
+                        ),
+                        column=group_column,
+                        row=data_row,
+                    )
+                node_group_map[node] = group
+
+        label = ""
+        if edge_label_column is not None:
+            label_value = row_values[edge_label_column]
+            label = "" if pd.isna(label_value) else str(label_value)
+        records.append(
+            CircularNetworkEdgeRecord(
+                panel=panel,
+                source=source,
+                target=target,
+                weight=float(row_values[weight_column]),
+                sign=sign,
+                label=label,
+            )
+        )
+
+    if not 1 <= len(panels) <= 4:
+        raise ScientificWorkflowError(
+            "circular_network_panel_count",
+            f"Circular network supports 1–4 panels; this table contains {len(panels)}.",
+        )
+    if len(nodes) > 24:
+        raise ScientificWorkflowError(
+            "circular_network_node_count",
+            f"Circular network supports at most 24 global nodes; this table contains {len(nodes)}.",
+        )
+    group_order = tuple(dict.fromkeys(node_group_map.values()))
+    if len(group_order) > MAX_NODE_GROUP_COUNT:
+        raise ScientificWorkflowError(
+            "circular_network_node_group_count",
+            (
+                f"Circular network supports at most {MAX_NODE_GROUP_COUNT} node groups "
+                f"with independent colour encoding; this table contains {len(group_order)}."
+            ),
+        )
+    excessive_panel = next(
+        ((panel, count) for panel, count in edges_per_panel.items() if count > 60),
+        None,
+    )
+    if excessive_panel is not None:
+        panel, count = excessive_panel
+        raise ScientificWorkflowError(
+            "circular_network_edge_count",
+            f"Panel {panel!r} contains {count} edges; the per-panel limit is 60.",
+        )
+
+    layout = resolve_circular_network_layout(
+        panel_order=panels,
+        node_order=nodes,
+        edges=records,
+    )
+    max_label_length = max(
+        (len(value) for value in (*panels, *nodes, *node_group_map.values())),
+        default=0,
+    )
+    style = resolve_adaptive_style(
+        template_id="circular_network",
+        plot_kind="circular_network",
+        row_count=len(frame),
+        series_count=len(panels),
+        max_label_length=max_label_length,
+    )
+    warnings: list[str] = []
+    if sign_column is None:
+        warnings.append("circular_network_sign_defaults_neutral")
+    elif blank_sign_seen:
+        warnings.append("circular_network_blank_sign_defaults_neutral")
+    if edge_label_column is not None and any(
+        not panel.edge_labels_visible and any(edge.label for edge in panel.edges)
+        for panel in layout.panels
+    ):
+        warnings.append("circular_network_edge_labels_hidden_dense")
+    series = (ScientificSeries(weight_column, weight_column),)
+    return (
+        ScientificPlotSpec(
+            plot_kind="circular_network",
+            plot_mode="temporal_directed_weighted",
+            x_column=None,
+            category_column=None,
+            series=series,
+            x_title="Directed network",
+            y_title=weight_column,
+            y2_title=None,
+            x_scale="linear",
+            y_scale="linear",
+            display_transform="identity",
+            display_plan=ScientificDisplayPlan(
+                15.0,
+                0.8,
+                0.72,
+                figure_style=style,
+            ),
+            axis_plan=ScientificAxisPlan(-1.25, 1.25, None, -1.25, 1.25, None),
+            source_column=source_column,
+            target_column=target_column,
+            panel_column=panel_column,
+            weight_column=weight_column,
+            sign_column=sign_column,
+            source_group_column=source_group_column,
+            target_group_column=target_group_column,
+            edge_label_column=edge_label_column,
+            node_groups=tuple(
+                (node, node_group_map[node])
+                for node in nodes
+                if node in node_group_map
+            ),
+            network_layout=layout,
+            category_order=tuple(nodes),
+            group_order=group_order,
+        ),
+        tuple(warnings),
+    )
+
+
 def _build_eis_spec(
     frame: pd.DataFrame,
     assignments: dict[str, str],
@@ -4544,6 +5052,8 @@ def _build_plot_spec(
         return _build_eis_spec(frame, assignments, plot_mode)
     if template_id == "sankey":
         return _build_sankey_spec(frame, assignments)
+    if template_id == "circular_network":
+        return _build_circular_network_spec(frame, assignments)
     if template_id in {"raw_summary", "violin", "histogram", "raincloud"}:
         return _build_raw_distribution_spec(template_id, frame, assignments)
     if template_id == "shap_summary":
@@ -4582,6 +5092,8 @@ def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
         return _automatic_eis_mapping(loaded)
     if template_id == "sankey":
         return _automatic_sankey_mapping(loaded)
+    if template_id == "circular_network":
+        return _automatic_circular_network_mapping(loaded)
     if template_id in {"raw_summary", "violin", "histogram", "raincloud"}:
         return _automatic_raw_distribution_mapping(loaded, template_id)
     if template_id == "shap_summary":

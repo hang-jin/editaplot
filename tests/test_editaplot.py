@@ -87,6 +87,11 @@ def _semantic_confirmation(
         ("templates/xrd/example_standard.csv", "XRD diffraction", "xrd"),
         ("templates/bar/example_multi_group.csv", "compare groups with bars", "bar"),
         ("templates/sankey/example_standard.csv", "Sankey flow", "sankey"),
+        (
+            "templates/circular_network/example_standard.csv",
+            "temporal circular directed weighted network",
+            "circular_network",
+        ),
         ("templates/scatter/example_dense.csv", "scatter relationship", "scatter"),
         ("templates/line_error/example_chinese.csv", "trend with error bars", "line_error"),
         ("templates/trend/example_standard.csv", "multi-series progression trendline", "trend"),
@@ -2375,17 +2380,44 @@ def test_plan_freezes_palette_and_passes_it_to_worker() -> None:
     assert command[index + 1] == "ocean_coral"
 
 
-def test_palette_override_does_not_weaken_xps_contract() -> None:
-    with pytest.raises(EditaPlotError, match="XPS keeps"):
-        build_plan(
-            EXAMPLES / "xps_fit.csv",
-            template_id="xps",
-            claim="XPS component evidence remains editable.",
-            evidence_role="spectral decomposition",
-            palette_id="ocean_coral",
-            semantic_confirmation=_semantic_confirmation(EXAMPLES / "xps_fit.csv", "xps"),
-            engine_home=ENGINE,
-        )
+def test_palette_override_changes_xps_style_without_weakening_scientific_contract() -> None:
+    source = EXAMPLES / "xps_fit.csv"
+    base = build_plan(
+        source,
+        template_id="xps",
+        claim="XPS component evidence remains editable.",
+        evidence_role="spectral decomposition",
+        semantic_confirmation=_semantic_confirmation(source, "xps"),
+        engine_home=ENGINE,
+    )
+    plan = build_plan(
+        source,
+        template_id="xps",
+        claim="XPS component evidence remains editable.",
+        evidence_role="spectral decomposition",
+        palette_id="ocean_coral",
+        semantic_confirmation=_semantic_confirmation(source, "xps"),
+        engine_home=ENGINE,
+    )
+
+    visual = plan["figure_contract"]["visual_style"]
+    assert plan["figure_contract"]["palette"]["palette_id"] == "ocean_coral"
+    assert visual["tokens"] == {"palette_id": "ocean_coral"}
+    assert [item["token"] for item in visual["report"]["applied"]] == ["palette_id"]
+    assert visual["report"]["safety"] == {
+        "style_only": True,
+        "source_values_changed": False,
+        "scientific_elements_changed": False,
+        "series_visibility_changed": False,
+        "source_columns_changed": False,
+        "unverified_origin_parameter_added": False,
+        "xps_fill_mode": "pfm3_two_colors",
+    }
+    assert plan["source"] == base["source"]
+    assert plan["data_understanding"] == base["data_understanding"]
+    assert plan["template"]["display_transform_or_profile"] == base["template"][
+        "display_transform_or_profile"
+    ]
 
 
 def test_public_bar_showcase_uses_few_series_and_explicit_sd() -> None:

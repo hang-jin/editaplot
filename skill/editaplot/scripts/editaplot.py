@@ -124,6 +124,10 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser.add_argument("--y-title")
     plan_parser.add_argument("--palette-id", help="Freeze a compatible palette from `palettes`")
     plan_parser.add_argument(
+        "--visual-style-json",
+        help="Confirmed exact XPS visual fields (colors, pt width, transparency, page, legend)",
+    )
+    plan_parser.add_argument(
         "--target-output",
         default="editable Origin figure and publication exports",
     )
@@ -467,6 +471,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "plan":
             _ensure_output_does_not_replace_input(args.input_file, args.output)
             _ensure_output_does_not_replace_input(args.mapping_json, args.output)
+            _ensure_output_does_not_replace_input(args.visual_style_json, args.output)
             _ensure_output_does_not_replace_input(
                 args.semantic_confirmation_json,
                 args.output,
@@ -479,6 +484,7 @@ def main(argv: list[str] | None = None) -> int:
             ):
                 _ensure_output_does_not_replace_input(reference_input, args.output)
             mapping = load_json(args.mapping_json) if args.mapping_json else None
+            visual_style = load_json(args.visual_style_json) if args.visual_style_json else None
             semantic_confirmation = load_json(args.semantic_confirmation_json)
             reference_spec = (
                 load_json(args.reference_spec_json)
@@ -505,6 +511,7 @@ def main(argv: list[str] | None = None) -> int:
                 x_title=args.x_title,
                 y_title=args.y_title,
                 palette_id=args.palette_id,
+                visual_style=visual_style,
                 mapping=mapping,
                 semantic_confirmation=semantic_confirmation,
                 reference_image=args.reference_image,

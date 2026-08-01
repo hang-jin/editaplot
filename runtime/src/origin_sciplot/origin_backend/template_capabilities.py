@@ -34,6 +34,8 @@ class OriginCapability(str, Enum):
     LOG_AXIS = "log_axis"
     XPS_FILL_TWO_COLOR = "xps_fill_two_color"
     OPEN_GL_3D = "open_gl_3d"
+    GRAPH_OBJECT_ARROW = "graph_object_arrow"
+    MULTI_LAYER_PAGE = "multi_layer_page"
 
 
 @dataclass(frozen=True)
@@ -139,6 +141,11 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
     "bland_altman": _profile("bland_altman"),
     "bubble": _profile("bubble"),
     "calibration_curve": _profile("calibration_curve"),
+    "circular_network": _profile(
+        "circular_network",
+        OriginCapability.GRAPH_OBJECT_ARROW,
+        OriginCapability.MULTI_LAYER_PAGE,
+    ),
     "confusion_matrix": _profile(
         "confusion_matrix",
         OriginCapability.CATEGORICAL_AXIS,

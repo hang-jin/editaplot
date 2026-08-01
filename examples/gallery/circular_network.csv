@@ -1,0 +1,23 @@
+Panel,Source,Target,Weight,Sign,SourceGroup,TargetGroup,EdgeLabel
+Period 1 (2000-2010),Acquisition,Signal,0.82,positive,Inputs,Evidence,+0.82
+Period 1 (2000-2010),Acquisition,Quality,0.44,positive,Inputs,Evidence,+0.44
+Period 1 (2000-2010),Context,Signal,0.53,negative,Inputs,Evidence,-0.53
+Period 1 (2000-2010),Context,Quality,0.67,positive,Inputs,Evidence,+0.67
+Period 1 (2000-2010),Signal,Model,0.91,positive,Evidence,Inference,+0.91
+Period 1 (2000-2010),Quality,Model,0.62,positive,Evidence,Inference,+0.62
+Period 1 (2000-2010),Quality,Calibration,0.58,positive,Evidence,Inference,+0.58
+Period 1 (2000-2010),Model,Calibration,0.35,negative,Inference,Inference,-0.35
+Period 1 (2000-2010),Model,Decision,0.88,positive,Inference,Decision,+0.88
+Period 1 (2000-2010),Calibration,Decision,0.71,positive,Inference,Decision,+0.71
+Period 1 (2000-2010),Decision,Outcome,0.79,positive,Decision,Decision,+0.79
+Period 2 (2010-2020),Acquisition,Signal,0.69,positive,Inputs,Evidence,+0.69
+Period 2 (2010-2020),Acquisition,Quality,0.55,positive,Inputs,Evidence,+0.55
+Period 2 (2010-2020),Context,Signal,0.41,negative,Inputs,Evidence,-0.41
+Period 2 (2010-2020),Context,Quality,0.76,positive,Inputs,Evidence,+0.76
+Period 2 (2010-2020),Signal,Model,0.84,positive,Evidence,Inference,+0.84
+Period 2 (2010-2020),Signal,Calibration,0.49,negative,Evidence,Inference,-0.49
+Period 2 (2010-2020),Quality,Calibration,0.73,positive,Evidence,Inference,+0.73
+Period 2 (2010-2020),Model,Decision,0.93,positive,Inference,Decision,+0.93
+Period 2 (2010-2020),Calibration,Decision,0.64,positive,Inference,Decision,+0.64
+Period 2 (2010-2020),Calibration,Outcome,0.37,negative,Inference,Decision,-0.37
+Period 2 (2010-2020),Decision,Outcome,0.86,positive,Decision,Decision,+0.86

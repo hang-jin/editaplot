@@ -7,7 +7,9 @@ logic inside the template package instead of the GUI.
 from __future__ import annotations
 
 import hashlib
+import re
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +26,7 @@ from origin_sciplot.origin_backend.session import OriginSession
 from origin_sciplot.origin_backend.verify_utils import (
     require_nonempty,
     verify_page_and_layer,
+    verify_plot_color,
     verify_plot_line_widths,
     verify_symbol_style,
     verify_text_fonts,
@@ -31,7 +34,11 @@ from origin_sciplot.origin_backend.verify_utils import (
 )
 from origin_sciplot.output_manager import RunOutput, write_json
 from origin_sciplot.template_registry import TemplateManifest
-from origin_sciplot.xps_workflow import XpsPreparation, prepare_xps
+from origin_sciplot.xps_workflow import (
+    XpsPreparation,
+    prepare_xps,
+    validate_xps_render_frame,
+)
 
 PEAKS = (
     ("Peak_CC", "C-C / C=C", "#4C78A8"),
@@ -88,25 +95,37 @@ def _resolve_preparation(
         )
     if source_digest != resolved.source_sha256:
         raise OriginDrawError("XPS preparation no longer matches the immutable input copy.")
-    if tuple(str(column) for column in frame.columns) != resolved.source_columns:
-        raise OriginDrawError("Validated XPS columns no longer match the preparation plan.")
-    if len(frame.index) != resolved.row_count:
-        raise OriginDrawError("Validated XPS row count no longer matches the preparation plan.")
+    try:
+        validate_xps_render_frame(frame, resolved)
+    except ValueError as exc:
+        raise OriginDrawError(str(exc)) from exc
     return resolved
 
 
-def _prepare_frame(frame: pd.DataFrame) -> pd.DataFrame:
+def _prepare_frame(
+    frame: pd.DataFrame,
+    preparation: XpsPreparation | None = None,
+) -> pd.DataFrame:
     prepared = frame.sort_values("BindingEnergy").reset_index(drop=True).copy()
     prepared.insert(1, "PlotX", -prepared["BindingEnergy"])
-    for peak_column, _label, _color in PEAKS:
+    component_columns = (
+        preparation.roles.components
+        if preparation is not None
+        else tuple(item[0] for item in PEAKS)
+    )
+    for peak_column in component_columns:
         if peak_column in prepared.columns and "Background" in prepared.columns:
             prepared[f"{peak_column}{FILL_TOP_SUFFIX}"] = prepared["Background"] + prepared[peak_column]
             prepared[f"{peak_column}{FILL_BASE_SUFFIX}"] = prepared["Background"]
     return prepared
 
 
-def _apply_page_layer(op: Any, graph: Any, layer: Any) -> dict[str, float]:
-    style = FIXED_ORIGIN_STYLE
+def _apply_page_layer(
+    op: Any,
+    graph: Any,
+    layer: Any,
+    style: Any = FIXED_ORIGIN_STYLE,
+) -> dict[str, float]:
     width_in, height_in = page_size_inches(style)
     graph.activate()
     graph.obj.LT_execute("page.updatetoprinter=0;page.kar=0;")
@@ -120,11 +139,15 @@ def _apply_page_layer(op: Any, graph: Any, layer: Any) -> dict[str, float]:
     layer.set_int("fixed", style.layer_fixed)
     layer.set_float("factor", style.layer_factor)
     op.set_show(True)
-    return verify_page_and_layer(graph, layer)
+    return verify_page_and_layer(graph, layer, style=style)
 
 
-def _style_axis(layer: Any, axis_name: str, show_ticks: bool) -> None:
-    style = FIXED_ORIGIN_STYLE
+def _style_axis(
+    layer: Any,
+    axis_name: str,
+    show_ticks: bool,
+    style: Any = FIXED_ORIGIN_STYLE,
+) -> None:
     show_labels = 1 if show_ticks else 0
     layer.set_int(f"{axis_name}.showGrids", 0)
     layer.set_int(f"{axis_name}.ticks", 5 if show_ticks else 0)
@@ -163,6 +186,7 @@ def _position_axis_titles(
     op: Any,
     x_title: Any,
     y_title: Any,
+    style: Any = FIXED_ORIGIN_STYLE,
 ) -> dict[str, float]:
     """Place fixed-XPS titles using the verified Origin auto-layout route.
 
@@ -175,7 +199,7 @@ def _position_axis_titles(
     x_title.set_float(
         "top",
         x_title.get_float("top")
-        - page_height * FIXED_ORIGIN_STYLE.x_title_upshift_page_percent / 100.0,
+        - page_height * style.x_title_upshift_page_percent / 100.0,
     )
     op.lt_exec("doc -uw;")
     state: dict[str, float] = {
@@ -205,7 +229,7 @@ def _position_axis_titles(
     if state["x_title.top"] < page_height * 0.90:
         raise OriginDrawError(
             "Origin fixed XPS X title is too close to the plot frame and may "
-            "overlap the 24 pt tick labels."
+            f"overlap the {style.tick_label_size_pt:g} pt tick labels."
         )
     return state
 
@@ -234,8 +258,11 @@ def _apply_clean_x_axis_format(op: Any, graph: Any) -> None:
         source_path.unlink(missing_ok=True)
 
 
-def _apply_x_axis_contract(layer: Any, first_tick_plot_value: float) -> None:
-    style = FIXED_ORIGIN_STYLE
+def _apply_x_axis_contract(
+    layer: Any,
+    first_tick_plot_value: float,
+    style: Any = FIXED_ORIGIN_STYLE,
+) -> None:
     layer.set_int("x.showAxes", 3)
     layer.set_int("x.label.show", 1)
     layer.set_int("x.label.type", 1)
@@ -332,11 +359,12 @@ def _verify_axis_contract(
     first_tick_plot_value: float,
     *,
     op: Any | None = None,
+    style: Any = FIXED_ORIGIN_STYLE,
 ) -> dict[str, float | int]:
     state = _read_axis_state(layer)
     expected_ints = {
         "x.ticks": 5,
-        "x.minorTicks": FIXED_ORIGIN_STYLE.x_minor_ticks_between_majors,
+        "x.minorTicks": style.x_minor_ticks_between_majors,
         "x.label.type": 1,
         "x.label.numFormat": 1,
         "x.label.align": X_LABEL_ALIGN_ON_TICK,
@@ -344,12 +372,16 @@ def _verify_axis_contract(
         "x.showlabel": 1,
         "x.label.table": 0,
         "x.reverse": 0,
+        "x2.ticks": 0,
+        "x2.label.show": 0,
+        "x2.showlabel": 0,
         "y.ticks": 0,
         "y.minorTicks": 0,
         "y.showLabels": 0,
         "y.showlabel": 0,
         "y.label.show": 0,
         "y2.ticks": 0,
+        "y2.label.show": 0,
         "y2.showlabel": 0,
     }
     for prop, expected in expected_ints.items():
@@ -357,30 +389,229 @@ def _verify_axis_contract(
             raise OriginDrawError(f"Origin axis verification failed: {prop}={state[prop]}")
     expected_floats = {
         "x.firstTick": first_tick_plot_value,
-        "x.inc": FIXED_ORIGIN_STYLE.x_major_step,
+        "x.inc": style.x_major_step,
         "x.label.divideBy": -1.0,
-        "x.label.pt": FIXED_ORIGIN_STYLE.tick_label_size_pt,
+        "x.label.pt": style.tick_label_size_pt,
         "x.label.rotate": 0.0,
-        "y.label.pt": FIXED_ORIGIN_STYLE.tick_label_size_pt,
+        "y.label.pt": style.tick_label_size_pt,
         "y.label.rotate": 0.0,
-        "x.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "x2.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "y.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "y2.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "x.tickthickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "y.tickthickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
+        "x.thickness": style.frame_line_width_pt,
+        "x2.thickness": style.frame_line_width_pt,
+        "y.thickness": style.frame_line_width_pt,
+        "y2.thickness": style.frame_line_width_pt,
+        "x.tickthickness": style.frame_line_width_pt,
+        "y.tickthickness": style.frame_line_width_pt,
     }
     for prop, expected in expected_floats.items():
         if abs(float(state[prop]) - expected) > 1e-6:
             raise OriginDrawError(f"Origin axis verification failed: {prop}={state[prop]}")
     if op is not None:
         expected_font = int(
-            round(float(op.lt_float(f"font({FIXED_ORIGIN_STYLE.font_family})")))
+            round(float(op.lt_float(f"font({style.font_family})")))
         )
         state["font_code_expected"] = expected_font
         for prop in ("x.label.font", "y.label.font"):
             if int(round(float(state[prop]))) != expected_font:
                 raise OriginDrawError(f"Origin axis font verification failed: {prop}")
+    return state
+
+
+def _series_color(
+    preparation: XpsPreparation,
+    column: str,
+    role: str,
+    component_index: int = 0,
+) -> str:
+    """Resolve an exact user colour before the registered role default."""
+
+    visual = preparation.visual_contract
+    overrides = dict(visual.series_color_overrides)
+    for key in (column, role, "components" if role == "component" else ""):
+        if key and key in overrides:
+            return overrides[key]
+    if role == "raw":
+        return visual.raw_color
+    if role == "background":
+        return visual.background_color
+    if role == "envelope":
+        return visual.envelope_color
+    if role == "residual":
+        return visual.residual_color
+    return visual.component_colors[component_index % len(visual.component_colors)]
+
+
+def _component_fill_color(
+    preparation: XpsPreparation,
+    column: str,
+    component_index: int,
+) -> str:
+    visual = preparation.visual_contract
+    overrides = dict(visual.series_color_overrides)
+    for key in (column, "component", "components"):
+        if key in overrides:
+            return overrides[key]
+    return visual.component_fill_colors[
+        component_index % len(visual.component_fill_colors)
+    ]
+
+
+def _legend_label(label: str) -> str:
+    return re.sub(r"\s+", " ", str(label).replace("×", "x")).strip() or "Series"
+
+
+def _remove_legend(layer: Any) -> None:
+    for name in ("legend", "Legend"):
+        with suppress(Exception):
+            legend = layer.label(name)
+            if legend is not None:
+                legend.remove()
+
+
+def _style_legend(
+    op: Any,
+    layer: Any,
+    entries: list[tuple[str, str, str]],
+    preparation: XpsPreparation,
+) -> tuple[Any | None, dict[str, Any]]:
+    """Apply and read back only the verified editable legend properties."""
+
+    visual = preparation.visual_contract
+    style = visual.figure_style
+    if not visual.legend_visible or visual.legend_position == "none":
+        _remove_legend(layer)
+        remaining_visible = False
+        for name in ("legend", "Legend"):
+            with suppress(Exception):
+                candidate = layer.label(name)
+                if candidate is not None and int(candidate.get_int("show")) != 0:
+                    remaining_visible = True
+        if remaining_visible:
+            raise OriginDrawError("Origin did not remove the hidden fixed XPS legend.")
+        return None, {
+            "visible": False,
+            "visible_readback": False,
+            "position": "none",
+            "showframe": None,
+        }
+
+    legend = layer.label("legend")
+    if legend is None:
+        raise OriginDrawError("Origin did not create the requested fixed XPS legend.")
+    lines: list[str] = []
+    raw_edge_width = RAW_SYMBOL_SIZE_PT * RAW_SYMBOL_EDGE_PERCENT / 200
+    for role, color, label in entries:
+        text = _legend_label(label)
+        if role == "raw":
+            lines.append(
+                rf"\L(O Shape:Circle,Interior:Open,Style:sss,EdgeColor:{color},"
+                rf"Size:{RAW_SYMBOL_SIZE_PT:g},EdgeWidth:{raw_edge_width:g},Gap:5) "
+                rf"\b({text})"
+            )
+        else:
+            lines.append(
+                rf"\L(O Style:L,LineColor:{color},LineWidth:{style.plot_line_width_pt:g},"
+                rf"Length:22,Gap:8) \b({text})"
+            )
+    legend.set_int("link", 1)
+    legend.text = "\n".join(lines)
+    _style_label(legend, style.legend_size_pt, bold=True)
+    legend.set_int("showframe", int(visual.legend_frame))
+    layer.obj.LT_execute(
+        f"legend.font=font({style.font_family});legend.color=color(black);legend.bold=1;"
+    )
+    if visual.legend_position == "outside_right":
+        op.lt_exec("doc -uw;")
+        page_width = float(op.lt_float("page.width"))
+        page_height = float(op.lt_float("page.height"))
+        layer_right = page_width * (
+            style.layer_left_percent + style.layer_width_percent
+        ) / 100.0
+        legend.set_int("attach", 1)
+        legend.set_float("left", layer_right + page_width * 0.02)
+        legend.set_float("top", page_height * 0.08)
+        op.lt_exec("doc -uw;")
+
+    visible_readback = int(legend.get_int("show")) != 0
+    showframe = int(legend.get_int("showframe"))
+    if not visible_readback or showframe != int(visual.legend_frame):
+        raise OriginDrawError("Origin fixed XPS legend state failed readback.")
+    left = float(legend.get_float("left"))
+    top = float(legend.get_float("top"))
+    width = float(legend.get_float("width"))
+    height = float(legend.get_float("height"))
+    page_width = float(op.lt_float("page.width"))
+    page_height = float(op.lt_float("page.height"))
+    inside_page = (
+        left >= 0.0
+        and top >= 0.0
+        and left + width <= page_width
+        and top + height <= page_height
+    )
+    if not inside_page:
+        raise OriginDrawError(
+            "Origin fixed XPS legend is clipped outside the graph page: "
+            f"left={left:g}, top={top:g}, width={width:g}, height={height:g}, "
+            f"page_width={page_width:g}, page_height={page_height:g}."
+        )
+    if visual.legend_position == "outside_right":
+        layer_right = page_width * (
+            style.layer_left_percent + style.layer_width_percent
+        ) / 100.0
+        if left < layer_right:
+            raise OriginDrawError("Origin fixed XPS legend did not remain outside the plot layer.")
+    return legend, {
+        "visible": True,
+        "visible_readback": visible_readback,
+        "position": visual.legend_position,
+        "showframe": showframe,
+        "left": left,
+        "top": top,
+        "width": width,
+        "height": height,
+        "inside_page": inside_page,
+        "attach": int(legend.get_int("attach")),
+    }
+
+
+def _verify_series_color_state(
+    op: Any,
+    plots: dict[str, tuple[Any, str]],
+    *,
+    prefix: str,
+) -> dict[str, dict[str, float | str]]:
+    state: dict[str, dict[str, float | str]] = {}
+    for index, (label, (plot, color)) in enumerate(plots.items(), start=1):
+        try:
+            state[label] = verify_plot_color(
+                op,
+                plot,
+                color,
+                variable_name=f"__xps_fixed_{prefix}_color_{index}",
+            )
+        except RuntimeError as exc:
+            raise OriginDrawError(str(exc)) from exc
+    return state
+
+
+def _verify_fill_state(
+    op: Any,
+    fills: dict[str, tuple[Any, str]],
+    expected_transparency: float,
+) -> dict[str, dict[str, Any]]:
+    color_state = _verify_series_color_state(op, fills, prefix="fill")
+    state: dict[str, dict[str, Any]] = {}
+    for label, (plot, _color) in fills.items():
+        actual = float(plot.transparency)
+        if abs(actual - expected_transparency) > 0.05:
+            raise OriginDrawError(
+                f"Origin fixed XPS fill transparency failed readback: {label}={actual:g}%, "
+                f"expected {expected_transparency:g}%."
+            )
+        state[label] = {
+            **color_state[label],
+            "transparency_percent": actual,
+            "fill_mode": "type9_pfm3_two_colors",
+        }
     return state
 
 
@@ -390,11 +621,12 @@ def _build_origin_graph(
     output: RunOutput,
     preparation: XpsPreparation,
 ) -> tuple[Any, dict[str, Any]]:
-    style = FIXED_ORIGIN_STYLE
+    visual = preparation.visual_contract
+    style = visual.figure_style
     worksheet = op.new_sheet("w", "XPS C1s Input")
     if worksheet is None:
         raise OriginDrawError("Origin could not create workbook")
-    origin_frame = _prepare_frame(frame)
+    origin_frame = _prepare_frame(frame, preparation)
     worksheet.from_df(origin_frame)
     worksheet.cols_axis("nx" + "y" * (len(origin_frame.columns) - 2), repeat=False)
 
@@ -402,35 +634,122 @@ def _build_origin_graph(
     if graph is None:
         raise OriginDrawError("Origin could not create graph")
     layer = graph[0]
-    geometry_report = _apply_page_layer(op, graph, layer)
+    geometry_report = _apply_page_layer(op, graph, layer, style)
     visible_line_plots: dict[str, Any] = {}
+    visible_color_plots: dict[str, tuple[Any, str]] = {}
+    fill_plots: dict[str, tuple[Any, str]] = {}
+    series_by_column = {
+        series.column: series for series in preparation.plot_spec.series
+    }
+    component_specs = [
+        series
+        for series in preparation.plot_spec.series
+        if series.role == "component"
+    ]
 
-    for peak_column, label, color in PEAKS:
+    # Fills are independent DataPlots so their transparency can be edited
+    # without fading the component outlines.  The verified Origin route stays
+    # one fill region + type=9 + Two Colors (-pfm 3); the unverified
+    # four-colour mode is deliberately excluded.
+    for index, series in enumerate(component_specs):
+        peak_column = series.column
+        label = series.label
         fill_top_column = f"{peak_column}{FILL_TOP_SUFFIX}"
         fill_base_column = f"{peak_column}{FILL_BASE_SUFFIX}"
-        peak = _add_plot(layer, worksheet, fill_top_column, color, style.plot_line_width_pt)
-        visible_line_plots[label] = peak
+        fill_color = _component_fill_color(preparation, peak_column, index)
+        fill_plot = _add_plot(layer, worksheet, fill_top_column, fill_color, 0.01)
+        fill_plot.transparency = style.fill_transparency_percent
         baseline = _add_plot(layer, worksheet, fill_base_column, "#FFFFFF", 0.1)
         baseline.transparency = 100
-        peak.set_fill_area(above=op.ocolor(color), type=9, below=op.ocolor(color))
+        origin_fill_color = op.ocolor(fill_color)
+        fill_plot.set_fill_area(
+            above=origin_fill_color,
+            type=9,
+            below=origin_fill_color,
+        )
         white = op.ocolor("#FFFFFF")
-        peak.set_cmd("-pfm 3")
-        peak.set_cmd(f"-pff {white}")
-        peak.set_cmd("-p2fm 3")
-        peak.set_cmd(f"-p2ff {white}")
-        peak.set_cmd("-paaf 0")
+        fill_plot.set_cmd(f"-pfb {origin_fill_color}")
+        fill_plot.set_cmd("-pfm 3")
+        fill_plot.set_cmd(f"-pff {white}")
+        fill_plot.set_cmd(f"-p2fb {origin_fill_color}")
+        fill_plot.set_cmd("-p2fm 3")
+        fill_plot.set_cmd(f"-p2ff {white}")
+        fill_plot.set_cmd("-paaf 0")
+        fill_plots[f"{label} fill"] = (fill_plot, fill_color)
 
-    visible_line_plots["Background"] = _add_plot(
-        layer, worksheet, "Background", BACKGROUND_COLOR, style.plot_line_width_pt
+    for index, series in enumerate(component_specs):
+        color = _series_color(
+            preparation,
+            series.column,
+            series.role,
+            index,
+        )
+        plot = _add_plot(
+            layer,
+            worksheet,
+            f"{series.column}{FILL_TOP_SUFFIX}",
+            color,
+            style.plot_line_width_pt,
+        )
+        visible_line_plots[series.label] = plot
+        visible_color_plots[series.label] = (plot, color)
+
+    background_spec = series_by_column.get(preparation.roles.background or "")
+    background_color = _series_color(
+        preparation,
+        preparation.roles.background or "Background",
+        "background",
     )
-    raw = _add_plot(layer, worksheet, "Raw", RAW_COLOR, 0.1, plot_type="s")
+    background_label = background_spec.label if background_spec is not None else "Background"
+    visible_line_plots["Background"] = _add_plot(
+        layer,
+        worksheet,
+        "Background",
+        background_color,
+        style.plot_line_width_pt,
+    )
+    if background_label != "Background":
+        visible_line_plots[background_label] = visible_line_plots.pop("Background")
+    visible_color_plots[background_label] = (
+        visible_line_plots[background_label],
+        background_color,
+    )
+
+    raw_spec = series_by_column.get(preparation.roles.raw)
+    raw_color = _series_color(preparation, preparation.roles.raw, "raw")
+    raw_label = raw_spec.label if raw_spec is not None else "Raw"
+    raw = _add_plot(
+        layer,
+        worksheet,
+        "Raw",
+        raw_color,
+        style.plot_line_width_pt,
+        plot_type="s",
+    )
     raw.symbol_kind = 2
     raw.symbol_interior = 2
     raw.symbol_size = RAW_SYMBOL_SIZE_PT
     raw.set_cmd(f"-kh {RAW_SYMBOL_EDGE_PERCENT:g}")
     raw.set_cmd("-skip 6")
-    visible_line_plots["Envelope"] = _add_plot(
-        layer, worksheet, "Envelope", ENVELOPE_COLOR, style.plot_line_width_pt
+    visible_color_plots[raw_label] = (raw, raw_color)
+
+    envelope_spec = series_by_column.get(preparation.roles.envelope or "")
+    envelope_color = _series_color(
+        preparation,
+        preparation.roles.envelope or "Envelope",
+        "envelope",
+    )
+    envelope_label = envelope_spec.label if envelope_spec is not None else "Envelope"
+    visible_line_plots[envelope_label] = _add_plot(
+        layer,
+        worksheet,
+        "Envelope",
+        envelope_color,
+        style.plot_line_width_pt,
+    )
+    visible_color_plots[envelope_label] = (
+        visible_line_plots[envelope_label],
+        envelope_color,
     )
 
     layer.rescale()
@@ -447,12 +766,12 @@ def _build_origin_graph(
     layer.axis("y").title = "Intensity (a.u.)"
     layer.axis("x2").title = ""
     layer.axis("y2").title = ""
-    _style_axis(layer, "x", True)
-    _style_axis(layer, "x2", False)
-    _style_axis(layer, "y", False)
-    _style_axis(layer, "y2", False)
+    _style_axis(layer, "x", True, style)
+    _style_axis(layer, "x2", False, style)
+    _style_axis(layer, "y", False, style)
+    _style_axis(layer, "y2", False, style)
     layer.set_float("x2.label.divideBy", -1.0)
-    _apply_x_axis_contract(layer, -X_FIRST_MAJOR_TICK_EV)
+    _apply_x_axis_contract(layer, -X_FIRST_MAJOR_TICK_EV, style)
     _apply_y_axis_contract(layer)
 
     x_title = layer.label("xb")
@@ -466,51 +785,58 @@ def _build_origin_graph(
         f"yl.font=font({style.font_family});yl.color=color(black);yl.bold=1;"
     )
 
-    legend = layer.label("legend")
-    if legend is not None:
-        legend.set_int("link", 1)
-        raw_edge_width = RAW_SYMBOL_SIZE_PT * RAW_SYMBOL_EDGE_PERCENT / 200
-        legend.text = "\n".join(
-            [
-                rf"\L(O Shape:Circle,Interior:Open,Style:sss,EdgeColor:#808080,"
-                rf"Size:{RAW_SYMBOL_SIZE_PT:g},EdgeWidth:{raw_edge_width:g},"
-                r"Gap:5) \b(Raw)",
-                r"\L(O Style:L,LineColor:#D62728,LineWidth:5,Length:22,Gap:8) \b(Envelope)",
-                r"\L(O Style:L,LineColor:#6F6887,LineWidth:5,Length:22,Gap:8) \b(Background)",
-                r"\L(O Style:L,LineColor:#4C78A8,LineWidth:5,Length:22,Gap:8) \b(C-C / C=C)",
-                r"\L(O Style:L,LineColor:#59A14F,LineWidth:5,Length:22,Gap:8) \b(C-O)",
-                r"\L(O Style:L,LineColor:#E7A1AE,LineWidth:5,Length:22,Gap:8) \b(C=O)",
-                r"\L(O Style:L,LineColor:#E39C37,LineWidth:5,Length:22,Gap:8) \b(O-C=O)",
-            ]
+    component_legend_entries = [
+        (
+            "component",
+            _series_color(preparation, series.column, series.role, index),
+            series.label,
         )
-        _style_label(legend, style.legend_size_pt, bold=True)
-        layer.obj.LT_execute(
-            f"legend.font=font({style.font_family});legend.color=color(black);legend.bold=1;"
-        )
+        for index, series in enumerate(component_specs)
+    ]
+    legend, legend_state = _style_legend(
+        op,
+        layer,
+        [
+            ("raw", raw_color, raw_label),
+            ("envelope", envelope_color, envelope_label),
+            ("background", background_color, background_label),
+            *component_legend_entries,
+        ],
+        preparation,
+    )
 
     graph.activate()
     graph.set_int("background", op.ocolor("#FFFFFF"))
     _apply_clean_x_axis_format(op, graph)
-    _apply_x_axis_contract(layer, -X_FIRST_MAJOR_TICK_EV)
+    _apply_x_axis_contract(layer, -X_FIRST_MAJOR_TICK_EV, style)
     _apply_y_axis_contract(layer)
     x_title.set_int("show", 1)
     y_title.set_int("show", 1)
     op.lt_exec("doc -uw;")
-    title_position = _position_axis_titles(op, x_title, y_title)
-    axis_state = _verify_axis_contract(layer, -X_FIRST_MAJOR_TICK_EV, op=op)
+    title_position = _position_axis_titles(op, x_title, y_title, style)
+    axis_state = _verify_axis_contract(
+        layer,
+        -X_FIRST_MAJOR_TICK_EV,
+        op=op,
+        style=style,
+    )
+    labels = {"x_title": x_title, "y_title": y_title}
+    expected_sizes = {
+        "x_title": style.axis_title_size_pt,
+        "y_title": style.axis_title_size_pt,
+    }
+    if legend is not None:
+        labels["legend"] = legend
+        expected_sizes["legend"] = style.legend_size_pt
     try:
         text_state = verify_text_sizes(
-            {"x_title": x_title, "y_title": y_title, "legend": legend},
-            {
-                "x_title": style.axis_title_size_pt,
-                "y_title": style.axis_title_size_pt,
-                "legend": style.legend_size_pt,
-            },
+            labels,
+            expected_sizes,
         )
         text_state.update(
             verify_text_fonts(
                 op,
-                {"x_title": x_title, "y_title": y_title, "legend": legend},
+                labels,
                 style.font_family,
             )
         )
@@ -522,6 +848,16 @@ def _build_origin_graph(
             raw,
             expected_size_pt=RAW_SYMBOL_SIZE_PT,
             expected_edge_percent=RAW_SYMBOL_EDGE_PERCENT,
+        )
+        line_color_state = _verify_series_color_state(
+            op,
+            visible_color_plots,
+            prefix="line",
+        )
+        fill_state = _verify_fill_state(
+            op,
+            fill_plots,
+            style.fill_transparency_percent,
         )
     except RuntimeError as exc:
         raise OriginDrawError(str(exc)) from exc
@@ -542,6 +878,7 @@ def _build_origin_graph(
             "x_last_visible_major_label_ev": X_LAST_VISIBLE_MAJOR_LABEL_EV,
             "x_visible_major_labels_ev": list(X_VISIBLE_MAJOR_LABELS_EV),
             "x_actual_step": abs(float(x_limits[2])),
+            "origin_output_style": style.to_dict(),
             "origin_axis_state": axis_state,
             "origin_text_state": {
                 **text_state,
@@ -553,8 +890,21 @@ def _build_origin_graph(
             },
             "origin_plot_state": {
                 "visible_line_plots": line_width_state,
+                "visible_series_colors": line_color_state,
+                "fill_plots": fill_state,
+                "fill_transparency_percent_expected": style.fill_transparency_percent,
+                "fill_mode": "type9_pfm3_two_colors",
+                "legend": legend_state,
                 "raw_symbol": raw_symbol_state,
             },
+            "xps_visual_contract": visual.to_dict(),
+            "origin_helper_columns": [
+                column
+                for column in origin_frame.columns
+                if column == "PlotX"
+                or column.endswith(FILL_TOP_SUFFIX)
+                or column.endswith(FILL_BASE_SUFFIX)
+            ],
             "source_data_modified": False,
             "xps_plan_digest": preparation.plan_digest,
             "xps_plot_spec": preparation.plot_spec.to_dict(),

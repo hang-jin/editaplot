@@ -12,11 +12,18 @@ import matplotlib as mpl
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
-from matplotlib.patches import PathPatch, Rectangle
+from matplotlib.lines import Line2D
+from matplotlib.patches import FancyArrowPatch, Patch, PathPatch, Rectangle
 from matplotlib.path import Path
 from matplotlib.text import Text
 from matplotlib.ticker import AutoMinorLocator, FixedLocator, MaxNLocator
 
+from .circular_network_layout import (
+    MAX_NODE_GROUP_COUNT,
+    NETWORK_EDGE_TRANSPARENCY_PERCENT,
+    NETWORK_NODE_GROUP_COLORS,
+    CircularNetworkLayoutPlan,
+)
 from .heatmap_layout import (
     resolve_heatmap_colorbar_geometry,
     resolve_heatmap_layout,
@@ -88,6 +95,17 @@ RIETVELD_PHASE_COLORS = (
     "#4F8073",
     "#9A7048",
 )
+CIRCULAR_NETWORK_NODE_COLORS = NETWORK_NODE_GROUP_COLORS
+CIRCULAR_NETWORK_EDGE_COLORS = {
+    "positive": "#2F6B6F",
+    "negative": "#B65C67",
+    "neutral": "#7B8794",
+}
+CIRCULAR_NETWORK_SIGN_LABELS = {
+    "positive": "Positive",
+    "negative": "Negative",
+    "neutral": "Neutral",
+}
 
 
 @dataclass(frozen=True)
@@ -1402,6 +1420,213 @@ def _draw_sankey(figure: Figure, frame: Any, preparation: ScientificPreparation)
         )
 
 
+def _circular_network_panel_geometry(panel_count: int) -> tuple[tuple[float, ...], ...]:
+    """Reserve a real bottom legend lane instead of overlaying the network."""
+
+    if panel_count == 1:
+        return ((0.09, 0.19, 0.82, 0.73),)
+    if panel_count == 2:
+        return (
+            (0.025, 0.20, 0.455, 0.70),
+            (0.520, 0.20, 0.455, 0.70),
+        )
+    if panel_count == 3:
+        return (
+            (0.012, 0.20, 0.315, 0.70),
+            (0.343, 0.20, 0.315, 0.70),
+            (0.674, 0.20, 0.315, 0.70),
+        )
+    if panel_count == 4:
+        return (
+            (0.035, 0.545, 0.440, 0.365),
+            (0.525, 0.545, 0.440, 0.365),
+            (0.035, 0.135, 0.440, 0.365),
+            (0.525, 0.135, 0.440, 0.365),
+        )
+    raise ScientificPreviewError(
+        "circular_network_panel_count_invalid",
+        "Circular-network preview supports one to four panels.",
+    )
+
+
+def _draw_circular_network(
+    figure: Figure,
+    frame: Any,
+    preparation: ScientificPreparation,
+) -> None:
+    """Draw the frozen shared geometry without deriving or aggregating edges."""
+
+    del frame  # geometry and semantics are already frozen in the preparation
+    spec = preparation.plot_spec
+    style = _preview_style(figure)
+    layout = getattr(spec, "network_layout", None)
+    if not isinstance(layout, CircularNetworkLayoutPlan):
+        raise ScientificPreviewError(
+            "circular_network_layout_missing",
+            "The circular-network preparation does not contain a frozen layout plan.",
+        )
+    panel_geometry = _circular_network_panel_geometry(len(layout.panels))
+    node_groups = dict(getattr(spec, "node_groups", ()))
+    group_order = tuple(
+        dict.fromkeys(node_groups.get(node.node, "Ungrouped") for node in layout.nodes)
+    )
+    if len(group_order) > MAX_NODE_GROUP_COUNT:
+        raise ScientificPreviewError(
+            "circular_network_node_group_count",
+            (
+                f"Circular-network preview supports at most {MAX_NODE_GROUP_COUNT} "
+                "independently coloured node groups."
+            ),
+        )
+    origin_style = spec.display_plan.figure_style
+    if origin_style is None:
+        raise ScientificPreviewError(
+            "preview_style_missing",
+            "Adaptive figure profile is missing.",
+        )
+    node_palette = palette_colors(origin_style.palette_name)
+    group_colors = {
+        group: node_palette[index]
+        for index, group in enumerate(group_order)
+    }
+    panel_count = len(layout.panels)
+    node_diameter_pt = max(10.0, style.marker_pt * 1.25)
+    node_label_pt = max(7.0, style.tick_label_pt)
+    horizontal_limit = {1: 1.48, 2: 1.72, 3: 1.90, 4: 1.72}[panel_count]
+    vertical_limit = 1.40 if panel_count < 4 else 1.48
+    edge_alpha = 1.0 - NETWORK_EDGE_TRANSPARENCY_PERCENT / 100.0
+    signs_used: list[str] = []
+
+    for geometry, panel in zip(panel_geometry, layout.panels, strict=True):
+        axis = figure.add_axes(geometry, facecolor="white")
+        axis.set_aspect("equal", adjustable="box")
+        axis.set_xlim(-horizontal_limit, horizontal_limit)
+        axis.set_ylim(-vertical_limit, vertical_limit)
+        axis.axis("off")
+        axis.set_title(
+            panel.panel,
+            fontsize=max(8.0, style.axis_title_pt),
+            fontweight="semibold",
+            pad=max(4.0, style.axis_title_pt * 0.35),
+            color="#25313B",
+        )
+        for edge in panel.edges:
+            color = CIRCULAR_NETWORK_EDGE_COLORS[edge.sign]
+            if edge.sign not in signs_used:
+                signs_used.append(edge.sign)
+            vertices = [(point.x, point.y) for point in edge.sampled_points]
+            codes = [Path.MOVETO, *([Path.LINETO] * (len(vertices) - 1))]
+            axis.add_patch(
+                PathPatch(
+                    Path(vertices, codes),
+                    fill=False,
+                    edgecolor=color,
+                    linewidth=edge.line_width_pt,
+                    alpha=edge_alpha,
+                    capstyle="round",
+                    joinstyle="round",
+                    zorder=1,
+                )
+            )
+            arrow = edge.arrow_segment
+            axis.add_patch(
+                FancyArrowPatch(
+                    (arrow.start.x, arrow.start.y),
+                    (arrow.end.x, arrow.end.y),
+                    arrowstyle="-|>",
+                    mutation_scale=7.0 + edge.line_width_pt * 1.25,
+                    linewidth=max(0.8, edge.line_width_pt * 0.62),
+                    color=color,
+                    alpha=edge_alpha,
+                    shrinkA=0.0,
+                    shrinkB=0.0,
+                    zorder=3,
+                )
+            )
+            if edge.label and panel.edge_labels_visible:
+                axis.text(
+                    edge.label_anchor.x,
+                    edge.label_anchor.y,
+                    edge.label,
+                    ha="center",
+                    va="center",
+                    fontsize=max(6.0, node_label_pt * 0.66),
+                    color=color,
+                    bbox={
+                        "boxstyle": "round,pad=0.12",
+                        "facecolor": "white",
+                        "edgecolor": "none",
+                        "alpha": 0.88,
+                    },
+                    zorder=4,
+                )
+        for node in layout.nodes:
+            group = node_groups.get(node.node, "Ungrouped")
+            color = group_colors[group]
+            axis.scatter(
+                [node.point.x],
+                [node.point.y],
+                s=node_diameter_pt**2,
+                facecolors=color,
+                edgecolors="#4B5660",
+                linewidths=max(0.6, style.frame_line_pt * 0.55),
+                zorder=5,
+            )
+            radial_length = max(math.hypot(node.point.x, node.point.y), 1e-12)
+            label_x = node.point.x + 0.13 * node.point.x / radial_length
+            label_y = node.point.y + 0.13 * node.point.y / radial_length
+            if abs(node.point.x) < 0.18:
+                horizontal_alignment = "center"
+            else:
+                horizontal_alignment = "left" if node.point.x > 0.0 else "right"
+            if abs(node.point.y) < 0.18:
+                vertical_alignment = "center"
+            else:
+                vertical_alignment = "bottom" if node.point.y > 0.0 else "top"
+            axis.text(
+                label_x,
+                label_y,
+                node.node,
+                ha=horizontal_alignment,
+                va=vertical_alignment,
+                fontsize=node_label_pt,
+                color="#25313B",
+                zorder=6,
+            )
+
+    legend_handles: list[Any] = [
+        Patch(
+            facecolor=group_colors[group],
+            edgecolor="#4B5660",
+            linewidth=max(0.5, style.frame_line_pt * 0.45),
+            label=group,
+        )
+        for group in group_order
+    ]
+    legend_handles.extend(
+        Line2D(
+            [0],
+            [0],
+            color=CIRCULAR_NETWORK_EDGE_COLORS[sign],
+            linewidth=2.2,
+            label=CIRCULAR_NETWORK_SIGN_LABELS[sign],
+        )
+        for sign in signs_used
+    )
+    if legend_handles:
+        figure.legend(
+            handles=legend_handles,
+            loc="lower center",
+            bbox_to_anchor=(0.5, 0.018),
+            ncol=min(6, len(legend_handles)),
+            frameon=False,
+            fontsize=max(7.0, style.legend_pt),
+            handlelength=1.5,
+            columnspacing=1.15,
+            handletextpad=0.45,
+        )
+
+
 def _draw_radar(figure: Figure, frame: Any, preparation: ScientificPreparation) -> None:
     spec = preparation.plot_spec
     style = _preview_style(figure)
@@ -1696,12 +1921,14 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         _draw_trajectory3d(figure, frame, preparation)
         _apply_font_contract(figure)
         return figure
-    if spec.plot_kind in {"pie", "sankey", "radar", "heatmap"}:
+    if spec.plot_kind in {"pie", "sankey", "circular_network", "radar", "heatmap"}:
         figure = _new_empty_figure(preparation)
         if spec.plot_kind == "pie":
             _draw_pie(figure, frame, preparation)
         elif spec.plot_kind == "sankey":
             _draw_sankey(figure, frame, preparation)
+        elif spec.plot_kind == "circular_network":
+            _draw_circular_network(figure, frame, preparation)
         elif spec.plot_kind == "radar":
             _draw_radar(figure, frame, preparation)
         else:

@@ -1,0 +1,34 @@
+id: circular_network
+name: 环形有向加权网络图
+category: general/network
+version: 0.1.0
+description: 用环形节点、方向箭头、权重线宽和正负语义比较一个或多个面板中的有向关系
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 78
+family: general_relationship
+origin_acceptance: origin_acceptance.md
+examples:
+  - id: two_periods
+    name_zh: 双阶段有向关系网络
+    file: example_standard.csv
+    description_zh: 两个面板、八个节点、四个节点组和正负有向边的中性教学数据。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 用长表描述不同面板中的有向关系；线宽编码权重，颜色编码已提供的正负语义。
+  required_columns: [Panel, Source, Target, Weight]
+  optional_columns: [Sign, SourceGroup, TargetGroup, EdgeLabel]
+  accepted_layouts: [有向边长表；每行一条边；支持 1–4 个面板]
+  aliases: [Panel/Period/阶段/时期, Source/From/来源/起点, Target/To/目标/终点, Weight/Value/权重/强度, Sign/Direction/符号/正负, SourceGroup/来源组, TargetGroup/目标组, EdgeLabel/边标签]
+  notes_zh:
+    - Weight 必须是大于零的有限数；正负关系由可选 Sign 单独提供，不能把负权重当作线宽。
+    - 不接受自连接或同一面板内重复的 Source→Target；节点组在所有行中必须保持一致。
+    - 最多支持 4 个节点组；单面板超过 12 条边时保留 EdgeLabel 源文字但默认不在图中显示。
+    - 本路线已经通过 Origin 2024b 的 OPJU、PNG、PDF、TIF、对象反读和人工视觉验收。

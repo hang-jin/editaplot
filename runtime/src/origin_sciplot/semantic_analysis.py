@@ -35,6 +35,7 @@ _PRIMARY_ROLES = frozenset(
         "source",
         "target",
         "value",
+        "panel",
         "estimate",
         "mean",
         "difference",
@@ -66,6 +67,10 @@ _SECONDARY_ROLES = frozenset(
         "fit",
         "tauc_fit",
         "bandgap",
+        "sign",
+        "source_group",
+        "target_group",
+        "edge_label",
     }
 )
 _SUPPORT_ROLES = frozenset({"frequency", "count"})
@@ -98,6 +103,7 @@ def _element_kind(plot_kind: str, series_role: str) -> str:
         "grouped_box": "box",
         "histogram": "bar",
         "sankey": "flow",
+        "circular_network": "directed_weighted_network",
         "paired_trajectory": "line_symbol",
         "trajectory3d": "line_symbol",
     }.get(plot_kind, "line")
@@ -242,6 +248,12 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
         getattr(spec, "source_column", None),
         getattr(spec, "target_column", None),
         getattr(spec, "y_column", None),
+        getattr(spec, "panel_column", None),
+        getattr(spec, "weight_column", None),
+        getattr(spec, "sign_column", None),
+        getattr(spec, "source_group_column", None),
+        getattr(spec, "target_group_column", None),
+        getattr(spec, "edge_label_column", None),
     )
     anchor_ids = _unique_existing(anchor_columns, item_ids)
     derived_items: list[DerivedDataItem] = []
@@ -256,7 +268,33 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
         for column in getattr(spec, "phase_tick_columns", ())
     )
 
-    for index, series in enumerate(spec.series):
+    if plot_kind == "circular_network":
+        network_bindings = _unique_existing(
+            (
+                getattr(spec, "panel_column", None),
+                getattr(spec, "source_column", None),
+                getattr(spec, "target_column", None),
+                getattr(spec, "weight_column", None),
+                getattr(spec, "sign_column", None),
+                getattr(spec, "source_group_column", None),
+                getattr(spec, "target_group_column", None),
+                getattr(spec, "edge_label_column", None),
+            ),
+            item_ids,
+        )
+        elements.append(
+            FigureElement(
+                element_id="circular_network_000",
+                element_kind="directed_weighted_network",
+                data_item_ids=network_bindings,
+                required=True,
+                axis="network",
+                legend_label="Directed weighted edges",
+            )
+        )
+
+    scientific_series = () if plot_kind == "circular_network" else spec.series
+    for index, series in enumerate(scientific_series):
         source_column = str(series.source_column)
         if source_column not in item_ids:
             continue

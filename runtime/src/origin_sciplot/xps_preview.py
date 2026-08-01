@@ -131,6 +131,45 @@ class _SeriesView:
     component_index: int | None = None
 
 
+@dataclass(frozen=True)
+class _XpsPreviewStyle:
+    width_in: float
+    height_in: float
+    axis_title_pt: float
+    tick_label_pt: float
+    legend_pt: float
+    plot_line_pt: float
+    frame_line_pt: float
+    major_tick_pt: float
+    minor_tick_pt: float
+    raw_symbol_pt: float
+    raw_symbol_edge_pt: float
+
+
+def _resolved_preview_style(preparation: XpsPreparation) -> _XpsPreviewStyle:
+    style = preparation.visual_contract.figure_style
+    width_in = PREVIEW_WIDTH_IN
+    height_in = width_in * style.page_height_cm / style.page_width_cm
+
+    def scaled(points: float) -> float:
+        return origin_points_to_preview_points(points, width_in, style)
+
+    raw_symbol = scaled(7.0)
+    return _XpsPreviewStyle(
+        width_in=width_in,
+        height_in=height_in,
+        axis_title_pt=scaled(style.axis_title_size_pt),
+        tick_label_pt=scaled(style.tick_label_size_pt),
+        legend_pt=scaled(style.legend_size_pt),
+        plot_line_pt=scaled(style.plot_line_width_pt),
+        frame_line_pt=scaled(style.frame_line_width_pt),
+        major_tick_pt=scaled(style.major_tick_length_pt),
+        minor_tick_pt=scaled(style.minor_tick_length_pt),
+        raw_symbol_pt=raw_symbol,
+        raw_symbol_edge_pt=raw_symbol * 0.25,
+    )
+
+
 def _read_prepared_source(preparation: XpsPreparation) -> dict[str, np.ndarray]:
     try:
         frame = load_xps_frame(preparation.source_path, preparation)
@@ -141,7 +180,10 @@ def _read_prepared_source(preparation: XpsPreparation) -> dict[str, np.ndarray]:
     required.update(series.column for series in preparation.plot_spec.series)
     missing = sorted(required.difference(frame.columns))
     if missing:
-        raise XpsPreviewError("source_columns_changed", f"XPS preview columns are missing: {', '.join(missing)}")
+        raise XpsPreviewError(
+            "source_columns_changed",
+            f"XPS preview columns are missing: {', '.join(missing)}",
+        )
     if frame.empty:
         raise XpsPreviewError("source_empty", "The XPS preview source has no data rows.")
     return {
@@ -250,10 +292,28 @@ def _regular_ticks(lower: float, upper: float, step: float) -> list[float]:
     return [k * step for k in range(first_k, last_k + 1)]
 
 
-def _component_color(index: int, *, fixed: bool, fill: bool = False) -> str:
-    if fixed:
-        return FIXED_COMPONENT_COLORS[index % len(FIXED_COMPONENT_COLORS)]
-    palette = COMPONENT_FILL_COLORS if fill else COMPONENT_COLORS
+def _series_color(
+    preparation: XpsPreparation,
+    view: _SeriesView,
+    *,
+    fill: bool = False,
+) -> str:
+    visual = preparation.visual_contract
+    overrides = dict(visual.series_color_overrides)
+    role = str(view.spec.role)
+    for key in (str(view.spec.column), role, "components" if role == "component" else ""):
+        if key and key in overrides:
+            return overrides[key]
+    if role == "raw":
+        return visual.raw_fill_color if fill else visual.raw_color
+    if role == "background":
+        return visual.background_color
+    if role == "envelope":
+        return visual.envelope_color
+    if role == "residual":
+        return visual.residual_color
+    index = int(view.component_index or 0)
+    palette = visual.component_fill_colors if fill else visual.component_colors
     return palette[index % len(palette)]
 
 
@@ -340,6 +400,7 @@ def _draw_preview_series(
     x: np.ndarray,
     views: list[_SeriesView],
     y_floor: float,
+    preview_style: _XpsPreviewStyle,
 ) -> None:
     fixed = preparation.plot_spec.visual_profile == "fixed_c1s_publication"
     background = next((view.values for view in views if view.spec.role == "background"), None)
@@ -347,14 +408,19 @@ def _draw_preview_series(
     # Fills are deliberately subordinate and are drawn before every line.
     for view in views:
         if view.spec.role == "component" and view.fill_baseline is not None:
-            assert view.component_index is not None
+            if view.component_index is None:
+                raise XpsPreviewError(
+                    "preview_component_index_missing",
+                    "The frozen XPS component order is incomplete.",
+                )
             _draw_single_fill(
                 axis,
                 x,
                 view.values,
                 view.fill_baseline,
-                _component_color(view.component_index, fixed=fixed, fill=True),
-                alpha=0.55 if fixed else 0.42,
+                _series_color(preparation, view, fill=True),
+                alpha=(0.55 if fixed else 0.42)
+                * (1.0 - preparation.visual_contract.figure_style.fill_transparency_percent / 100.0),
                 zorder=1.0 + view.component_index * 0.01,
             )
         elif view.spec.role == "raw" and not fixed:
@@ -363,8 +429,9 @@ def _draw_preview_series(
                 x,
                 view.values,
                 background if background is not None else y_floor,
-                "#7884B4",
-                alpha=0.20,
+                _series_color(preparation, view, fill=True),
+                alpha=0.20
+                * (1.0 - preparation.visual_contract.figure_style.fill_transparency_percent / 100.0),
                 zorder=0.5,
             )
 
@@ -375,12 +442,16 @@ def _draw_preview_series(
         role = view.spec.role
         label = _clean_label(view.spec.label)
         if role == "component":
-            assert view.component_index is not None
+            if view.component_index is None:
+                raise XpsPreviewError(
+                    "preview_component_index_missing",
+                    "The frozen XPS component order is incomplete.",
+                )
             axis.plot(
                 x,
                 view.values,
-                color=_component_color(view.component_index, fixed=fixed),
-                linewidth=PREVIEW_PLOT_LINE_PT,
+                color=_series_color(preparation, view),
+                linewidth=preview_style.plot_line_pt,
                 label=label,
                 zorder=3,
             )
@@ -388,8 +459,8 @@ def _draw_preview_series(
             axis.plot(
                 x,
                 view.values,
-                color=FIXED_BACKGROUND_COLOR if fixed else BACKGROUND_COLOR,
-                linewidth=PREVIEW_PLOT_LINE_PT,
+                color=_series_color(preparation, view),
+                linewidth=preview_style.plot_line_pt,
                 label=label,
                 zorder=4,
             )
@@ -397,8 +468,8 @@ def _draw_preview_series(
             axis.plot(
                 x,
                 view.values,
-                color=FIXED_ENVELOPE_COLOR if fixed else ENVELOPE_COLOR,
-                linewidth=PREVIEW_PLOT_LINE_PT,
+                color=_series_color(preparation, view),
+                linewidth=preview_style.plot_line_pt,
                 label=label,
                 zorder=6,
             )
@@ -409,11 +480,11 @@ def _draw_preview_series(
             axis.scatter(
                 x[finite],
                 view.values[finite],
-                s=PREVIEW_RAW_SYMBOL_SIZE_PT**2,
+                s=preview_style.raw_symbol_pt**2,
                 marker="o",
                 facecolors="none",
-                edgecolors=FIXED_RAW_COLOR,
-                linewidths=PREVIEW_RAW_SYMBOL_EDGE_PT,
+                edgecolors=_series_color(preparation, view),
+                linewidths=preview_style.raw_symbol_edge_pt,
                 label=label,
                 zorder=5,
             )
@@ -421,8 +492,8 @@ def _draw_preview_series(
             axis.plot(
                 x,
                 view.values,
-                color=RAW_COLOR,
-                linewidth=PREVIEW_PLOT_LINE_PT,
+                color=_series_color(preparation, view),
+                linewidth=preview_style.plot_line_pt,
                 alpha=0.95,
                 label=label,
                 zorder=5,
@@ -442,24 +513,29 @@ def _build_xps_preview_figure(preparation: XpsPreparation) -> Figure:
     else:
         adaptive_axis_plan = _adaptive_axis_plan(preparation, columns)
         y_from, y_to = adaptive_axis_plan.y_from, adaptive_axis_plan.y_to
-    figure = Figure(figsize=(PREVIEW_WIDTH_IN, PREVIEW_HEIGHT_IN), dpi=100, facecolor="white")
+    preview_style = _resolved_preview_style(preparation)
+    figure = Figure(
+        figsize=(preview_style.width_in, preview_style.height_in),
+        dpi=100,
+        facecolor="white",
+    )
     FigureCanvasAgg(figure)
     axis = figure.add_subplot(1, 1, 1)
     axis.set_facecolor("white")
-    _draw_preview_series(axis, preparation, x, views, y_from)
+    _draw_preview_series(axis, preparation, x, views, y_from, preview_style)
 
     axis_plan = preparation.plot_spec.axis
     axis.set_xlim(float(axis_plan.display_from_ev), float(axis_plan.display_to_ev))
     axis.set_ylim(y_from, y_to)
     axis.set_xlabel(
         _clean_label(axis_plan.x_title),
-        fontsize=PREVIEW_AXIS_TITLE_PT,
+        fontsize=preview_style.axis_title_pt,
         fontweight="bold",
         labelpad=7,
     )
     axis.set_ylabel(
         "Intensity (a.u.)" if fixed else _clean_label(xps_y_axis_title(preparation)),
-        fontsize=PREVIEW_AXIS_TITLE_PT,
+        fontsize=preview_style.axis_title_pt,
         fontweight="bold",
         labelpad=9,
     )
@@ -474,24 +550,28 @@ def _build_xps_preview_figure(preparation: XpsPreparation) -> Figure:
         axis="x",
         which="major",
         direction="out",
-        length=PREVIEW_MAJOR_TICK_PT,
-        width=PREVIEW_FRAME_LINE_PT,
-        labelsize=PREVIEW_TICK_LABEL_PT,
+        length=preview_style.major_tick_pt,
+        width=preview_style.frame_line_pt,
+        labelsize=preview_style.tick_label_pt,
         pad=4,
     )
     axis.tick_params(
         axis="x",
         which="minor",
         direction="out",
-        length=PREVIEW_MINOR_TICK_PT,
-        width=max(PREVIEW_FRAME_LINE_PT * 0.6, 0.5),
+        length=preview_style.minor_tick_pt,
+        width=max(preview_style.frame_line_pt * 0.6, 0.5),
     )
     if fixed:
         axis.yaxis.set_major_locator(NullLocator())
         axis.yaxis.set_minor_locator(NullLocator())
         axis.tick_params(axis="y", which="both", left=False, labelleft=False)
     else:
-        assert adaptive_axis_plan is not None
+        if adaptive_axis_plan is None:
+            raise XpsPreviewError(
+                "preview_axis_plan_missing",
+                "The adaptive XPS axis plan is unavailable.",
+            )
         y_ticks = _regular_ticks(y_from, y_to, adaptive_axis_plan.y_step)
         if y_ticks:
             axis.yaxis.set_major_locator(FixedLocator(y_ticks))
@@ -504,21 +584,22 @@ def _build_xps_preview_figure(preparation: XpsPreparation) -> Figure:
             axis="y",
             which="major",
             direction="out",
-            length=PREVIEW_MAJOR_TICK_PT,
-            width=PREVIEW_FRAME_LINE_PT,
-            labelsize=PREVIEW_TICK_LABEL_PT,
+            length=preview_style.major_tick_pt,
+            width=preview_style.frame_line_pt,
+            labelsize=preview_style.tick_label_pt,
             pad=4,
         )
 
     axis.grid(False, which="both")
     for spine in axis.spines.values():
         spine.set_visible(True)
-        spine.set_linewidth(PREVIEW_FRAME_LINE_PT)
+        spine.set_linewidth(preview_style.frame_line_pt)
 
     handles, labels = axis.get_legend_handles_labels()
-    if handles:
+    visual = preparation.visual_contract
+    if handles and visual.legend_visible and visual.legend_position != "none":
         # Re-establish plot-spec order after using a deliberate visual z-order.
-        handle_by_label = dict(zip(labels, handles))
+        handle_by_label = dict(zip(labels, handles, strict=True))
         ordered_specs = [spec for spec in preparation.plot_spec.series if spec.role != "residual"]
         if fixed:
             fixed_order = {"raw": 0, "envelope": 1, "background": 2, "component": 3}
@@ -528,24 +609,34 @@ def _build_xps_preview_figure(preparation: XpsPreparation) -> Figure:
             for spec in ordered_specs
             if _clean_label(spec.label) in handle_by_label
         ]
+        legend_kwargs: dict[str, Any] = {
+            "loc": "upper left",
+            "borderaxespad": 0.65,
+        }
+        if visual.legend_position == "outside_right":
+            legend_kwargs.update({"loc": "upper left", "bbox_to_anchor": (1.02, 1.0)})
         axis.legend(
             [handle_by_label[label] for label in ordered_labels],
             ordered_labels,
-            loc="upper left",
-            borderaxespad=0.65,
-            frameon=False,
+            frameon=visual.legend_frame,
             handlelength=2.2,
             handletextpad=0.65,
             labelspacing=0.55,
             prop={
                 "family": ["Arial", "Microsoft YaHei", "SimHei"],
-                "size": PREVIEW_LEGEND_PT,
+                "size": preview_style.legend_pt,
                 "weight": "bold",
             },
+            **legend_kwargs,
         )
+    style = visual.figure_style
     figure.subplots_adjust(
-        left=0.14 if fixed else 0.23,
-        right=0.99,
+        left=style.layer_left_percent / 100.0,
+        right=(
+            0.78
+            if visual.legend_position == "outside_right" and visual.legend_visible
+            else min(0.99, (style.layer_left_percent + style.layer_width_percent) / 100.0)
+        ),
         bottom=0.15,
         top=0.97,
     )

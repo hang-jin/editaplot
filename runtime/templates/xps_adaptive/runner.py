@@ -22,6 +22,7 @@ from origin_sciplot.origin_backend.session import OriginSession
 from origin_sciplot.origin_backend.verify_utils import (
     require_nonempty,
     verify_page_and_layer,
+    verify_plot_color,
     verify_plot_line_widths,
     verify_text_fonts,
     verify_text_sizes,
@@ -29,7 +30,13 @@ from origin_sciplot.origin_backend.verify_utils import (
 from origin_sciplot.output_manager import RunOutput, write_json
 from origin_sciplot.template_registry import TemplateManifest
 from origin_sciplot.xps_adaptive import XpsAxisPlan, XpsProfile, XpsSeries, build_axis_plan
-from origin_sciplot.xps_workflow import XpsPreparation, prepare_xps, xps_y_axis_title
+from origin_sciplot.xps_workflow import (
+    XpsPreparation,
+    load_xps_source_snapshot,
+    prepare_xps,
+    validate_xps_render_frame,
+    xps_y_axis_title,
+)
 
 RAW_COLOR = "#0F4D92"
 RAW_FILL_COLOR = "#7884B4"
@@ -84,17 +91,16 @@ void CleanAdaptiveXAxisLabels()
 '''
 
 
-def _apply_page_layer(op: Any, graph: Any, layer: Any) -> dict[str, float]:
-    style = FIXED_ORIGIN_STYLE
+def _apply_page_layer(op: Any, graph: Any, layer: Any, style: Any) -> dict[str, float]:
     width_in, height_in = page_size_inches(style)
     graph.activate()
     graph.obj.LT_execute("page.updatetoprinter=0;page.kar=0;")
     graph.obj.PutWidth(width_in)
     graph.obj.PutHeight(height_in)
     layer.set_int("unit", 1)
-    layer.set_float("left", ADAPTIVE_LAYER_LEFT_PERCENT)
+    layer.set_float("left", style.layer_left_percent)
     layer.set_float("top", style.layer_top_percent)
-    layer.set_float("width", ADAPTIVE_LAYER_WIDTH_PERCENT)
+    layer.set_float("width", style.layer_width_percent)
     layer.set_float("height", style.layer_height_percent)
     layer.set_int("fixed", style.layer_fixed)
     layer.set_float("factor", style.layer_factor)
@@ -104,8 +110,8 @@ def _apply_page_layer(op: Any, graph: Any, layer: Any) -> dict[str, float]:
         layer,
         style=style,
         expected_layer={
-            "left_percent": ADAPTIVE_LAYER_LEFT_PERCENT,
-            "width_percent": ADAPTIVE_LAYER_WIDTH_PERCENT,
+            "left_percent": style.layer_left_percent,
+            "width_percent": style.layer_width_percent,
         },
     )
 
@@ -123,6 +129,7 @@ def _position_axis_titles(
     op: Any,
     x_title: Any,
     y_title: Any,
+    style: Any,
 ) -> dict[str, float]:
     """Keep locked large titles inside the page without shrinking their fonts.
 
@@ -135,9 +142,47 @@ def _position_axis_titles(
     x_title.set_float(
         "top",
         x_title.get_float("top")
-        - page_height * FIXED_ORIGIN_STYLE.x_title_upshift_page_percent / 100.0,
+        - page_height * style.x_title_upshift_page_percent / 100.0,
     )
-    return _axis_title_geometry(op, x_title, y_title)
+    op.lt_exec("doc -uw;")
+    state = _axis_title_geometry(op, x_title, y_title)
+
+    # Origin's automatic XB/YL placement is stable for the verified default
+    # landscape page, but the same special axis-title objects can extend a few
+    # physical units beyond a user-confirmed square/tall page.  Preserve the
+    # automatic placement whenever it is already valid; otherwise move only
+    # the clipped title into page coordinates and clamp it to a 0.5% inset.
+    # This is a geometry repair, not a font-size fallback.
+    page_width = state["page.width"]
+    page_height = state["page.height"]
+    padding_x = page_width * 0.005
+    padding_y = page_height * 0.005
+    repaired = False
+    for name, label in (("x_title", x_title), ("y_title", y_title)):
+        left = state[f"{name}.left"]
+        top = state[f"{name}.top"]
+        width = state[f"{name}.width"]
+        height = state[f"{name}.height"]
+        if (
+            left < 0.0
+            or top < 0.0
+            or left + width > page_width
+            or top + height > page_height
+        ):
+            label.set_int("attach", 1)
+            label.set_float(
+                "left",
+                min(max(left, padding_x), page_width - width - padding_x),
+            )
+            label.set_float(
+                "top",
+                min(max(top, padding_y), page_height - height - padding_y),
+            )
+            repaired = True
+    if repaired:
+        op.lt_exec("doc -uw;")
+        state = _axis_title_geometry(op, x_title, y_title)
+    return state
 
 
 def _axis_title_geometry(op: Any, x_title: Any, y_title: Any) -> dict[str, float]:
@@ -179,8 +224,7 @@ def _require_axis_titles_inside_page(state: dict[str, float]) -> None:
         )
 
 
-def _style_axis(layer: Any, axis_name: str, show_ticks: bool) -> None:
-    style = FIXED_ORIGIN_STYLE
+def _style_axis(layer: Any, axis_name: str, show_ticks: bool, style: Any) -> None:
     show_labels = 1 if show_ticks else 0
     layer.set_int(f"{axis_name}.showGrids", 0)
     layer.set_int(f"{axis_name}.ticks", 5 if show_ticks else 0)
@@ -258,11 +302,41 @@ def _resolve_preparation(
         )
     if source_digest != resolved.source_sha256:
         raise OriginDrawError("XPS preparation no longer matches the immutable input copy.")
-    if tuple(str(column) for column in frame.columns) != resolved.source_columns:
-        raise OriginDrawError("Validated XPS columns no longer match the preparation plan.")
-    if len(frame.index) != resolved.row_count:
-        raise OriginDrawError("Validated XPS row count no longer matches the preparation plan.")
+    try:
+        validate_xps_render_frame(frame, resolved)
+    except ValueError as exc:
+        raise OriginDrawError(str(exc)) from exc
     return resolved
+
+
+def _retain_ignored_source_snapshot(
+    op: Any,
+    output: RunOutput,
+    preparation: XpsPreparation,
+) -> dict[str, Any]:
+    """Keep source-only columns editable without exposing them to plots."""
+
+    ignored = list(preparation.roles.ignored)
+    if not ignored:
+        return {
+            "created": False,
+            "retained_not_rendered_columns": [],
+            "plotted": False,
+        }
+    snapshot = load_xps_source_snapshot(output.input_copy, preparation)
+    worksheet = op.new_sheet("w", "XPS Source Snapshot")
+    if worksheet is None:
+        raise OriginDrawError("Origin could not retain the XPS source snapshot")
+    worksheet.from_df(snapshot)
+    return {
+        "created": True,
+        "worksheet": "XPS Source Snapshot",
+        "columns": [str(column) for column in snapshot.columns],
+        "row_count": len(snapshot.index),
+        "retained_not_rendered_columns": ignored,
+        "plotted": False,
+        "source_values_modified": False,
+    }
 
 
 def _prepare_origin_frame(
@@ -329,16 +403,22 @@ def _prepare_origin_frame(
     return output, mapping, fill_base_mapping
 
 
-def _series_color(role: str, component_index: int) -> str:
+def _series_color(preparation: XpsPreparation, series: Any, component_index: int) -> str:
+    visual = preparation.visual_contract
+    overrides = dict(visual.series_color_overrides)
+    for key in (series.column, series.role, "components" if series.role == "component" else ""):
+        if key and key in overrides:
+            return overrides[key]
+    role = series.role
     if role == "raw":
-        return RAW_COLOR
+        return visual.raw_color
     if role == "background":
-        return BACKGROUND_COLOR
+        return visual.background_color
     if role == "envelope":
-        return ENVELOPE_COLOR
+        return visual.envelope_color
     if role == "residual":
-        return RESIDUAL_COLOR
-    return COMPONENT_COLORS[component_index % len(COMPONENT_COLORS)]
+        return visual.residual_color
+    return visual.component_colors[component_index % len(visual.component_colors)]
 
 
 def _add_plot(
@@ -366,10 +446,12 @@ def _add_gradient_fill(
     color: str,
     *,
     fill_base_column: str | None,
-) -> None:
+    transparency_percent: float,
+) -> tuple[Any, Any] | None:
     if not fill_base_column:
-        return
+        return None
     fill_plot = _add_plot(layer, worksheet, y_column, color, 0.01)
+    fill_plot.transparency = transparency_percent
     baseline = _add_plot(layer, worksheet, fill_base_column, "#FFFFFF", 0.1)
     baseline.transparency = 100
     fill_color = op.ocolor(color)
@@ -382,6 +464,7 @@ def _add_gradient_fill(
     fill_plot.set_cmd("-p2fm 3")
     fill_plot.set_cmd(f"-p2ff {white}")
     fill_plot.set_cmd("-paaf 0")
+    return fill_plot, baseline
 
 
 def _apply_clean_x_axis_format(op: Any, graph: Any) -> None:
@@ -399,8 +482,7 @@ def _apply_clean_x_axis_format(op: Any, graph: Any) -> None:
         source_path.unlink(missing_ok=True)
 
 
-def _apply_x_axis_contract(layer: Any, axis_plan: XpsAxisPlan) -> None:
-    style = FIXED_ORIGIN_STYLE
+def _apply_x_axis_contract(layer: Any, axis_plan: XpsAxisPlan, style: Any) -> None:
     label_divide_by = float(getattr(axis_plan, "x_label_divide_by", -1.0))
     layer.set_int("x.showAxes", 3)
     layer.set_float("x.from", axis_plan.x_from_plot)
@@ -504,11 +586,12 @@ def _verify_axis_contract(
     axis_plan: XpsAxisPlan,
     *,
     op: Any | None = None,
+    style: Any = FIXED_ORIGIN_STYLE,
 ) -> dict[str, float | int]:
     state = _read_axis_state(layer)
     expected_ints = {
         "x.ticks": 5,
-        "x.minorTicks": FIXED_ORIGIN_STYLE.x_minor_ticks_between_majors,
+        "x.minorTicks": style.x_minor_ticks_between_majors,
         "x.label.type": 1,
         "x.label.numFormat": 1,
         "x.label.align": X_LABEL_ALIGN_ON_TICK,
@@ -536,23 +619,23 @@ def _verify_axis_contract(
         "x.firstTick": axis_plan.x_first_tick_plot,
         "x.inc": axis_plan.x_step_ev,
         "x.label.divideBy": float(getattr(axis_plan, "x_label_divide_by", -1.0)),
-        "x.label.pt": FIXED_ORIGIN_STYLE.tick_label_size_pt,
+        "x.label.pt": style.tick_label_size_pt,
         "x.label.rotate": 0.0,
-        "y.label.pt": FIXED_ORIGIN_STYLE.tick_label_size_pt,
+        "y.label.pt": style.tick_label_size_pt,
         "y.label.rotate": 0.0,
-        "x.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "x2.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "y.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "y2.thickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "x.tickthickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
-        "y.tickthickness": FIXED_ORIGIN_STYLE.frame_line_width_pt,
+        "x.thickness": style.frame_line_width_pt,
+        "x2.thickness": style.frame_line_width_pt,
+        "y.thickness": style.frame_line_width_pt,
+        "y2.thickness": style.frame_line_width_pt,
+        "x.tickthickness": style.frame_line_width_pt,
+        "y.tickthickness": style.frame_line_width_pt,
     }
     for prop, expected in expected_floats.items():
         if abs(float(state[prop]) - expected) > 1e-6:
             raise OriginDrawError(f"Origin adaptive axis verification failed: {prop}={state[prop]}")
     if op is not None:
         expected_font = int(
-            round(float(op.lt_float(f"font({FIXED_ORIGIN_STYLE.font_family})")))
+            round(float(op.lt_float(f"font({style.font_family})")))
         )
         state["font_code_expected"] = expected_font
         for prop in ("x.label.font", "y.label.font"):
@@ -569,21 +652,98 @@ def _clean_label_text(label: str) -> str:
     return re.sub(r"\s+", " ", str(label).replace("×", "x")).strip() or "Series"
 
 
-def _style_legend(layer: Any, entries: list[tuple[str, str, str]]) -> None:
-    style = FIXED_ORIGIN_STYLE
+def _style_legend(
+    op: Any,
+    layer: Any,
+    entries: list[tuple[str, str, str]],
+    preparation: XpsPreparation,
+) -> dict[str, Any]:
+    visual = preparation.visual_contract
+    style = visual.figure_style
+    if not visual.legend_visible or visual.legend_position == "none":
+        _remove_legend(layer)
+        remaining_visible = False
+        for name in ("legend", "Legend"):
+            with suppress(Exception):
+                candidate = layer.label(name)
+                if candidate is not None and int(candidate.get_int("show")) != 0:
+                    remaining_visible = True
+        if remaining_visible:
+            raise OriginDrawError("Origin did not remove the hidden XPS legend.")
+        return {
+            "visible": False,
+            "visible_readback": False,
+            "position": "none",
+            "showframe": None,
+        }
     legend = layer.label("legend")
     if legend is None:
-        return
+        raise OriginDrawError("Origin did not create the requested XPS legend.")
     lines = []
     for _role, color, label in entries:
         text = _legend_label(label)
-        lines.append(rf"\L(O Style:L,LineColor:{color},LineWidth:5,Length:22,Gap:8) {text}")
+        lines.append(
+            rf"\L(O Style:L,LineColor:{color},LineWidth:{style.plot_line_width_pt:g},"
+            rf"Length:22,Gap:8) {text}"
+        )
     legend.set_int("link", 1)
     legend.text = "\n".join(lines)
     _style_label(legend, style.legend_size_pt, bold=True)
+    legend.set_int("showframe", int(visual.legend_frame))
     layer.obj.LT_execute(
         f"legend.font=font({style.font_family});legend.color=color(black);legend.bold=1;"
     )
+    if visual.legend_position == "outside_right":
+        op.lt_exec("doc -uw;")
+        page_width = float(op.lt_float("page.width"))
+        page_height = float(op.lt_float("page.height"))
+        layer_right = page_width * (
+            style.layer_left_percent + style.layer_width_percent
+        ) / 100.0
+        legend.set_int("attach", 1)
+        legend.set_float("left", layer_right + page_width * 0.02)
+        legend.set_float("top", page_height * 0.08)
+        op.lt_exec("doc -uw;")
+    visible_readback = int(legend.get_int("show")) != 0
+    showframe = int(legend.get_int("showframe"))
+    if not visible_readback or showframe != int(visual.legend_frame):
+        raise OriginDrawError("Origin XPS legend state failed readback.")
+    left = float(legend.get_float("left"))
+    top = float(legend.get_float("top"))
+    width = float(legend.get_float("width"))
+    height = float(legend.get_float("height"))
+    page_width = float(op.lt_float("page.width"))
+    page_height = float(op.lt_float("page.height"))
+    inside_page = (
+        left >= 0.0
+        and top >= 0.0
+        and left + width <= page_width
+        and top + height <= page_height
+    )
+    if not inside_page:
+        raise OriginDrawError(
+            "Origin XPS legend is clipped outside the graph page: "
+            f"left={left:g}, top={top:g}, width={width:g}, height={height:g}, "
+            f"page_width={page_width:g}, page_height={page_height:g}."
+        )
+    if visual.legend_position == "outside_right":
+        layer_right = page_width * (
+            style.layer_left_percent + style.layer_width_percent
+        ) / 100.0
+        if left < layer_right:
+            raise OriginDrawError("Origin XPS legend did not remain outside the plot layer.")
+    return {
+        "visible": True,
+        "visible_readback": visible_readback,
+        "position": visual.legend_position,
+        "showframe": showframe,
+        "left": left,
+        "top": top,
+        "width": width,
+        "height": height,
+        "inside_page": inside_page,
+        "attach": int(legend.get_int("attach")),
+    }
 
 
 def _remove_legend(layer: Any) -> None:
@@ -594,13 +754,56 @@ def _remove_legend(layer: Any) -> None:
                 legend.remove()
 
 
+def _verify_series_color_state(
+    op: Any,
+    plots: dict[str, tuple[Any, str]],
+    *,
+    prefix: str,
+) -> dict[str, dict[str, float | str]]:
+    state: dict[str, dict[str, float | str]] = {}
+    for index, (label, (plot, color)) in enumerate(plots.items(), start=1):
+        try:
+            state[label] = verify_plot_color(
+                op,
+                plot,
+                color,
+                variable_name=f"__xps_{prefix}_color_{index}",
+            )
+        except RuntimeError as exc:
+            raise OriginDrawError(str(exc)) from exc
+    return state
+
+
+def _verify_fill_state(
+    op: Any,
+    fills: dict[str, tuple[Any, str]],
+    expected_transparency: float,
+) -> dict[str, dict[str, Any]]:
+    color_state = _verify_series_color_state(op, fills, prefix="fill")
+    state: dict[str, dict[str, Any]] = {}
+    for label, (plot, _color) in fills.items():
+        actual = float(plot.transparency)
+        if abs(actual - expected_transparency) > 0.05:
+            raise OriginDrawError(
+                f"Origin XPS fill transparency failed readback: {label}={actual:g}%, "
+                f"expected {expected_transparency:g}%."
+            )
+        state[label] = {
+            **color_state[label],
+            "transparency_percent": actual,
+            "fill_mode": "type9_pfm3_two_colors",
+        }
+    return state
+
+
 def _build_origin_graph(
     op: Any,
     frame: pd.DataFrame,
     output: RunOutput,
     preparation: XpsPreparation,
 ) -> tuple[Any, dict[str, Any]]:
-    style = FIXED_ORIGIN_STYLE
+    visual = preparation.visual_contract
+    style = visual.figure_style
     try:
         profile = _profile_from_preparation(preparation)
         axis_plan = build_axis_plan(frame, profile, preparation)
@@ -610,6 +813,7 @@ def _build_origin_graph(
     origin_frame, column_mapping, fill_base_mapping = _prepare_origin_frame(
         frame, preparation, axis_plan
     )
+    source_snapshot_state = _retain_ignored_source_snapshot(op, output, preparation)
     worksheet = op.new_sheet("w", "XPS Adaptive Input")
     if worksheet is None:
         raise OriginDrawError("Origin could not create workbook")
@@ -620,75 +824,112 @@ def _build_origin_graph(
     if graph is None:
         raise OriginDrawError("Origin could not create graph")
     layer = graph[0]
-    geometry_report = _apply_page_layer(op, graph, layer)
+    geometry_report = _apply_page_layer(op, graph, layer, style)
 
     component_color_by_column = {
-        column: COMPONENT_COLORS[index % len(COMPONENT_COLORS)]
-        for index, column in enumerate(profile.component_columns)
+        column: _series_color(preparation, series, index)
+        for index, series in enumerate(
+            item for item in profile.series if item.role == "component"
+        )
+        for column in (series.column,)
     }
     component_fill_color_by_column = {
-        column: COMPONENT_FILL_COLORS[index % len(COMPONENT_FILL_COLORS)]
-        for index, column in enumerate(profile.component_columns)
+        series.column: dict(visual.series_color_overrides).get(
+            series.column,
+            dict(visual.series_color_overrides).get(
+                "component",
+                dict(visual.series_color_overrides).get(
+                    "components",
+                    visual.component_fill_colors[index % len(visual.component_fill_colors)],
+                ),
+            ),
+        )
+        for index, series in enumerate(
+            item for item in profile.series if item.role == "component"
+        )
     }
     main_series = _main_plot_series(profile)
     visible_line_plots: dict[str, Any] = {}
+    visible_line_color_plots: dict[str, tuple[Any, str]] = {}
+    fill_plots: dict[str, tuple[Any, str]] = {}
 
     for series in main_series:
         if series.role != "raw":
             continue
         origin_column = column_mapping[series.column]
-        _add_gradient_fill(
+        fill_color = dict(visual.series_color_overrides).get(
+            series.column,
+            dict(visual.series_color_overrides).get("raw", visual.raw_fill_color),
+        )
+        added_fill = _add_gradient_fill(
             op,
             layer,
             worksheet,
             origin_column,
-            RAW_FILL_COLOR,
+            fill_color,
             fill_base_column=fill_base_mapping.get(series.column),
+            transparency_percent=style.fill_transparency_percent,
         )
+        if added_fill is not None:
+            fill_plots[f"{series.label} fill"] = (added_fill[0], fill_color)
 
     for series in main_series:
         if series.role != "component":
             continue
         origin_column = column_mapping[series.column]
-        _add_gradient_fill(
+        fill_color = component_fill_color_by_column[series.column]
+        added_fill = _add_gradient_fill(
             op,
             layer,
             worksheet,
             origin_column,
-            component_fill_color_by_column[series.column],
+            fill_color,
             fill_base_column=fill_base_mapping.get(series.column),
+            transparency_percent=style.fill_transparency_percent,
         )
+        if added_fill is not None:
+            fill_plots[f"{series.label} fill"] = (added_fill[0], fill_color)
 
     for series in main_series:
         if series.role != "component":
             continue
         origin_column = column_mapping[series.column]
-        visible_line_plots[series.label] = _add_plot(
+        plot = _add_plot(
             layer,
             worksheet,
             origin_column,
             component_color_by_column[series.column],
             style.plot_line_width_pt,
         )
+        visible_line_plots[series.label] = plot
+        visible_line_color_plots[series.label] = (
+            plot,
+            component_color_by_column[series.column],
+        )
 
     for series in main_series:
         if series.role == "component":
             continue
-        color = _series_color(series.role, 0)
+        color = _series_color(preparation, series, 0)
         origin_column = column_mapping[series.column]
         if series.role == "raw":
-            width = ADAPTIVE_RAW_LINE_WIDTH_PT
+            width = style.plot_line_width_pt
         elif series.role == "envelope":
-            width = ADAPTIVE_ENVELOPE_LINE_WIDTH_PT
+            width = style.plot_line_width_pt
         else:
             width = style.plot_line_width_pt
-        visible_line_plots[series.label] = _add_plot(
+        plot = _add_plot(
             layer, worksheet, origin_column, color, width
         )
+        visible_line_plots[series.label] = plot
+        visible_line_color_plots[series.label] = (plot, color)
 
     legend_entries: list[tuple[str, str, str]] = []
     for series in main_series:
-        color = component_color_by_column.get(series.column, _series_color(series.role, 0))
+        color = component_color_by_column.get(
+            series.column,
+            _series_color(preparation, series, 0),
+        )
         legend_entries.append((series.role, color, series.label))
 
     layer.set_float("x.from", axis_plan.x_from_plot)
@@ -703,13 +944,13 @@ def _build_origin_graph(
     layer.axis("y").title = y_axis_title
     layer.axis("x2").title = ""
     layer.axis("y2").title = ""
-    _style_axis(layer, "x", True)
-    _style_axis(layer, "x2", False)
-    _style_axis(layer, "y", True)
-    _style_axis(layer, "y2", False)
+    _style_axis(layer, "x", True, style)
+    _style_axis(layer, "x2", False, style)
+    _style_axis(layer, "y", True, style)
+    _style_axis(layer, "y2", False, style)
     layer.set_float("y.label.pt", style.tick_label_size_pt)
     layer.obj.LT_execute(f"layer.y.label.pt={style.tick_label_size_pt};")
-    _apply_x_axis_contract(layer, axis_plan)
+    _apply_x_axis_contract(layer, axis_plan, style)
     _apply_y_axis_contract(layer, axis_plan)
 
     x_title = layer.label("xb")
@@ -724,41 +965,52 @@ def _build_origin_graph(
         f"yl.font=font({style.font_family});yl.color=color(black);yl.bold=1;"
         f"yl.fsize={style.axis_title_size_pt};yl.pt={style.axis_title_size_pt};"
     )
-    _style_legend(layer, legend_entries)
+    legend_state = _style_legend(op, layer, legend_entries, preparation)
     direct_labels: list[dict[str, float | str]] = []
 
     graph.activate()
     graph.set_int("background", op.ocolor("#FFFFFF"))
     _apply_clean_x_axis_format(op, graph)
-    _apply_x_axis_contract(layer, axis_plan)
+    _apply_x_axis_contract(layer, axis_plan, style)
     _apply_y_axis_contract(layer, axis_plan)
     x_title.set_int("show", 1)
     y_title.set_int("show", 1)
     op.lt_exec("doc -uw;")
-    _position_axis_titles(op, x_title, y_title)
+    _position_axis_titles(op, x_title, y_title, style)
     op.lt_exec("doc -uw;")
     title_position = _axis_title_geometry(op, x_title, y_title)
     _require_axis_titles_inside_page(title_position)
-    axis_state = _verify_axis_contract(layer, axis_plan, op=op)
-    legend = layer.label("legend")
+    axis_state = _verify_axis_contract(layer, axis_plan, op=op, style=style)
+    legend = (
+        layer.label("legend")
+        if visual.legend_visible and visual.legend_position != "none"
+        else None
+    )
+    labels = {"x_title": x_title, "y_title": y_title}
+    expected_sizes = {
+        "x_title": style.axis_title_size_pt,
+        "y_title": style.axis_title_size_pt,
+    }
+    if legend is not None:
+        labels["legend"] = legend
+        expected_sizes["legend"] = style.legend_size_pt
     try:
-        text_state = verify_text_sizes(
-            {"x_title": x_title, "y_title": y_title, "legend": legend},
-            {
-                "x_title": style.axis_title_size_pt,
-                "y_title": style.axis_title_size_pt,
-                "legend": style.legend_size_pt,
-            },
-        )
+        text_state = verify_text_sizes(labels, expected_sizes)
         text_state.update(
             verify_text_fonts(
                 op,
-                {"x_title": x_title, "y_title": y_title, "legend": legend},
+                labels,
                 style.font_family,
             )
         )
         line_width_state = verify_plot_line_widths(
             op, visible_line_plots, style.plot_line_width_pt
+        )
+        line_color_state = _verify_series_color_state(
+            op, visible_line_color_plots, prefix="line"
+        )
+        fill_state = _verify_fill_state(
+            op, fill_plots, style.fill_transparency_percent
         )
     except RuntimeError as exc:
         raise OriginDrawError(str(exc)) from exc
@@ -776,8 +1028,8 @@ def _build_origin_graph(
             "xps_plot_spec": preparation.plot_spec.to_dict(),
             "origin_output_style": {
                 **style.to_dict(),
-                "layer_left_percent": ADAPTIVE_LAYER_LEFT_PERCENT,
-                "layer_width_percent": ADAPTIVE_LAYER_WIDTH_PERCENT,
+                "layer_left_percent": style.layer_left_percent,
+                "layer_width_percent": style.layer_width_percent,
             },
             "origin_column_mapping": column_mapping,
             "origin_axis_state": axis_state,
@@ -789,8 +1041,17 @@ def _build_origin_graph(
                 "frame_line_width_pt": style.frame_line_width_pt,
                 **title_position,
             },
-            "origin_plot_state": {"visible_line_plots": line_width_state},
+            "origin_plot_state": {
+                "visible_line_plots": line_width_state,
+                "visible_series_colors": line_color_state,
+                "fill_plots": fill_state,
+                "fill_transparency_percent_expected": style.fill_transparency_percent,
+                "fill_mode": "type9_pfm3_two_colors",
+                "legend": legend_state,
+            },
+            "xps_visual_contract": visual.to_dict(),
             "source_data_modified": False,
+            "origin_source_snapshot": source_snapshot_state,
             "direct_labels": direct_labels,
             "residuals_column_plotted": False,
             "series_fill_base_columns": fill_base_mapping,
