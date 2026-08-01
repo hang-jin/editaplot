@@ -7,14 +7,14 @@
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
-    "sha256": "7aa983fbdee32e56bcd4b744059785637b35cd018c01bab19ed99a567e9e007b"
+    "sha256": "a5fe3c3c11440f96c3ebd5519c39665665adab88e03efc6b73e120c468f4d2ed"
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
     "reviewed_on": "2026-07-30",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, payment-identifier intent, and redistribution boundary"
   },
-  "asset_count": 225,
+  "asset_count": 229,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
@@ -81,6 +81,26 @@
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 45041,
       "sha256": "aa833fcc1c84bcd1228c0503a349121e5e62eb5faaf3644872faff6fb2c15fb4",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/density-ridgeline3d.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 164155,
+      "sha256": "14ae5b08257482a018902aa547151c827e5c8fe76f718b4c90f3c32bd4b47bbc",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -1120,6 +1140,14 @@
       "contains_phi": false
     },
     {
+      "path": "examples/gallery/density_ridgeline3d.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 4506,
+      "sha256": "fc63e0e391b4c220282c30e3ad3bbbecee2cb508b01720e08fd87ea75bcb411f",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "examples/gallery/diverging_effects.csv",
       "kind": "synthetic_public_example",
       "size_bytes": 155,
@@ -1629,6 +1657,22 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 568,
       "sha256": "1da480239bdfbaea722b35cdb6af2b6d2b1ee3102bce8ae29fd17f6bf6b1d458",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/density_ridgeline3d/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 114,
+      "sha256": "cd63921d95264c0121ea9b90becf66675dd109c04b03d2dbb7f71cc75c8d19cd",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/density_ridgeline3d/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 1536,
+      "sha256": "47adc68fa01caf5cae6cbd6fd45e502a04edba93c6d3b44aa7d8b1999282c40f",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 399,
+  "file_count": 409,
   "files": [
     {
       "path": "LICENSE",
@@ -89,6 +89,11 @@
       "sha256": "8c7c3589763572f11321af9aa4d30266dad859e9c6841f30939572c2abd900c3"
     },
     {
+      "path": "src/origin_sciplot/origin_backend/density_ridgeline3d_renderer.py",
+      "size_bytes": 43436,
+      "sha256": "c58fcf7a4baccf13d3ca65cd26cdb5e9c7db4ffb6b61c193c2f2a6293a3c294a"
+    },
+    {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
       "size_bytes": 61645,
       "sha256": "db1ad09fab809247ce7a125a9ef32d310044a9294d1104d4dd7b34f7e910e054"
@@ -125,8 +130,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/template_capabilities.py",
-      "size_bytes": 11784,
-      "sha256": "08ef210fbf31a17f027f1b0ca890e0ac613579a1975e11e543e3f146ffa73726"
+      "size_bytes": 11896,
+      "sha256": "494b2f4d9e2c93a0cf5cad61f631a622baf5e236156ce5d50a84b474f92b63c1"
     },
     {
       "path": "src/origin_sciplot/origin_backend/trajectory3d_renderer.py",
@@ -160,8 +165,8 @@
     },
     {
       "path": "src/origin_sciplot/reference_adaptation.py",
-      "size_bytes": 28666,
-      "sha256": "4eddd05ae684e188820a138d9824a76e41cfded1041f77d6b98e2c098c0d502c"
+      "size_bytes": 28772,
+      "sha256": "cb05a2d2d4aad521fe5ce65828f002a2319b75a97db79ee05115d9ea04d7e91c"
     },
     {
       "path": "src/origin_sciplot/reference_figure.py",
@@ -170,8 +175,8 @@
     },
     {
       "path": "src/origin_sciplot/reference_style.py",
-      "size_bytes": 28267,
-      "sha256": "c2faaf9d5f6cf753b32ef9c0fefdcc8225ff730795f84695aefff19aa24f3edc"
+      "size_bytes": 29053,
+      "sha256": "9edba0ec5282a8b82f8cee81507231804be57f8f47572c6a996708ac702ee888"
     },
     {
       "path": "src/origin_sciplot/resources/app_icon.png",
@@ -185,23 +190,23 @@
     },
     {
       "path": "src/origin_sciplot/scientific_preview.py",
-      "size_bytes": 76953,
-      "sha256": "6548c163f6e5b0fb99abccc9647cb7be9465b4f1f7e71a25e7a4a269f4b43940"
+      "size_bytes": 81915,
+      "sha256": "a2a87cf57d658ab1cc6b26397bd7a0e3c18ba7beee8bbdf4cc7ba31fdbc2efb6"
     },
     {
       "path": "src/origin_sciplot/scientific_visual.py",
-      "size_bytes": 21119,
-      "sha256": "8da002600495d3011cfbed30aa5c080811bb9f7d98b95cf2b7bf1dd736caf8bd"
+      "size_bytes": 21677,
+      "sha256": "374b25193869c8d766bfe41116ae77bf548f56c0d7959bf474ba81d907a347d1"
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 188592,
-      "sha256": "f3bc4a3226d45b601577cad004d9495ea327797eff59f5f9fe8600a4f223233f"
+      "size_bytes": 215293,
+      "sha256": "05cef1f863910a48d1af821d87c7559a4f348e4ca8b2d74d738d510dfd86236e"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
-      "size_bytes": 16869,
-      "sha256": "e9f70fc74515c26fc6b752ffb93a115e19e6bb6abd9f7d6e7a32e80331b64be8"
+      "size_bytes": 19424,
+      "sha256": "cd562ecbf3411766beb9253d3a8a5a628711f9d1b34163b8d0fc79ea11d88afb"
     },
     {
       "path": "src/origin_sciplot/semantic_contract.py",
@@ -215,8 +220,8 @@
     },
     {
       "path": "src/origin_sciplot/template_service.py",
-      "size_bytes": 21591,
-      "sha256": "82f9fb7f42135aeb55a64510236c22edeeeaaa661e0c244205e70732e6654f7b"
+      "size_bytes": 23108,
+      "sha256": "d78c133f659e37b4f23a6880a05853a8cee0ba2708b271af21806f7d86eca3d8"
     },
     {
       "path": "src/origin_sciplot/validation/__init__.py",
@@ -612,6 +617,51 @@
       "path": "templates/decision_curve/visual_contract.md",
       "size_bytes": 489,
       "sha256": "9daa1ec54b52236ff048aaf597c283a65912263aeb34041932b54dc323fa6cbc"
+    },
+    {
+      "path": "templates/density_ridgeline3d/data_contract.md",
+      "size_bytes": 3591,
+      "sha256": "c185551713cc3f2b6e77f6c95d5307992bb5fef22d3dd3463472a86c406d452a"
+    },
+    {
+      "path": "templates/density_ridgeline3d/data_template.csv",
+      "size_bytes": 114,
+      "sha256": "cd63921d95264c0121ea9b90becf66675dd109c04b03d2dbb7f71cc75c8d19cd"
+    },
+    {
+      "path": "templates/density_ridgeline3d/example_standard.csv",
+      "size_bytes": 1536,
+      "sha256": "47adc68fa01caf5cae6cbd6fd45e502a04edba93c6d3b44aa7d8b1999282c40f"
+    },
+    {
+      "path": "templates/density_ridgeline3d/manifest.yaml",
+      "size_bytes": 2720,
+      "sha256": "f4f988d8afadccc9fdbfd08f267c17d432443e6473a5722189cd1325d7951af4"
+    },
+    {
+      "path": "templates/density_ridgeline3d/origin_acceptance.md",
+      "size_bytes": 6455,
+      "sha256": "9daf68292ab41c1c8a310a435c13a84386b02a9d11c676baf2ad78a2066097fd"
+    },
+    {
+      "path": "templates/density_ridgeline3d/runner.py",
+      "size_bytes": 472,
+      "sha256": "e69501fcd0ab7707d8056773041cda43923413ab6993345ddd2a3db8a4b92761"
+    },
+    {
+      "path": "templates/density_ridgeline3d/schema.json",
+      "size_bytes": 1878,
+      "sha256": "3dfea098c17689c66592e1016c7e50f67009862b8253afdbe0cf2066fa57144c"
+    },
+    {
+      "path": "templates/density_ridgeline3d/service.py",
+      "size_bytes": 223,
+      "sha256": "102046765252ef889c735819eb581982d58d0be788ccb364dd70bb9ae81e7627"
+    },
+    {
+      "path": "templates/density_ridgeline3d/visual_contract.md",
+      "size_bytes": 1965,
+      "sha256": "5f153b0fa2dc33e10a143117d309380ad057a541ea5b37742ea97758cd3d9891"
     },
     {
       "path": "templates/diagnostic_curve/data_contract.md",

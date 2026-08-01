@@ -16,8 +16,8 @@ data, labels, conclusions, or private template assets.
 
 ## Current verified public gallery scope
 
-The retained verification inventory contains 46 reviewed, metadata-sanitized PNGs across 39 public
-plotting routes. The public page displays 44 cases. Keep inventory count, display count, and route
+The retained verification inventory contains 47 reviewed, metadata-sanitized PNGs across 40 public
+plotting routes. The public page displays 45 cases. Keep inventory count, display count, and route
 count separate: a case enters the inventory only after Origin artifacts, object readback, human
 visual QA, sanitized PNG, provenance record, and asset manifest all pass. Display visibility is a
 separate decision and does not delete retained verification evidence.
@@ -45,6 +45,8 @@ separate decision and does not delete retained verification evidence.
 20. A multi-panel circular directed weighted network with shared node positions, signed edges, one
     global weight scale, and a borderless editable legend; the current showcase fixture uses two
     periods.
+21. A 3D dual-density ridgeline over four real, unit-bearing follow-up conditions, with paired
+    upstream density profiles and one supplied Z=0 baseline locator per condition.
 
 ## Newly verified materials and dense-matrix cases
 
@@ -59,6 +61,17 @@ regression and audit history, but they are not public-page showcase cards.
 
 The all-in-one poster is an archived promotion asset. It is not embedded in the live bilingual
 gallery and is not required to include every newly added verified case.
+
+## 我已验证的三维双密度教学案例
+
+我已经准备了一份原创、确定性的 mixed-wide 教学表：
+`examples/gallery/density_ridgeline3d.csv`。四个带单位随访条件各自包含同行、同密度语义和单位的
+实线/虚线预计算密度，并且每组只有一个上游提供的 `Focal X`；它只作为 Z=0 基线 locator。
+生成器可以重复产生完全相同的数据，不会运行用户数据的 KDE、阈值或交点计算。
+
+该案例已经完成真实 Origin OPJU、PNG/PDF/TIF、完整对象反读和与导出哈希绑定的人工视觉检查，
+现登记在 `CASES`，进入公开 verified 路线与页面展示。公开图必须来自同一 Origin renderer；
+我仍不会用 Python mock 图代替 Origin 成果。
 
 Add experimental chart images only under an explicit experimental label.
 

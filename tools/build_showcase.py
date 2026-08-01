@@ -76,6 +76,15 @@ CASES = (
         title_zh="三维多位置 Nyquist 轨迹",
     ),
     ShowcaseCase(
+        "density-ridgeline3d",
+        "density_ridgeline3d",
+        "density_ridgeline3d.csv",
+        "Four synthetic follow-up conditions compare two upstream precomputed density profiles while each supplied focal value remains a Z=0 baseline locator.",
+        "three-axis distribution comparison",
+        "3D dual-density ridgeline with supplied baseline focal locators",
+        title_zh="三维双密度曲线与基线焦点",
+    ),
+    ShowcaseCase(
         "cv-cycles",
         "cv",
         "cv_cycles.csv",

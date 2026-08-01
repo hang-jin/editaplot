@@ -45,6 +45,7 @@ jobs:
           runtime/src/origin_sciplot/output_manager.py
           runtime/src/origin_sciplot/project_paths.py
           runtime/src/origin_sciplot/origin_backend/capabilities.py
+          runtime/src/origin_sciplot/origin_backend/density_ridgeline3d_renderer.py
           runtime/src/origin_sciplot/origin_backend/network_renderer.py
           runtime/src/origin_sciplot/origin_backend/safe_errors.py
           runtime/src/origin_sciplot/origin_backend/session.py
@@ -54,6 +55,8 @@ jobs:
           runtime/src/origin_sciplot/workers/run_template_worker.py
           runtime/templates/circular_network/runner.py
           runtime/templates/circular_network/service.py
+          runtime/templates/density_ridgeline3d/runner.py
+          runtime/templates/density_ridgeline3d/service.py
           runtime/templates/xps_adaptive/runner.py
           runtime/templates/xps_c1s_fit/runner.py
           tests

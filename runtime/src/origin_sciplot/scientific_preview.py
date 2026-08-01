@@ -220,10 +220,15 @@ def _new_empty_figure(preparation: ScientificPreparation) -> Figure:
     origin_style = preparation.plot_spec.display_plan.figure_style
     if origin_style is None:
         raise ScientificPreviewError("preview_style_missing", "Adaptive figure profile is missing.")
+    series_count = (
+        len(preparation.plot_spec.group_order)
+        if preparation.plot_spec.plot_kind == "density_ridgeline3d"
+        else len(preparation.plot_spec.series)
+    )
     preview = _resolved_preview_style(
         origin_style,
         preparation.plot_spec.display_plan.marker_size_pt,
-        len(preparation.plot_spec.series),
+        series_count,
     )
     figure = Figure(
         figsize=(PREVIEW_WIDTH_IN, preview.height_in),
@@ -295,6 +300,142 @@ def _draw_trajectory3d(
     for pane_axis in (axis.xaxis, axis.yaxis, axis.zaxis):
         pane_axis.pane.set_facecolor((1.0, 1.0, 1.0, 1.0))
         pane_axis.pane.set_edgecolor("#222222")
+
+
+def _draw_density_ridgeline3d(
+    figure: Figure,
+    frame: Any,
+    preparation: ScientificPreparation,
+) -> None:
+    """Preview two supplied profiles and one supplied baseline focus per condition."""
+
+    spec = preparation.plot_spec
+    if (
+        spec.x_column is None
+        or spec.y_column is None
+        or spec.category_column is None
+        or spec.focal_x_column is None
+        or len(spec.series) != 2
+        or not spec.condition_positions
+    ):
+        raise ScientificPreviewError(
+            "density_ridgeline3d_plan_invalid",
+            "The ordered density-profile/focus plan is incomplete.",
+        )
+    style = _preview_style(figure)
+    axis = figure.add_axes([0.08, 0.08, 0.79, 0.84], projection="3d", facecolor="white")
+    conditions = frame[spec.category_column].astype(str).str.strip()
+    positions = dict(spec.condition_positions)
+    focal_x_values: list[float] = []
+    focal_y_values: list[float] = []
+
+    for index, condition in enumerate(spec.group_order):
+        mask = conditions == condition
+        x = frame.loc[mask, spec.x_column].to_numpy(dtype=float, copy=True)
+        y = np.full(x.size, positions[condition], dtype=float)
+        solid = frame.loc[mask, spec.series[0].source_column].to_numpy(
+            dtype=float,
+            copy=True,
+        )
+        dashed = frame.loc[mask, spec.series[1].source_column].to_numpy(
+            dtype=float,
+            copy=True,
+        )
+        color = style.colors[index % len(style.colors)]
+        axis.plot(
+            x,
+            y,
+            solid,
+            color=color,
+            linewidth=style.plot_line_pt,
+            linestyle="-",
+            marker=None,
+            zorder=3,
+        )
+        axis.plot(
+            x,
+            y,
+            dashed,
+            color=color,
+            linewidth=style.plot_line_pt,
+            linestyle="--",
+            marker=None,
+            zorder=2,
+        )
+        focus = frame.loc[mask, spec.focal_x_column].dropna().to_numpy(
+            dtype=float,
+            copy=True,
+        )
+        focal_x_values.append(float(focus[0]))
+        focal_y_values.append(float(positions[condition]))
+
+    focus_color = "#8A541D"
+    axis.scatter(
+        focal_x_values,
+        focal_y_values,
+        np.zeros(len(focal_x_values), dtype=float),
+        s=max(style.marker_pt, 5.0) ** 2,
+        c=focus_color,
+        edgecolors="white",
+        linewidths=max(style.frame_line_pt * 0.55, 0.6),
+        depthshade=False,
+        zorder=5,
+    )
+    for x_value, y_value in zip(focal_x_values, focal_y_values, strict=True):
+        axis.text(
+            x_value,
+            y_value,
+            0.0,
+            f" {x_value:.3g}",
+            fontsize=max(style.legend_pt * 0.84, 8.0),
+            color="#292929",
+            zorder=6,
+        )
+
+    plan = spec.axis_plan
+    if plan.x_from is not None and plan.x_to is not None:
+        axis.set_xlim(plan.x_from, plan.x_to)
+    axis.set_ylim(plan.y_from, plan.y_to)
+    if plan.z_from is not None and plan.z_to is not None:
+        axis.set_zlim(plan.z_from, plan.z_to)
+    axis.set_xlabel(_matplotlib_label(spec.x_title), fontsize=style.axis_title_pt, fontweight="bold")
+    axis.set_ylabel(_matplotlib_label(spec.y_title), fontsize=style.axis_title_pt, fontweight="bold")
+    axis.set_zlabel(
+        _matplotlib_label(spec.z_title or "Density"),
+        fontsize=style.axis_title_pt,
+        fontweight="bold",
+    )
+    axis.tick_params(labelsize=style.tick_label_pt, width=style.frame_line_pt)
+    axis.view_init(elev=18.0, azim=-55.0)
+    axis.grid(True, color="#D9DCDF", linewidth=0.50)
+    for pane_axis in (axis.xaxis, axis.yaxis, axis.zaxis):
+        pane_axis.pane.set_facecolor((1.0, 1.0, 1.0, 1.0))
+        pane_axis.pane.set_edgecolor("#252525")
+
+    axis.legend(
+        handles=(
+            Line2D([0], [0], color="#343434", linewidth=style.plot_line_pt, linestyle="-"),
+            Line2D([0], [0], color="#343434", linewidth=style.plot_line_pt, linestyle="--"),
+            Line2D(
+                [0],
+                [0],
+                color="none",
+                marker="o",
+                markerfacecolor=focus_color,
+                markeredgecolor="white",
+                markersize=max(style.marker_pt, 5.0),
+            ),
+        ),
+        labels=(
+            spec.series[0].label,
+            spec.series[1].label,
+            "Baseline focal locator / 基线焦点定位点",
+        ),
+        loc="upper left",
+        frameon=False,
+        fontsize=style.legend_pt,
+        handlelength=1.8,
+    )
 
 
 def _style_axis(axis: Any, *, right_axis: bool = False) -> None:
@@ -1919,6 +2060,11 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
     if spec.plot_kind == "trajectory3d":
         figure = _new_empty_figure(preparation)
         _draw_trajectory3d(figure, frame, preparation)
+        _apply_font_contract(figure)
+        return figure
+    if spec.plot_kind == "density_ridgeline3d":
+        figure = _new_empty_figure(preparation)
+        _draw_density_ridgeline3d(figure, frame, preparation)
         _apply_font_contract(figure)
         return figure
     if spec.plot_kind in {"pie", "sankey", "circular_network", "radar", "heatmap"}:

@@ -207,6 +207,10 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
         optional=(OriginCapability.ERROR_BARS,),
     ),
     "trajectory3d": _profile("trajectory3d", OriginCapability.OPEN_GL_3D),
+    "density_ridgeline3d": _profile(
+        "density_ridgeline3d",
+        OriginCapability.OPEN_GL_3D,
+    ),
     "trend": _profile("trend"),
     "ftir": _profile("ftir"),
     "uv_vis": _profile("uv_vis", optional=(OriginCapability.INSET_LAYER,)),

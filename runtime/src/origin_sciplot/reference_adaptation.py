@@ -172,6 +172,8 @@ TEMPLATE_PRIMITIVE_COMPATIBILITY: dict[str, frozenset[str]] = {
     "ftir": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "uv_vis": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "trajectory3d": _COMMON_CONTEXT_PRIMITIVES | frozenset({"line", "symbol", "line_symbol"}),
+    "density_ridgeline3d": _COMMON_CONTEXT_PRIMITIVES
+    | frozenset({"line", "symbol", "line_symbol"}),
 }
 
 TEMPLATE_MODE_PRIMITIVE_EXTENSIONS: dict[tuple[str, str], frozenset[str]] = {

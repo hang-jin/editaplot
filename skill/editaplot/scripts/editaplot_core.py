@@ -94,6 +94,7 @@ VERIFIED_TEMPLATE_IDS = frozenset(
         "xps_compare",
         "uv_vis",
         "trajectory3d",
+        "density_ridgeline3d",
     }
 )
 
@@ -463,6 +464,61 @@ _SEMANTIC_ALIASES: dict[str, tuple[str, ...]] = {
     "shap_value": ("shapvalue", "shap", "shap值", "特征贡献", "贡献值"),
     "feature_value": ("featurevalue", "rawfeaturevalue", "特征值", "原始特征值"),
     "series_id": ("series", "seriesid", "sampleid", "conditionname", "系列", "样品编号", "组别"),
+    "condition_id": (
+        "conditionid",
+        "conditionname",
+        "conditionlabel",
+        "条件标识",
+        "条件编号",
+        "条件名称",
+    ),
+    "density_x": (
+        "densityx",
+        "responsescore",
+        "distributionscore",
+        "metricvalue",
+        "分布横轴",
+        "响应评分",
+        "指标值",
+    ),
+    "condition_position": (
+        "conditionposition",
+        "conditionaxis",
+        "orderedcondition",
+        "year",
+        "followuptime",
+        "timepoint",
+        "条件位置",
+        "条件轴",
+        "有序条件",
+        "年份",
+        "年度",
+        "随访时间",
+        "时间点",
+    ),
+    "density_solid": (
+        "soliddensity",
+        "solidprofiledensity",
+        "实线密度",
+        "实线轮廓密度",
+    ),
+    "density_dashed": (
+        "dasheddensity",
+        "dashedprofiledensity",
+        "虚线密度",
+        "虚线轮廓密度",
+    ),
+    "focal_x": (
+        "focalx",
+        "focalpoint",
+        "focusx",
+        "focuspoint",
+        "baselinefocus",
+        "locatorx",
+        "焦点横坐标",
+        "基线焦点",
+        "定位点",
+    ),
 }
 
 
@@ -498,6 +554,10 @@ def _semantic_tags(column: str) -> list[str]:
         tags = [tag for tag in tags if tag != "category"]
     if "panel" in tags:
         tags = [tag for tag in tags if tag != "time"]
+    if "condition_id" in tags:
+        tags = [tag for tag in tags if tag not in {"series_id", "category"}]
+    if "focal_x" in tags:
+        tags = [tag for tag in tags if tag != "density_x"]
     return tags
 
 
@@ -516,6 +576,7 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
         import numpy as np
         import pandas as pd
         from origin_sciplot.data_loader import DataLoadError, load_table
+        from origin_sciplot.scientific_workflow import density_ridgeline3d_contract_issues
     except Exception as exc:  # noqa: BLE001
         raise EditaPlotError("engine_import_failed", f"Could not import the engine: {exc}") from exc
 
@@ -640,6 +701,39 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
         layouts.append("paired_wide")
     if {"feature", "shap_value", "feature_value"}.issubset(tags) and categorical_columns:
         layouts.append("shap_long")
+    density_required_roles = (
+        "condition_id",
+        "condition_position",
+        "density_x",
+        "density_solid",
+        "density_dashed",
+        "focal_x",
+    )
+    density_role_candidates = {
+        role: [profile for profile in profiles if role in profile["semantic_tags"]]
+        for role in density_required_roles
+    }
+    density_roles_detected = sum(bool(items) for items in density_role_candidates.values())
+    density_candidate = density_roles_detected == len(density_required_roles)
+    density_issues: list[str] = []
+    density_role_columns: dict[str, str] = {}
+    density_strict = False
+    if density_candidate:
+        layouts.append("density_ridgeline3d_candidate")
+        for role, candidates in density_role_candidates.items():
+            if len(candidates) != 1:
+                density_issues.append(f"{role}_role_not_unique")
+            else:
+                density_role_columns[role] = str(candidates[0]["name"])
+
+        if not density_issues:
+            density_issues.extend(
+                density_ridgeline3d_contract_issues(loaded.frame, density_role_columns)
+            )
+
+        density_strict = not density_issues
+        if density_strict:
+            layouts.append("density_ridgeline3d_mixed_wide")
     trajectory_x = [
         profile
         for profile in profiles
@@ -701,6 +795,7 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
         "ftir": sum(tag in tags for tag in ("wavenumber", "ir_signal")),
         "uv_vis": sum(tag in tags for tag in ("wavelength", "uv_signal", "tauc", "bandgap")),
         "trajectory3d": int("trajectory3d_long" in layouts),
+        "density_ridgeline3d": len(density_required_roles) if density_strict else 0,
     }
 
     return {
@@ -731,6 +826,15 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
             "all_numeric_values_nonnegative": all_nonnegative,
             "first_category_unique_count": first_category_unique,
             "maximum_category_label_length": max_label_length,
+            "density_ridgeline3d_detection": {
+                "detected_role_count": density_roles_detected,
+                "required_role_count": len(density_required_roles),
+                "candidate": density_candidate,
+                "strict": density_strict,
+                "requires_confirmation": bool(density_candidate and not density_strict),
+                "role_columns": density_role_columns,
+                "issues": density_issues,
+            },
         },
         "domain_signals": domain_signals,
         "columns": profiles,
@@ -835,6 +939,16 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
         "带隙",
     ),
     "trajectory3d": ("trajectory3d", "3dnyquist", "3dtrajectory", "三维nyquist", "三维阻抗", "三维轨迹"),
+    "density_ridgeline3d": (
+        "densityridgeline3d",
+        "3ddensityprofile",
+        "3ddensitycurve",
+        "baselinefocus",
+        "三维密度曲线",
+        "三维密度轮廓",
+        "基线焦点",
+        "焦点定位",
+    ),
 }
 
 
@@ -1148,6 +1262,21 @@ def _score_candidate(
         else:
             score -= 0.60
             reason_codes.append("explicit_xyz_series_evidence_missing")
+    elif template_id == "density_ridgeline3d":
+        if "density_ridgeline3d_mixed_wide" in layouts:
+            score += 0.46
+            reason_codes.append("explicit_precomputed_dual_density_3d_match")
+            reasons.append(
+                "检测到六个唯一 mixed-wide 角色、同行的实线/虚线预计算密度、"
+                "带单位的横轴与真实条件轴，以及每组一个用户提供的基线焦点。"
+            )
+        elif "density_ridgeline3d_candidate" in layouts:
+            score -= 0.34
+            reason_codes.append("density_ridgeline3d_role_conflict_requires_confirmation")
+            reasons.append("六类表头语义已出现，但单位、角色唯一性、条件映射、密度完整性或每组焦点数目存在冲突，必须人工确认。")
+        else:
+            score -= 0.62
+            reason_codes.append("explicit_precomputed_dual_density_3d_evidence_missing")
     elif template_id == "eis" and "trajectory3d_long" in layouts:
         score -= 0.38
         reason_codes.append("trajectory3d_route_preferred")
@@ -1227,11 +1356,20 @@ def recommend_charts(
     second_score = candidates[1]["score"] if len(candidates) > 1 else 0.0
     margin = (top["score"] - second_score) if top else 0.0
     selected = candidates[: max(1, limit)]
+    density_detection = inspection["table"].get("density_ridgeline3d_detection", {})
+    density_contract_conflict = bool(density_detection.get("requires_confirmation"))
+    density_mapping_requires_confirmation = any(
+        candidate["template_id"] == "density_ridgeline3d"
+        and candidate["requires_column_confirmation"]
+        for candidate in candidates
+    )
     auto_allowed = bool(
         top
         and top["score"] >= AUTO_SCORE_THRESHOLD
         and margin >= AUTO_MARGIN_THRESHOLD
         and not top["requires_column_confirmation"]
+        and not density_contract_conflict
+        and not density_mapping_requires_confirmation
     )
     gate_reasons: list[str] = []
     if top is None:
@@ -1243,6 +1381,10 @@ def recommend_charts(
             gate_reasons.append("candidate_margin_too_small")
         if top["requires_column_confirmation"]:
             gate_reasons.append("column_confirmation_required")
+    if density_contract_conflict:
+        gate_reasons.append("density_ridgeline3d_contract_requires_confirmation")
+    if density_mapping_requires_confirmation:
+        gate_reasons.append("density_ridgeline3d_mapping_requires_confirmation")
 
     return {
         "schema_version": "1.0",

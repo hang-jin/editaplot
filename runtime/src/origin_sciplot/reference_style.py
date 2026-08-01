@@ -51,6 +51,7 @@ _FILL_TRANSPARENCY_PERCENT = {
     "medium": 30.0,
     "heavy": 55.0,
 }
+_DENSITY_RIDGELINE3D_FOCAL_MARKER_SIZE_PT = 9.0
 
 _LINE_WEIGHT_PLOT_KINDS = frozenset(
     {
@@ -82,6 +83,7 @@ _LINE_WEIGHT_PLOT_KINDS = frozenset(
         "stacked_bar",
         "stacked_line",
         "trajectory3d",
+        "density_ridgeline3d",
         "trend",
         "uv_vis",
         "violin",
@@ -229,7 +231,12 @@ def _verified_legend_position(preparation: ScientificPreparation) -> str:
 
 
 def _verified_grid(preparation: ScientificPreparation) -> str:
-    return "major_only" if preparation.plot_spec.plot_kind in {"radar", "trajectory3d"} else "none"
+    return (
+        "major_only"
+        if preparation.plot_spec.plot_kind
+        in {"radar", "trajectory3d", "density_ridgeline3d"}
+        else "none"
+    )
 
 
 def _finish_report(
@@ -647,7 +654,21 @@ def apply_reference_style(
 
     requested_density = str(tokens["marker_density"])
     marker_size = spec.display_plan.marker_size_pt
-    if requested_density == "adaptive":
+    if spec.plot_kind == "density_ridgeline3d":
+        marker_size = _DENSITY_RIDGELINE3D_FOCAL_MARKER_SIZE_PT
+        item = _item(
+            "marker_density",
+            requested_density,
+            resolved={"marker_size_pt": marker_size},
+            reason=(
+                "verified_density_ridgeline3d_focal_marker_retained"
+                if requested_density == "adaptive"
+                else "density_ridgeline3d_fixed_focal_marker_contract"
+            ),
+            implementation="shared_preview_origin_fixed_focal_marker_9pt",
+        )
+        (retained if requested_density == "adaptive" else rejected).append(item)
+    elif requested_density == "adaptive":
         retained.append(
             _item(
                 "marker_density",

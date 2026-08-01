@@ -22,6 +22,7 @@ def _preparation(
     *,
     template_id: str = "xrd",
     plot_kind: str = "line_error",
+    marker_size_pt: float = 6.0,
 ) -> ScientificPreparation:
     series = (
         ScientificSeries("A", "A"),
@@ -46,7 +47,7 @@ def _preparation(
         y_scale="linear",
         display_transform="identity",
         display_plan=ScientificDisplayPlan(
-            marker_size_pt=6.0,
+            marker_size_pt=marker_size_pt,
             bar_group_span=0.8,
             bar_inner_width=0.72,
             figure_style=style,
@@ -166,6 +167,31 @@ def test_marker_none_is_rejected_and_never_hides_required_points() -> None:
     assert rejected["marker_density"]["reason"] == "marker_hiding_forbidden"
     assert rejected["marker_density"]["implementation"] == "all_source_points_retained"
     assert application.report["safety"]["series_visibility_changed"] is False
+
+
+def test_density_ridgeline_rejects_marker_density_and_keeps_fixed_focus_size() -> None:
+    preparation = _preparation(
+        template_id="density_ridgeline3d",
+        plot_kind="density_ridgeline3d",
+        marker_size_pt=9.0,
+    )
+    application = apply_reference_style(
+        preparation,
+        _adaptation(
+            template_id="density_ridgeline3d",
+            palette_id=None,
+            marker_density="dense",
+            line_weight="adaptive",
+            grid="major_only",
+        ),
+    )
+
+    assert application.preparation.plot_spec.display_plan.marker_size_pt == 9.0
+    assert "marker_density" not in _entries(application.report, "applied")
+    rejected = _entries(application.report, "rejected")["marker_density"]
+    assert rejected["resolved"] == {"marker_size_pt": 9.0}
+    assert rejected["reason"] == "density_ridgeline3d_fixed_focal_marker_contract"
+    assert rejected["implementation"] == "shared_preview_origin_fixed_focal_marker_9pt"
 
 
 def test_fill_transparency_is_shared_for_verified_fill_templates() -> None:
