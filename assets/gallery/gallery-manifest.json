@@ -1,12 +1,13 @@
 {
   "schema_version": "1.0",
   "asset_policy": "programmatically verified and explicitly manually reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
-  "case_count": 45,
-  "display_case_count": 43,
+  "case_count": 46,
+  "display_case_count": 44,
   "cases": [
     {
       "id": "bar-error-groups",
       "title_zh": "分组柱状图与 SD 误差棒",
+      "title_en": "grouped bar with SD error bars",
       "display_in_gallery": true,
       "sha256": "2b8e80b3865f46c8c2a76714555cfb4c189aff5a3b3bc4edb2feaf50be450ee8",
       "size_bytes": 40793
@@ -14,13 +15,23 @@
     {
       "id": "bubble-indexed-size",
       "title_zh": "大小编码气泡关系图",
+      "title_en": "bubble indexed size relationship",
       "display_in_gallery": true,
       "sha256": "e3c27979e9dbae196dc700a1a7da40178d55aa2ec339f64754f86d4dc6ff7e49",
       "size_bytes": 46132
     },
     {
+      "id": "circular-network",
+      "title_zh": "多阶段环形有向加权网络图",
+      "title_en": "two-period circular directed weighted network",
+      "display_in_gallery": true,
+      "sha256": "339dd5ef282ff5d0d2d3638468dead02e8c8cfac4d7919fd5c8d4bb714db8999",
+      "size_bytes": 65143
+    },
+    {
       "id": "cv-cycles",
       "title_zh": "CV 循环伏安曲线",
+      "title_en": "CV cyclic voltammetry",
       "display_in_gallery": true,
       "sha256": "aa833fcc1c84bcd1228c0503a349121e5e62eb5faaf3644872faff6fb2c15fb4",
       "size_bytes": 45041
@@ -28,6 +39,7 @@
     {
       "id": "diverging-effects",
       "title_zh": "正负效应发散条形图",
+      "title_en": "diverging signed-effect horizontal bars",
       "display_in_gallery": true,
       "sha256": "e9b0d7d948f7d5cb5a47f44e8cd2e67e8923612b40e41b5a633e3cea3868ac60",
       "size_bytes": 28641
@@ -35,6 +47,7 @@
     {
       "id": "dsc-multi",
       "title_zh": "DSC 多样品热流曲线",
+      "title_en": "DSC multi-sample heat flow comparison",
       "display_in_gallery": true,
       "sha256": "449c5241498a8fb62fca80e63fdd36b3ffad662b3b694403d2468daf2d90cf01",
       "size_bytes": 59586
@@ -42,6 +55,7 @@
     {
       "id": "eis-nyquist",
       "title_zh": "EIS Nyquist 阻抗图",
+      "title_en": "EIS Nyquist impedance",
       "display_in_gallery": true,
       "sha256": "81c3d11fbd416e9ed06b38750b8914e2afee04b359cbbf0048e5098b0fdcb8ef",
       "size_bytes": 38248
@@ -49,6 +63,7 @@
     {
       "id": "forest-intervals",
       "title_zh": "效应量森林图",
+      "title_en": "forest effect confidence interval",
       "display_in_gallery": true,
       "sha256": "df26aadc469869023ee99f5cca5efa0b6eb46830b44212baf0fc784543014374",
       "size_bytes": 28210
@@ -56,6 +71,7 @@
     {
       "id": "ftir-temperature-series",
       "title_zh": "FTIR 温度序列光谱",
+      "title_en": "FTIR temperature series comparison",
       "display_in_gallery": true,
       "sha256": "158c060277c3558098897a1da3cb43d4332e1ce026134184a768924ba821f3ac",
       "size_bytes": 81442
@@ -63,6 +79,7 @@
     {
       "id": "heatmap-dense-30x30",
       "title_zh": "30×30 高密度热力图",
+      "title_en": "dense 30 by 30 heatmap matrix",
       "display_in_gallery": true,
       "sha256": "5496ff5f39f03f5452a87d59937b6949fdac0a89044183afb704b6133ba2f1a2",
       "size_bytes": 66283
@@ -70,6 +87,7 @@
     {
       "id": "heatmap-dense-40x40",
       "title_zh": "40×40 高密度热力图",
+      "title_en": "dense 40 by 40 heatmap matrix",
       "display_in_gallery": false,
       "sha256": "b5538ea18a688e81ceb960f7f47d8f113d108c7794482b0f111d0092085b668d",
       "size_bytes": 61710
@@ -77,6 +95,7 @@
     {
       "id": "heatmap-results",
       "title_zh": "带数值标注的结果热力图",
+      "title_en": "annotated results heatmap matrix",
       "display_in_gallery": false,
       "sha256": "3b7227364fc46af85f2326225eead9019d7ab1e016ecf6f8fde4823ac9898e6e",
       "size_bytes": 78432
@@ -84,6 +103,7 @@
     {
       "id": "histogram-frozen-bins",
       "title_zh": "固定分箱直方图",
+      "title_en": "histogram frequency distribution",
       "display_in_gallery": true,
       "sha256": "734c8da4e37428ab4fc47deb5d391824a46fa898bf32901c0814e426f271d06e",
       "size_bytes": 28878
@@ -91,6 +111,7 @@
     {
       "id": "horizontal-long-labels",
       "title_zh": "长标签横向条形图",
+      "title_en": "horizontal bar for long labels",
       "display_in_gallery": true,
       "sha256": "c28e195ee11ba9b3fe21f7ecd95b4324314760b11e0b5e769af9f86478c0f186",
       "size_bytes": 36741
@@ -98,6 +119,7 @@
     {
       "id": "line-error",
       "title_zh": "带 SD / SEM 的趋势图",
+      "title_en": "trend with SD and SEM error bars",
       "display_in_gallery": true,
       "sha256": "947abc2b43816da39fb121ba715615624f2d946c352d198dadee279105e98bcc",
       "size_bytes": 42193
@@ -105,6 +127,7 @@
     {
       "id": "lsv-multi",
       "title_zh": "LSV 线性扫描曲线",
+      "title_en": "LSV linear sweep",
       "display_in_gallery": true,
       "sha256": "ba2d4621f2d6eb87ba5c5ec63a8a1fcbe5adb298998e0737615a7df1a1aa09b5",
       "size_bytes": 47321
@@ -112,6 +135,7 @@
     {
       "id": "medical-agreement",
       "title_zh": "Bland–Altman 一致性图",
+      "title_en": "Bland Altman medical measurement agreement",
       "display_in_gallery": true,
       "sha256": "3b970d5c57347bef3f35d684ef8ee30aff9b2253f80e31a72570e6e903d13e68",
       "size_bytes": 39699
@@ -119,6 +143,7 @@
     {
       "id": "medical-calibration",
       "title_zh": "医学模型校准曲线",
+      "title_en": "medical model calibration curve reliability",
       "display_in_gallery": true,
       "sha256": "b50c80bcefc60e12d22df43c98c161e7ea39defd4c10231ada7b1bee99e2d535",
       "size_bytes": 48240
@@ -126,6 +151,7 @@
     {
       "id": "medical-confusion",
       "title_zh": "医学分类混淆矩阵",
+      "title_en": "medical classification confusion matrix",
       "display_in_gallery": true,
       "sha256": "3ce9a7e505771dd70104674c37f0d8296726755c9cd84e0fd08b7d858b18671b",
       "size_bytes": 42745
@@ -133,6 +159,7 @@
     {
       "id": "medical-decision",
       "title_zh": "医学决策曲线 DCA",
+      "title_en": "medical decision curve DCA net benefit",
       "display_in_gallery": true,
       "sha256": "6d2f48233c0b8db1640ae2d70d365f151abbeadd9b25b3bf90c77dfdb81af17c",
       "size_bytes": 48762
@@ -140,6 +167,7 @@
     {
       "id": "medical-grouped-box",
       "title_zh": "医学分组箱线图与原始点",
+      "title_en": "medical grouped boxplot with raw observations",
       "display_in_gallery": true,
       "sha256": "95c690aeddeb7e24c63d6154f84826cae8c01d733fef800cc167fa433c740255",
       "size_bytes": 44179
@@ -147,6 +175,7 @@
     {
       "id": "medical-longitudinal",
       "title_zh": "配对纵向医学轨迹",
+      "title_en": "paired longitudinal medical trajectory",
       "display_in_gallery": true,
       "sha256": "6667d13ec28c7e6fd24493ac13e1d347fa6a5c15f986c0ba57303461651a8eb7",
       "size_bytes": 49506
@@ -154,6 +183,7 @@
     {
       "id": "medical-pr",
       "title_zh": "医学模型 PR 曲线",
+      "title_en": "medical imaging precision recall PR curve",
       "display_in_gallery": true,
       "sha256": "e5b312190236477f15f2c3e9527897e3f851e90c5621dfceab0e841698b34664",
       "size_bytes": 51957
@@ -161,6 +191,7 @@
     {
       "id": "medical-raincloud",
       "title_zh": "医学 Raincloud 原始分布图",
+      "title_en": "medical imaging Raincloud raw distribution",
       "display_in_gallery": true,
       "sha256": "a4ef2162967535d37f18768f590d5570e19c99d4f0adc8cee92270dd3cebe38e",
       "size_bytes": 63152
@@ -168,6 +199,7 @@
     {
       "id": "medical-roc",
       "title_zh": "医学模型 ROC 曲线",
+      "title_en": "medical imaging ROC diagnostic curve",
       "display_in_gallery": true,
       "sha256": "48f6d231725c67dc1bc417050304756a961cf65f3b9d21f470613d7c5a78fc5b",
       "size_bytes": 60062
@@ -175,6 +207,7 @@
     {
       "id": "medical-shap",
       "title_zh": "预计算 SHAP 特征贡献图",
+      "title_en": "medical imaging precomputed SHAP summary beeswarm feature contribution",
       "display_in_gallery": true,
       "sha256": "5a76ff47a1db9d46c881a89f16919e5d53e84f1abd6270dd5880889640850c4e",
       "size_bytes": 40511
@@ -182,6 +215,7 @@
     {
       "id": "nmr-comparison",
       "title_zh": "19F NMR 光谱对比",
+      "title_en": "19F NMR spectrum comparison",
       "display_in_gallery": true,
       "sha256": "9772e573463422f24847394f8435c70adaddcaf4e95a572ac6c8625d682fa70e",
       "size_bytes": 41013
@@ -189,6 +223,7 @@
     {
       "id": "percent-composition",
       "title_zh": "百分比堆叠组成图",
+      "title_en": "percentage composition with confirmed row denominator",
       "display_in_gallery": true,
       "sha256": "f9b288608c88b0068d944dbe2c6b84b1ee667a3f4c7a5bdb23fe7bfea3d268cc",
       "size_bytes": 58827
@@ -196,6 +231,7 @@
     {
       "id": "pie-five-parts",
       "title_zh": "少类别饼图",
+      "title_en": "pie part-to-whole",
       "display_in_gallery": true,
       "sha256": "5a25a449965b6ebc571b00ff085f5ea18d66ffacb7ef55e293b5a116da4e69e0",
       "size_bytes": 69833
@@ -203,6 +239,7 @@
     {
       "id": "pl-steady-state",
       "title_zh": "稳态 PL 发射光谱",
+      "title_en": "steady-state PL emission spectrum",
       "display_in_gallery": true,
       "sha256": "2c2d7352ee2e287a441504d67530be67e52f782a05ec8f4a2dd9e74c3da43b57",
       "size_bytes": 60539
@@ -210,6 +247,7 @@
     {
       "id": "pl-temperature-series",
       "title_zh": "PL 温度序列光谱",
+      "title_en": "steady-state PL temperature series",
       "display_in_gallery": true,
       "sha256": "211253908985f3e47287c33cb9f81d0559321e331b5ad4c188248cd743e09916",
       "size_bytes": 74572
@@ -217,6 +255,7 @@
     {
       "id": "pl-trpl",
       "title_zh": "PL / TRPL 光致发光",
+      "title_en": "TRPL photoluminescence decay with user supplied fits",
       "display_in_gallery": true,
       "sha256": "e7dab14f4016fa19b4b1403232212649cd24215869b6f68af3ecc992024b2ad4",
       "size_bytes": 61157
@@ -224,6 +263,7 @@
     {
       "id": "radar-multimetric",
       "title_zh": "多指标雷达图",
+      "title_en": "radar multimetric comparison",
       "display_in_gallery": true,
       "sha256": "2b36550711fffb9ef5ea66f139fd0e19b1076d08eb97e6b9902b88feb29bbfc7",
       "size_bytes": 170728
@@ -231,6 +271,7 @@
     {
       "id": "raw-observations",
       "title_zh": "原始观测点与中位数",
+      "title_en": "raw observations dot summary",
       "display_in_gallery": true,
       "sha256": "426b9755635edb5b4536bc72ce7e150b10f2b5669a54e32f6236807f8ab3adf2",
       "size_bytes": 29606
@@ -238,6 +279,7 @@
     {
       "id": "sankey-flow",
       "title_zh": "多阶段桑基流向图",
+      "title_en": "four-stage Sankey flow",
       "display_in_gallery": true,
       "sha256": "1459c96520a7a4237a78d5e383eb3d0e3cac7a3bc295964503532a3eb6651d15",
       "size_bytes": 108224
@@ -245,6 +287,7 @@
     {
       "id": "scatter-dense",
       "title_zh": "多组密集散点图",
+      "title_en": "dense scatter relationship",
       "display_in_gallery": true,
       "sha256": "8f2c4ffc428c4e70f5a6a717455bdcc58c6477dd9dcf95626b79ef364344e3f6",
       "size_bytes": 92294
@@ -252,6 +295,7 @@
     {
       "id": "stacked-composition",
       "title_zh": "绝对值堆叠组成图",
+      "title_en": "absolute stacked composition",
       "display_in_gallery": true,
       "sha256": "16ce1362ca424227581b2fe106dc625fffb560cf0f4fa7855ac56c7acbacd413",
       "size_bytes": 37375
@@ -259,6 +303,7 @@
     {
       "id": "trajectory3d",
       "title_zh": "三维多条件 Nyquist 轨迹",
+      "title_en": "multi-position 3D Nyquist trajectory",
       "display_in_gallery": true,
       "sha256": "06a4bdf973ebb6154fcf1a1856377f2b8248c7bef00132ba404625b6022108c9",
       "size_bytes": 383974
@@ -266,6 +311,7 @@
     {
       "id": "trend-progression",
       "title_zh": "多系列进展折线图",
+      "title_en": "multi-series progression trendline",
       "display_in_gallery": true,
       "sha256": "7908b309b86e2628e9980e9367ff717c47015e5ab1d3031592cfd4fdd7d4f575",
       "size_bytes": 39934
@@ -273,6 +319,7 @@
     {
       "id": "uv-vis-multi",
       "title_zh": "UV-Vis 多样品吸收光谱",
+      "title_en": "UV-vis multi-sample absorbance comparison",
       "display_in_gallery": true,
       "sha256": "b4b5d41f8ae40b00381cb0d5c7b78198478e329c59d4695a9abfbae0211c26e7",
       "size_bytes": 50955
@@ -280,6 +327,7 @@
     {
       "id": "uv-vis-tauc",
       "title_zh": "UV–Vis 与可选 Tauc 插图",
+      "title_en": "UV-vis absorbance with supplied Tauc inset",
       "display_in_gallery": true,
       "sha256": "37ea2f036996d36c3e0b1b5917e37b8c7fa3ab93438d24c591edfe6ca8a98c58",
       "size_bytes": 43065
@@ -287,6 +335,7 @@
     {
       "id": "violin-distributions",
       "title_zh": "小提琴分布对比",
+      "title_en": "violin distribution comparison",
       "display_in_gallery": true,
       "sha256": "fd7bd3394e38426d37ffefc0057af149ea9af11ec9c0753043746d2696f83229",
       "size_bytes": 88788
@@ -294,6 +343,7 @@
     {
       "id": "xas-profiles",
       "title_zh": "XAS 吸收谱对比",
+      "title_en": "XAS absorption spectrum",
       "display_in_gallery": true,
       "sha256": "c0a93898ffb6fbc148c0c6368db1776c90e8aa075bab16d15935a82215fc4e47",
       "size_bytes": 47719
@@ -301,6 +351,7 @@
     {
       "id": "xps-comparison",
       "title_zh": "XPS 多样品谱线对比",
+      "title_en": "XPS multi-spectrum comparison",
       "display_in_gallery": true,
       "sha256": "10c9121d701005b86c1bb2685fc74dab580ddc75efeefb34c5b18bc2eb06943a",
       "size_bytes": 47338
@@ -308,6 +359,7 @@
     {
       "id": "xps-fit",
       "title_zh": "XPS 峰拟合",
+      "title_en": "XPS peak fitting",
       "display_in_gallery": true,
       "sha256": "d89eeec96d0bd909c2056eb4dfcab49e72ebb5f35defcbe9cc83b068a6de3e62",
       "size_bytes": 92191
@@ -315,6 +367,7 @@
     {
       "id": "xrd-multi",
       "title_zh": "XRD 多谱线对比",
+      "title_en": "XRD multi-series comparison",
       "display_in_gallery": true,
       "sha256": "3616581a3a367edda8df5cf47413259b5e084285dfc1bb3e8c0fb40d239293b3",
       "size_bytes": 43597

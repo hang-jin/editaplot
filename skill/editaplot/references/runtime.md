@@ -9,6 +9,7 @@
 - [Origin connection policy](#origin-connection-policy)
 - [Beginner entry point](#beginner-entry-point)
 - [Advanced commands](#advanced-commands)
+- [Timing and stall diagnosis](#timing-and-stall-diagnosis)
 - [Expected artifacts](#expected-artifacts)
 
 ## Supported environment
@@ -168,6 +169,123 @@ strict ReferenceFigureSpec JSON, and its exact confirmation JSON. Codex construc
 grammar from visual inspection; the runtime does not OCR the image and never executes model-generated
 Python, LabTalk, shell, or commands. Use `template_adaptation` for supported registered templates.
 `controlled_composition` remains experimental and blocked until its exact Origin route is verified.
+
+## Exact XPS visual choices
+
+Before planning XPS, ask one short question: keep the template default, use a confirmed approximate
+style suggested by the reference, or use exact custom values? The exact route is a separate,
+user-confirmed visual contract; it does not weaken the frozen scientific contract.
+
+A beginner can say this in natural language:
+
+```text
+请按我的精确样式画 XPS：Raw 用 #173F5F，Envelope 用 #C94C4C，所有数据线宽 2.4 pt，
+填充透明度 38%，画幅 18 × 18 cm，隐藏图例。数据列、结合能方向、峰组分和拟合含义保持不变。
+若有字段不支持或数值越界，请直接告诉我并停止，不要悄悄改回模板默认。
+```
+
+Translate only the confirmed visual values into a JSON file such as `xps-visual-style.json`:
+
+```json
+{
+  "series_colors": {
+    "raw": "#173F5F",
+    "envelope": "#C94C4C",
+    "Peak A": "#2A9D8F"
+  },
+  "line_width_pt": 2.4,
+  "fill_transparency_percent": 38,
+  "page_size_cm": {"width": 18, "height": 18},
+  "legend_visible": false,
+  "legend_position": "none",
+  "legend_frame": false
+}
+```
+
+`series_colors` maps an XPS role (`raw`, `background`, `envelope`, `residual`, `component`, or
+`components`) or an actual visible source-column name to `#RRGGBB`. `line_width_pt` accepts 0.9–6.4,
+`fill_transparency_percent` accepts 0–85, and each `page_size_cm` dimension accepts 12–40. The
+verified `legend_position` values are `inside`, `outside_right`, `none`, and `adaptive`; legend
+visibility and frame are booleans. `outside_right` keeps the contracted 24 pt legend readable by
+reserving an 8 cm physical page column; pair it with a sufficiently wide page. A page/legend
+combination that cannot keep both the plot and legend on the page fails visibly instead of
+shrinking the font or moving the legend over the data. Then freeze the request at plan time:
+
+```powershell
+.\editaplot.cmd plan <xps-data.csv> --template-id xps --claim "<confirmed scientific claim>" --evidence-role "fit decomposition" --semantic-confirmation-json semantic-confirmation.json --visual-style-json xps-visual-style.json --output render-plan.json
+```
+
+Explicit values have precedence over a conflicting reference suggestion. Invalid explicit JSON,
+unknown series keys, unsafe numeric values, or unsupported fields fail fast before Origin. A
+confirmed reference approximation is evaluated field by field and may be applied, retain the
+template default, or be rejected with a reason. In every mode, keep source values and column roles,
+the high-to-low binding-energy axis, component identity, residual policy, and the verified
+single-region `set_fill_area(..., type=9)` / `-pfm 3` fill route unchanged.
+
+## Timing and stall diagnosis
+
+Treat elapsed time as a sequence of independently observable stages, not one undifferentiated
+"drawing time." The following triage bands are user-experience guidance, not a hardware-independent
+service-level promise:
+
+- On an already prepared environment, for an ordinary dataset after the required scientific
+  confirmations have been supplied, local execution of the complete analysis, smoke, render,
+  export, and verification sequence taking up to roughly **4–5 minutes** can be treated as normal.
+- First-time repository download, `setup`, dependency installation, `doctor --repair`, time spent
+  waiting for a user confirmation, and Codex conversation latency are separate. Do not charge them
+  to Origin rendering.
+- **30–60 minutes** without a pending user question and without a new local progress event is
+  abnormal. Stop and identify the last completed stage instead of silently retrying the whole
+  workflow.
+
+Do not diagnose "slow network" from total time alone. Repository/dependency download uses the
+network; ordinary `--diagnose`, `doctor`, `start`, `understand`, `origin-smoke`, `render`, and
+`verify` are local engine operations. Codex service or network latency can delay when a command is
+started or when its result reaches the conversation, but that is outside the EditaPlot runtime.
+
+Keep these five timing groups separate:
+
+| Timing group | Commands/events | What it measures |
+| --- | --- | --- |
+| Download and dependencies | repository update, `setup`, `doctor --repair` | Network transfer, package source, local environment creation |
+| Environment diagnosis | `--diagnose`, `doctor` | Python discovery, runtime/dependency checks, read-only Origin registration discovery |
+| Data understanding | `start`, `understand`, `plan`; render event `analyze_data` | Local file reading, role inference, recommendation, semantic-contract creation; exclude time waiting for the user's answer |
+| Origin startup and connection | `origin-smoke`, `origin_smoke` progress event | Dedicated process activation, version handshake, initialization, minimum export loop |
+| Drawing, export, and verification | render events `load_template`, `create_output_dir`, `validate_csv`, `launch_origin_draw_export_verify`, and `verify_outputs` | Local validation, dedicated Origin startup, workbook/graph construction, OPJU/PNG/PDF/TIF export, readback and artifact checks |
+
+Smoke and render workers emit one JSON object per line. Every worker event contains
+`elapsed_seconds`, measured with a monotonic clock from the start of that worker. It resets between
+the smoke worker and the render worker; it is not the total Codex task duration. Terminal events are
+bounded to 32 KiB, with compact scientific summaries only; complete plot specifications and Origin
+readback remain in the output reports. Capture render
+output without changing the data or plan:
+
+```powershell
+.\editaplot.cmd render .\render-plan.json 2>&1 |
+  Tee-Object -FilePath .\render-progress.jsonl
+```
+
+Interpret the last event before a long pause:
+
+- no launcher output: first run `--diagnose` directly; distinguish a command that never started
+  from a slow worker;
+- `setup` or dependency repair: inspect the package/download result and local environment lock;
+- `origin_smoke`: the delay is in local Origin activation, handshake, initialization, or its
+  minimum export loop;
+- `load_template`, `create_output_dir`, or `validate_csv`: the delay is before scientific analysis
+  or Origin startup;
+- `analyze_data`: the delay is in local table loading, semantic preparation, layout, or plot-plan
+  construction;
+- `launch_origin_draw_export_verify`: the runner is inside the Origin-owned combined operation.
+  This honest coarse stage covers activation, workbook/graph construction, export, and Origin
+  object readback because the worker cannot safely claim finer checkpoints it cannot observe;
+- `verify_outputs`: Origin returned and the worker is checking the final artifact bundle, source
+  hash, and compact terminal summary. Inspect write permissions, security scanning, and cloud-sync
+  contention if this stage stalls.
+
+Do not promise that every computer will finish inside five minutes, and do not blame the network
+when local events show an Origin or filesystem stage. Report the command, last event type/step,
+its `elapsed_seconds`, whether a confirmation was pending, and whether this was first-time setup.
 
 For an ordinary render, omit `--output-dir`. The runtime creates a unique folder named
 `<source_stem>_EditaPlot_YYYYMMDD_HHMMSS` directly beside the original CSV/TXT/XLS/XLSX file. This

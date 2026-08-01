@@ -315,6 +315,43 @@ class ScientificTemplateService:
                 components=spec.group_order,
                 warnings=preparation.warnings,
             )
+        if spec.plot_kind == "circular_network":
+            layout = spec.network_layout
+            panel_count = len(layout.panel_order) if layout is not None else 0
+            node_count = len(layout.node_order) if layout is not None else 0
+            edge_count = (
+                sum(len(panel.edges) for panel in layout.panels)
+                if layout is not None
+                else preparation.row_count
+            )
+            return TemplateSummary(
+                heading=f"{self.manifest.name} · {panel_count} 个面板",
+                facts=(
+                    ("绘图模式", spec.plot_mode),
+                    ("图形类型", spec.plot_kind),
+                    ("面板数", str(panel_count)),
+                    ("全局节点数", str(node_count)),
+                    ("有向边数", str(edge_count)),
+                ),
+                roles=(
+                    ("Panel", spec.panel_column or "—"),
+                    ("Source", spec.source_column or "—"),
+                    ("Target", spec.target_column or "—"),
+                    ("Weight", spec.weight_column or "—"),
+                    ("Sign", spec.sign_column or "—（中性）"),
+                    (
+                        "Node groups",
+                        (
+                            f"{spec.source_group_column} + {spec.target_group_column}"
+                            if spec.source_group_column and spec.target_group_column
+                            else "—"
+                        ),
+                    ),
+                    ("Edge label", spec.edge_label_column or "—"),
+                ),
+                components=layout.panel_order if layout is not None else (),
+                warnings=preparation.warnings,
+            )
         x_value = spec.category_column or spec.x_column or spec.source_column or "—"
         errors = [column for column, role in assignments.items() if role == "error"]
         facts = (

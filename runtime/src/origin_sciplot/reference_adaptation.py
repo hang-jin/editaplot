@@ -127,6 +127,7 @@ TEMPLATE_PRIMITIVE_COMPATIBILITY: dict[str, frozenset[str]] = {
     "percent_stacked_bar": _COMMON_CONTEXT_PRIMITIVES | frozenset({"stacked_bar"}),
     "pie": _COMMON_CONTEXT_PRIMITIVES,
     "sankey": _COMMON_CONTEXT_PRIMITIVES,
+    "circular_network": _COMMON_CONTEXT_PRIMITIVES,
     "radar": _COMMON_CONTEXT_PRIMITIVES
     | frozenset({"line", "line_symbol", "symbol", "area", "reference_line"}),
     "heatmap": _COMMON_CONTEXT_PRIMITIVES | frozenset({"heatmap_cell", "colorbar"}),

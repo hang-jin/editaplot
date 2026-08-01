@@ -8,8 +8,8 @@ current fully verified live baseline; other target versions receive a compatibil
 local handshake, real smoke test, and template capability check. Origin 2020b and earlier, macOS,
 Linux, WSL, Wine/CrossOver, Parallels, and other VMs are unsupported.
 
-I currently publish 38 Origin plotting routes and retain 45 fully reviewed PNGs as verification
-assets. The public page displays 43 cases. For heatmaps, it shows only the real Origin-rendered
+I currently publish 39 Origin plotting routes and retain 46 fully reviewed PNGs as verification
+assets. The public page displays 44 cases. For heatmaps, it shows only the real Origin-rendered
 30×30 dense example; the smaller matrix and 40×40 cases remain regression history rather than
 additional gallery entries.
 
@@ -95,13 +95,32 @@ Attach a local PNG, JPEG, or TIFF and add:
 ```text
 Treat this reference figure only as a visual brief. Abstract its marks, layout, data encodings, and
 safely adaptable style. Do not copy its data, labels, fits, phase assignments, logos, or watermarks,
-and do not embed the bitmap. List what will be adopted, kept as the template default, rejected, or
-still needs clarification, then wait for my confirmation.
+and do not embed the bitmap. Ask separately whether I want exact series colors, line widths, fill
+transparency, a page/aspect ratio, and legend show/hide, borderless, or position choices. My explicit
+choice takes precedence over the reference. List each field as applied, template default retained,
+rejected, or still unclear; call it applied only when the selected renderer can verify and read it
+back. Then wait for my confirmation.
 ```
 
 This is not an arbitrary one-to-one image replication feature. A reference cannot create evidence
 missing from your data or promote support-only columns into visible marks. An essential feature that
 the selected template cannot express safely blocks adaptation instead of being silently approximated.
+For XPS, cosmetic choices also cannot change source data, column roles, the binding-energy direction,
+component identity, or the verified single-region gradient-fill route.
+
+### Shortest exact-style route for XPS
+
+I suggest saying: “Use exact custom style: Raw `#173F5F`, Envelope `#C94C4C`, `2.4 pt` lines,
+`38%` fill transparency, an `18 × 18 cm` page, and no legend or legend frame.” After confirmation,
+I create a small JSON file and add `--visual-style-json xps-visual-style.json` to the plan command:
+
+```json
+{"series_colors":{"raw":"#173F5F","envelope":"#C94C4C"},"line_width_pt":2.4,"fill_transparency_percent":38,"page_size_cm":{"width":18,"height":18},"legend_visible":false,"legend_position":"none","legend_frame":false}
+```
+
+Exact values take precedence over the reference. I stop for correction when a field name, series,
+or value is invalid; reference suggestions are instead reported field by field as applied, template
+default retained, or rejected. None of these visual choices changes the scientific contract.
 
 ## When you are ready to render
 
@@ -117,6 +136,11 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 I put `origin-smoke` before render so an EditaPlot-owned isolated Origin instance completes the
 minimal graph-and-export loop first; Doctor's read-only discovery is never treated as a successful
 live connection.
+
+With the environment ready and necessary confirmation complete, finishing the local workflow within
+about four or five minutes is a reasonable range. If no reply or permission is pending and no new
+progress appears for 30–60 minutes, stop looped retries and use the
+[installation and stage-diagnosis guide](installation.md#runtime-duration).
 
 ```text
 Use the confirmed plan. I do not need to open Origin first: run the real smoke test, start a

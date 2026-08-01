@@ -76,6 +76,12 @@
 - Keep the verified XPS fill route: one fill region, `set_fill_area(..., type=9)`, and `-pfm 3`.
 - Preserve the stable XPS negative PlotX and label divide-by route; do not replace it with
   `x.reverse=1`.
+- Treat user-requested XPS colors, physical line widths, fill transparency, safe page/aspect ratio,
+  and legend show/hide, borderless, or position as independent capability-gated cosmetic fields.
+  Apply and report a field only after the exact Origin write/readback route is verified; otherwise
+  retain the registered default or reject it. A reference image is never sufficient authorization.
+- Cosmetic overrides must not change source values or column roles, the binding-energy direction,
+  component identity, or the single-region XPS fill API above.
 - Do not write right/top-axis label properties known to contaminate the paired bottom/left axes.
 
 ## Data and diagnostics

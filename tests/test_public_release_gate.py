@@ -79,9 +79,7 @@ def test_asset_kind_mapping_is_independent_and_fail_closed() -> None:
     assert _expected_asset_kind("assets/gallery/xps-fit.png") == (
         "verified_origin_export_from_synthetic_fixture"
     )
-    assert _expected_asset_kind("assets/support/wechat-tip.png") == (
-        "author_provided_support_payment_qr"
-    )
+    assert _expected_asset_kind("assets/support/wechat-tip.png") == ("author_provided_support_payment_qr")
     assert _expected_asset_kind("patient-data/scan.png") is None
 
 
@@ -91,10 +89,7 @@ def test_git_blob_audit_distinguishes_lf_from_crlf() -> None:
 
 def test_public_readmes_use_aggregate_star_badge_and_anonymous_trend() -> None:
     badge = "https://img.shields.io/github/stars/hang-jin/editaplot?style=social"
-    trend = (
-        "https://raw.githubusercontent.com/hang-jin/editaplot/"
-        "metrics/assets/star-trend/stars.svg"
-    )
+    trend = "https://raw.githubusercontent.com/hang-jin/editaplot/metrics/assets/star-trend/stars.svg"
     repository_link = '<a href="https://github.com/hang-jin/editaplot">'
     forbidden = ("/stargazers", "api.star-history.com")
 
@@ -117,9 +112,7 @@ def test_public_readmes_end_with_optional_support_section() -> None:
     assert "不会解锁任何额外功能" in chinese
     assert asset in chinese
 
-    assert english.rfind("## Buy me a coffee ☕") > english.rfind(
-        "## Open source, contributing, and support"
-    )
+    assert english.rfind("## Buy me a coffee ☕") > english.rfind("## Open source, contributing, and support")
     assert "Tips are entirely optional" in english
     assert "do not unlock features" in english
     assert asset in english
@@ -127,38 +120,37 @@ def test_public_readmes_end_with_optional_support_section() -> None:
 
 def test_gallery_inventory_and_display_selection_are_separate() -> None:
     manifest = json.loads(
-        (
-            PRODUCT_ROOT / "assets" / "gallery" / "gallery-manifest.json"
-        ).read_text(encoding="utf-8")
+        (PRODUCT_ROOT / "assets" / "gallery" / "gallery-manifest.json").read_text(encoding="utf-8")
     )
-    policy = json.loads(
-        (PRODUCT_ROOT / "release" / "public-release-policy.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    policy = json.loads((PRODUCT_ROOT / "release" / "public-release-policy.json").read_text(encoding="utf-8"))
     records = {record["id"]: record for record in manifest["cases"]}
-    visible = {
-        case_id
-        for case_id, record in records.items()
-        if record["display_in_gallery"]
-    }
+    visible = {case_id for case_id, record in records.items() if record["display_in_gallery"]}
 
     assert manifest["case_count"] == len(records)
     assert manifest["display_case_count"] == len(visible)
     assert manifest["case_count"] == policy["gallery"]["expected_case_count"]
-    assert (
-        manifest["display_case_count"]
-        == policy["gallery"]["expected_display_case_count"]
-    )
+    assert manifest["display_case_count"] == policy["gallery"]["expected_display_case_count"]
+    public_route_count = 0
+    for path in (PRODUCT_ROOT / "runtime" / "templates").glob("*/manifest.yaml"):
+        text = path.read_text(encoding="utf-8")
+        if re.search(r"(?m)^status:\s*implemented\s*$", text) and re.search(
+            r"(?m)^visibility:\s*public\s*$",
+            text,
+        ):
+            public_route_count += 1
+    assert public_route_count == policy["gallery"]["expected_public_route_count"]
     assert records["heatmap-results"]["display_in_gallery"] is False
     assert records["heatmap-dense-40x40"]["display_in_gallery"] is False
     assert records["heatmap-dense-30x30"]["display_in_gallery"] is True
-    gallery_document = (PRODUCT_ROOT / "docs" / "gallery.md").read_text(
-        encoding="utf-8"
-    )
+    gallery_document = (PRODUCT_ROOT / "docs" / "gallery.md").read_text(encoding="utf-8")
+    english_gallery = (PRODUCT_ROOT / "docs" / "gallery.en.md").read_text(encoding="utf-8")
     assert "heatmap-dense-30x30.png" in gallery_document
     assert "heatmap-results.png" not in gallery_document
     assert "heatmap-dense-40x40.png" not in gallery_document
+    assert "circular-network.png" in gallery_document
+    assert "circular-network.png" in english_gallery
+    assert gallery_document.count("<img ") == 44
+    assert english_gallery.count("<img ") == 44
 
 
 def test_public_source_has_no_stargazer_identity_collection_path() -> None:
@@ -190,6 +182,7 @@ def test_public_guidance_has_no_legacy_origin_status_gate() -> None:
             "docs/quickstart.en.md",
             "docs/release-boundaries.md",
             "docs/gallery.md",
+            "docs/gallery.en.md",
             "skill/editaplot/SKILL.md",
             "skill/editaplot/agents/openai.yaml",
             "skill/editaplot/references/runtime.md",

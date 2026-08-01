@@ -32,8 +32,13 @@ Reviewer risk:
   values, allowed mode, group limit, and accessibility warnings in the plan. If the group count
   exceeds the safe limit, retain the verified default or add independently readable marker/line/hatch
   encoding rather than cycling invisible pale colors.
-- Keep semantic palettes fixed for XPS components, signed effects, diagnostic reference curves,
-  confusion matrices, and heatmaps unless that exact override route has been independently verified.
+- Ask for explicit visual preferences independently of any reference image. The user may request
+  exact series colors, physical line widths, fill transparency, page/aspect ratio, and legend
+  visibility, frame, or position. A direct user request outranks a conflicting reference token;
+  classify every field as applied, retained template default, or rejected before rendering.
+- Keep semantic mappings for XPS components, signed effects, diagnostic reference curves, confusion
+  matrices, and heatmaps unless the user explicitly confirms an exact replacement and that override
+  route has been independently verified and read back. A reference image alone cannot reassign them.
 - Avoid rainbow maps, ornamental 3D, shadows, glossy bars, and unjustified smoothing.
 - Use direct labels when stable and readable; otherwise keep an editable legend. Legend overlap is
   not a hard failure when the OPJU remains editable.
@@ -52,6 +57,13 @@ Reviewer risk:
 - Put a percent-composition legend in a reserved external page column when it cannot fit the data
   field. Grouped-box legends are borderless editable labels, not the framed system-template legend.
 - Heatmaps reserve a detached right margin for the colorbar and verify both colorbar and cell-label fonts.
+
+For XPS, cosmetic requests never change the source table, column roles, high-to-low binding-energy
+direction, component identity, or verified fill construction. Exact colors, widths, transparency,
+safe page/aspect ratios, and legend options may be applied only by a selected XPS renderer that has
+passed the corresponding Origin API, object-readback, four-export, and visual-QA gate. Otherwise the
+plan records the verified default or an explicit rejection; it does not describe the whole XPS style
+as immutably locked.
 
 ## Scientific integrity
 

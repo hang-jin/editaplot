@@ -226,6 +226,15 @@ CASES = (
         "four-stage Sankey flow",
     ),
     ShowcaseCase(
+        "circular-network",
+        "circular_network",
+        "circular_network.csv",
+        "Directed relationships change between two periods while shared nodes retain fixed positions and one global weight scale.",
+        "temporal directed relationship",
+        "two-period circular directed weighted network",
+        title_zh="多阶段环形有向加权网络图",
+    ),
+    ShowcaseCase(
         "scatter-dense",
         "scatter",
         "scatter_dense.csv",

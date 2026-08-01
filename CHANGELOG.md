@@ -1,5 +1,48 @@
 # Changelog
 
+## 2026-08-01 — Flexible, verified XPS visual styling
+
+- Split the XPS contract into an immutable scientific layer and an independently confirmed visual
+  layer. Users may now choose the verified template default, a confirmed approximation suggested
+  by a reference figure, or exact custom values without changing source roles or XPS semantics.
+- Added exact XPS controls for visible series colors, physical line width, fill transparency,
+  physical page size, and legend visibility, frame, and position. Explicit user choices take
+  precedence over reference suggestions; invalid exact fields fail before Origin instead of
+  silently reverting to a default.
+- Updated both adaptive and fixed C 1s Origin runners and the shared preview to consume the same
+  visual contract. The runners read back page/layer geometry, Arial typography, line widths,
+  series/fill colors, transparency, and editable legend state before reporting success.
+- Kept the scientific and API safety contracts unchanged: immutable source data, high-to-low
+  binding-energy display, fixed C 1s `PlotX=-BindingEnergy` with `divideBy=-1`, residual retention,
+  and the single-region `type=9` / `-pfm 3` two-color fill route.
+- Preserved the physical title margins when a custom page width is requested, and reserved an
+  8 cm physical column for a readable 24 pt outside-right legend. Too-narrow combinations fail
+  visibly rather than clipping or shrinking contracted fonts.
+- Fixed the runner boundary for confirmed retain-not-render columns. Such columns remain unchanged
+  in an editable `XPS Source Snapshot` worksheet but never enter plot or helper-series logic.
+- Verified both XPS routes with Origin 2024b: an adaptive 19 × 19 cm hidden-legend case completed in
+  12.4 seconds, and a fixed C 1s 28 × 19 cm outside-right borderless-legend case completed in
+  17.6 seconds; each produced editable OPJU plus PNG/PDF/TIF and passed object readback and visual
+  inspection.
+
+## 2026-07-31 — Circular-network route and stage timing
+
+- Added a verified multi-panel circular directed weighted network route for `Panel + Source +
+  Target + Weight` edge lists, with optional sign, node-group, and edge-label columns.
+- Kept node positions stable across panels, applied one global weight-to-line-width scale, and
+  rendered editable Origin curves, terminal arrow objects, direct labels, and a borderless legend.
+- Promoted the route only after a real Origin 2024b run produced OPJU, PNG, PDF, and TIF artifacts,
+  passed object/font/color/size readback, preserved the source table, and passed image-bound human
+  visual review.
+- Added monotonic `elapsed_seconds` to worker progress events and documented stage-level diagnosis:
+  up to roughly four or five minutes is a reasonable normal range for an already prepared
+  ordinary workflow, while a silent 30–60 minute wait is abnormal and should be localized before
+  retrying.
+- Kept full Origin readback in `origin_verify_report.json` while making the terminal success event
+  concise.
+- Expanded the public inventory to 39 plotting routes, 46 reviewed verification PNGs, and 44
+  displayed examples.
+
 ## 2026-07-30 — Scientific understanding, compatibility, and release hardening
 
 - Added a confirmation-first scientific understanding layer that classifies every source column as

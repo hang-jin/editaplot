@@ -67,6 +67,7 @@ VERIFIED_TEMPLATE_IDS = frozenset(
         "percent_stacked_bar",
         "pie",
         "sankey",
+        "circular_network",
         "scatter",
         "line_error",
         "trend",
@@ -382,6 +383,51 @@ _SEMANTIC_ALIASES: dict[str, tuple[str, ...]] = {
     "source": ("source", "from", "来源", "起点", "源"),
     "target": ("target", "to", "目标", "终点"),
     "value": ("value", "weight", "flow", "数值", "权重", "流量"),
+    "panel": (
+        "panel",
+        "period",
+        "timeperiod",
+        "stage",
+        "facet",
+        "面板",
+        "时期",
+        "时段",
+        "阶段",
+        "分面",
+    ),
+    "sign": (
+        "sign",
+        "relationsign",
+        "edgetype",
+        "effectdirection",
+        "符号",
+        "关系符号",
+        "边类型",
+        "效应方向",
+        "正负",
+    ),
+    "source_group": (
+        "sourcegroup",
+        "fromgroup",
+        "来源组",
+        "起点组",
+        "源节点组",
+    ),
+    "target_group": (
+        "targetgroup",
+        "togroup",
+        "目标组",
+        "终点组",
+        "目标节点组",
+    ),
+    "edge_label": (
+        "edgelabel",
+        "relationlabel",
+        "linklabel",
+        "边标签",
+        "关系标签",
+        "连线标签",
+    ),
     "size": (
         "size",
         "magnitude",
@@ -441,6 +487,17 @@ def _semantic_tags(column: str) -> list[str]:
                 break
         if matched:
             tags.append(tag)
+    # Prefer the more specific circular-network roles over substring matches.
+    # For example, ``SourceGroup`` must not count as the required ``Source``
+    # endpoint and ``EdgeLabel`` is metadata, not a category column.
+    if "source_group" in tags:
+        tags = [tag for tag in tags if tag not in {"source", "category"}]
+    if "target_group" in tags:
+        tags = [tag for tag in tags if tag not in {"target", "category"}]
+    if "edge_label" in tags:
+        tags = [tag for tag in tags if tag != "category"]
+    if "panel" in tags:
+        tags = [tag for tag in tags if tag != "time"]
     return tags
 
 
@@ -532,6 +589,8 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
     layouts: list[str] = []
     if {"source", "target", "value"}.issubset(tags):
         layouts.append("edge_list")
+        if "panel" in tags:
+            layouts.append("temporal_edge_list")
     if profiles and profiles[0]["kind"] == "categorical" and numeric_columns:
         layouts.append("category_wide")
         if len(numeric_columns) >= 2:
@@ -621,6 +680,9 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
         "eis": sum(tag in tags for tag in ("z_real", "z_imag", "frequency", "phase")),
         "electrochem": sum(tag in tags for tag in ("potential", "current")),
         "sankey": sum(tag in tags for tag in ("source", "target", "value")),
+        "circular_network": sum(
+            tag in tags for tag in ("panel", "source", "target", "value")
+        ),
         "error": int("error" in tags),
         "distribution": int("numeric_wide" in layouts),
         "forest": sum(tag in tags for tag in ("estimate", "lower", "upper", "reference")),
@@ -698,6 +760,18 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "percent_stacked_bar": ("percentstacked", "percentagecomposition", "百分比堆叠", "占比"),
     "pie": ("pie", "parttowhole", "饼图", "份额"),
     "sankey": ("sankey", "flow", "桑基", "流向"),
+    "circular_network": (
+        "circularnetwork",
+        "directednetwork",
+        "weightednetwork",
+        "temporalnetwork",
+        "multipanelnetwork",
+        "环形网络",
+        "有向网络",
+        "加权网络",
+        "时段网络",
+        "多面板网络",
+    ),
     "scatter": ("scatter", "correlation", "relationship", "散点", "相关", "关系"),
     "line_error": ("errorbar", "uncertainty", "trend", "误差", "不确定性", "趋势"),
     "trend": ("trendline", "timeseries", "progression", "折线趋势", "时间趋势", "阶段变化"),
@@ -954,6 +1028,20 @@ def _score_candidate(
             reasons.append("检测到 source、target、value 边列表。")
         else:
             score -= 0.45
+        if "temporal_edge_list" in layouts:
+            score -= 0.48
+            reason_codes.append("temporal_network_route_preferred")
+            reasons.append("检测到显式 Panel/时期列；应保留面板语义，而不是合并成单个桑基图。")
+    elif template_id == "circular_network":
+        if "temporal_edge_list" in layouts and int(signals["circular_network"]) >= 4:
+            score += 0.48
+            reason_codes.append("temporal_directed_edge_list_match")
+            reasons.append(
+                "检测到 Panel、Source、Target、Weight 有向边长表，可保留时段分面、方向和全局权重尺度。"
+            )
+        else:
+            score -= 0.60
+            reason_codes.append("temporal_directed_edge_list_missing")
     elif template_id in {"scatter", "trend"}:
         if "numeric_xy" in layouts:
             score += 0.15
@@ -1817,6 +1905,7 @@ def build_plan(
     x_title: str | None = None,
     y_title: str | None = None,
     palette_id: str | None = None,
+    visual_style: dict[str, Any] | None = None,
     mapping: dict[str, Any] | None = None,
     semantic_confirmation: dict[str, Any] | None = None,
     reference_image: str | Path | None = None,
@@ -1868,6 +1957,16 @@ def build_plan(
     )
     worker_mapping = service.worker_mapping(prepared)
     frozen_payload = prepared.payload
+    explicit_visual_tokens = dict(visual_style or {})
+    if palette_id is not None:
+        existing_palette = explicit_visual_tokens.get("palette_id")
+        if existing_palette is not None and existing_palette != palette_id:
+            raise EditaPlotError(
+                "visual_style_conflict",
+                "palette_id conflicts with visual_style.palette_id.",
+            )
+        explicit_visual_tokens["palette_id"] = palette_id
+    explicit_visual_report: dict[str, Any] | None = None
     axis_title_overrides = {
         key: value for key, value in (("x_title", x_title), ("y_title", y_title)) if value is not None
     }
@@ -1887,18 +1986,49 @@ def build_plan(
             code = getattr(exc, "code", "text_overrides_invalid")
             raise EditaPlotError(code, str(exc)) from exc
     palette_contract: dict[str, Any] = {}
-    if palette_id is not None:
-        if template_id == "xps":
-            raise EditaPlotError(
-                "palette_override_unsupported",
-                "XPS keeps its verified component-colour contract.",
+    if template_id == "xps" and explicit_visual_tokens:
+        try:
+            from origin_sciplot.xps_visual_style import apply_xps_visual_style
+
+            visual_application = apply_xps_visual_style(
+                frozen_payload,
+                explicit_visual_tokens,
+                source="explicit_user",
             )
+        except Exception as exc:  # noqa: BLE001 - normalized visual contract error
+            code = getattr(exc, "code", "xps_visual_style_invalid")
+            raise EditaPlotError(code, str(exc)) from exc
+        frozen_payload = visual_application.preparation
+        explicit_visual_report = visual_application.report
+        # Freeze and forward the adapter's canonical form (normalised HEX,
+        # numeric values and deterministic key ordering), never the raw CLI
+        # object.  The report hash is computed over this exact representation.
+        explicit_visual_tokens = dict(explicit_visual_report["requested_tokens"])
+        selected_palette = explicit_visual_tokens.get("palette_id")
+        if selected_palette is not None:
+            try:
+                palette_contract = palette_to_dict(get_palette(str(selected_palette)))
+            except (KeyError, ValueError):
+                # The style report already records a rejected palette and the
+                # retained semantic default; do not mislabel it as applied.
+                palette_contract = {}
+    elif visual_style and template_id != "xps":
+        raise EditaPlotError(
+            "visual_style_template_unsupported",
+            "Exact visual_style fields are currently implemented for XPS only; "
+            "use --palette-id for non-XPS templates.",
+            unsupported_fields=sorted(explicit_visual_tokens),
+        )
+    if palette_id is not None and template_id != "xps":
         try:
             frozen_payload = apply_scientific_palette_override(
                 frozen_payload,
                 palette_id=palette_id,
             )
             palette_contract = palette_to_dict(get_palette(palette_id))
+            # Non-XPS palettes keep using the established palette contract;
+            # do not mislabel them as an XPS exact-visual request.
+            explicit_visual_tokens = {}
         except Exception as exc:  # noqa: BLE001 - normalize engine validation errors
             code = getattr(exc, "code", "palette_invalid")
             raise EditaPlotError(code, str(exc)) from exc
@@ -1957,11 +2087,6 @@ def build_plan(
                 "reference_inputs_incomplete",
                 "Reference adaptation needs an image, a reviewed spec, and explicit confirmation.",
             )
-        if template_id == "xps":
-            raise EditaPlotError(
-                "reference_style_xps_unsupported",
-                "XPS keeps its verified component and fill style contract.",
-            )
         confirmed_reference = _confirm_reference_spec(
             reference_image,
             reference_spec,
@@ -2003,6 +2128,7 @@ def build_plan(
                 frozen_payload,
                 reference_adaptation,
                 locked_palette_id=palette_id,
+                locked_style_tokens=explicit_visual_tokens,
             )
         except Exception as exc:  # noqa: BLE001
             code = getattr(exc, "code", "reference_style_invalid")
@@ -2033,6 +2159,10 @@ def build_plan(
             "target_output": target_output.strip(),
             "axis_title_overrides": axis_title_overrides,
             "palette": palette_contract,
+            "visual_style": {
+                "tokens": explicit_visual_tokens,
+                "report": explicit_visual_report,
+            },
         },
         "data_understanding": semantic_contract.to_dict(),
         "reference_adaptation": reference_adaptation,
@@ -2133,6 +2263,31 @@ def validate_plan(plan: dict[str, Any]) -> None:
     )
     reference_adaptation = plan.get("reference_adaptation")
     reference_style = plan.get("reference_style")
+    visual_style = plan.get("figure_contract", {}).get("visual_style")
+    if isinstance(visual_style, dict) and visual_style.get("tokens"):
+        visual_report = visual_style.get("report")
+        if not isinstance(visual_report, dict):
+            raise EditaPlotError(
+                "xps_visual_style_report_missing",
+                "The render plan has no frozen explicit XPS visual-style report.",
+            )
+        report_payload = dict(visual_report)
+        report_hash = report_payload.pop("report_hash", None)
+        expected_output_digest = (
+            reference_style.get("input_plan_digest")
+            if isinstance(reference_style, dict)
+            else plan.get("template", {}).get("plan_digest")
+        )
+        if (
+            not isinstance(report_hash, str)
+            or report_hash != _json_hash(report_payload)
+            or visual_style.get("tokens") != visual_report.get("requested_tokens")
+            or visual_report.get("output_plan_digest") != expected_output_digest
+        ):
+            raise EditaPlotError(
+                "xps_visual_style_report_mismatch",
+                "The explicit XPS visual-style report does not match the render plan.",
+            )
     if reference_adaptation is not None:
         if not isinstance(reference_adaptation, dict) or not isinstance(
             reference_style,
@@ -2206,6 +2361,33 @@ def build_worker_command(
     palette = plan.get("figure_contract", {}).get("palette")
     if isinstance(palette, dict) and palette.get("palette_id"):
         command.extend(("--palette-id", str(palette["palette_id"])))
+    visual_style = plan.get("figure_contract", {}).get("visual_style")
+    visual_tokens: dict[str, Any] = {}
+    if isinstance(visual_style, dict) and isinstance(visual_style.get("tokens"), dict):
+        visual_tokens = dict(visual_style["tokens"])
+        visual_report = visual_style.get("report")
+        if visual_tokens:
+            if not isinstance(visual_report, dict) or not isinstance(
+                visual_report.get("report_hash"),
+                str,
+            ):
+                raise EditaPlotError(
+                    "xps_visual_style_report_missing",
+                    "The render plan has no frozen explicit XPS visual-style report.",
+                )
+            command.extend(
+                (
+                    "--visual-style-json",
+                    json.dumps(
+                        {
+                            "tokens": visual_tokens,
+                            "expected_report_hash": visual_report["report_hash"],
+                        },
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                )
+            )
     reference_adaptation = plan.get("reference_adaptation")
     reference_style = plan.get("reference_style")
     if isinstance(reference_adaptation, dict):
@@ -2229,6 +2411,7 @@ def build_worker_command(
                             if isinstance(palette, dict) and palette.get("palette_id")
                             else None
                         ),
+                        "locked_style_tokens": visual_tokens,
                     },
                     ensure_ascii=False,
                     separators=(",", ":"),

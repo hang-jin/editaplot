@@ -14,6 +14,7 @@
     "README.md",
     "README.en.md",
     "docs/origin-2021-2026-compatibility.md",
+    "docs/gallery.en.md",
     "assets/gallery/gallery-manifest.json",
     "assets/palettes/palette-catalog.json",
     "assets/provenance-manifest.json",
@@ -78,6 +79,7 @@
     "docs/asset-provenance.md",
     "docs/dependency-inventory.md",
     "docs/gallery.md",
+    "docs/gallery.en.md",
     "docs/installation.md",
     "docs/origin-2021-2026-compatibility.md",
     "docs/palette-guide.md",
@@ -364,8 +366,9 @@
   "gallery": {
     "directory": "assets/gallery",
     "manifest": "assets/gallery/gallery-manifest.json",
-    "expected_case_count": 45,
-    "expected_display_case_count": 43,
+    "expected_case_count": 46,
+    "expected_display_case_count": 44,
+    "expected_public_route_count": 39,
     "reject_nonempty_png_text": true
   },
   "palettes": {
@@ -386,7 +389,7 @@
     "inventory_generator": "tools/build_asset_provenance.py",
     "gallery_fixture_generator": "tools/generate_showcase_data.py",
     "required_review_decision": "approved_for_public_source_release",
-    "expected_asset_count": 221,
+    "expected_asset_count": 225,
     "require_synthetic_or_generated": true,
     "require_contains_phi_false": true
   }

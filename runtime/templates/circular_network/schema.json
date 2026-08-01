@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "template_id": "circular_network",
+  "layout": "directed_edge_list_with_panels",
+  "required_roles": ["panel", "source", "target", "weight"],
+  "optional_roles": [
+    "sign",
+    "source_group",
+    "target_group",
+    "edge_label"
+  ],
+  "min_columns": 4,
+  "min_rows": 1,
+  "min_panels": 1,
+  "max_panels": 4,
+  "min_nodes": 2,
+  "weight_constraint": "finite_and_greater_than_zero",
+  "accepted_sign_values": ["positive", "negative", "neutral"],
+  "self_links": false,
+  "duplicate_directed_edges_per_panel": false,
+  "node_groups_must_be_consistent": true,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]
+}

@@ -1,6 +1,6 @@
 # Origin 2024b 实机生成并复核的图形示例
 
-我从 45 个保留验证资产中精选了 43 个案例放在本页，
+我从 46 个保留验证资产中精选了 44 个案例放在本页，
 让第一次接触 EditaPlot 的读者可以先按科研问题和图形类型判断方向，再用自己的数据定制。
 同一路线的历史验证图不会重复占版面；热力图目前只展示真实 30×30 高密度版本。
 
@@ -9,9 +9,22 @@ OPJU/PNG/PDF/TIF、对象反读和人工视觉检查。
 全部展示数据均为项目生成的合成教学数据，不代表测量、材料性能或临床结论。
 GitHub 源码仓库只保留脱敏 PNG；可编辑项目和其他格式不直接写入源码历史。
 
+## 第一次选图，可以先看这张表
+
+| 你想回答的问题 | 优先考虑 | 最少数据结构 |
+|---|---|---|
+| 比较多条光谱或随条件变化的曲线 | XPS/XRD/PL/UV-Vis/FTIR/NMR 等谱线 | 共用 X + 一列或多列 Y |
+| 比较组间水平并展示不确定性 | 柱状图、折线误差图或森林图 | 类别/X + 数值 + 明确的 SD/SEM/CI |
+| 展示原始分布和离群形态 | 原始点、箱线、小提琴或 Raincloud | 组别 + 每个原始观测值 |
+| 展示规则矩阵 | 热力图或混淆矩阵 | 行标签 + 多列数值矩阵 |
+| 展示正权重流量或组成传递 | 桑基图 | Source + Target + Value |
+| 比较多个阶段的定向、正负和权重 | 环形有向加权网络 | Panel + Source + Target + Weight；Sign 可选 |
+| 展示医学模型证据 | ROC/PR/校准/DCA/Bland-Altman 等 | 预先计算的坐标或统计量 |
+
 <div align="center">
 <img src="../assets/gallery/bar-error-groups.png" alt="分组柱状图与 SD 误差棒" width="31%" />
 <img src="../assets/gallery/bubble-indexed-size.png" alt="大小编码气泡关系图" width="31%" />
+<img src="../assets/gallery/circular-network.png" alt="多阶段环形有向加权网络图" width="31%" />
 <img src="../assets/gallery/cv-cycles.png" alt="CV 循环伏安曲线" width="31%" />
 <img src="../assets/gallery/diverging-effects.png" alt="正负效应发散条形图" width="31%" />
 <img src="../assets/gallery/dsc-multi.png" alt="DSC 多样品热流曲线" width="31%" />

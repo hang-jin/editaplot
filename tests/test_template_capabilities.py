@@ -119,6 +119,33 @@ def test_error_bar_and_statistical_routes_are_classified() -> None:
     assert OriginCapability.STATISTICAL_PLOT in get_template_capability_profile("violin").required
 
 
+@pytest.mark.parametrize(
+    "missing_capability",
+    [
+        OriginCapability.GRAPH_OBJECT_ARROW,
+        OriginCapability.MULTI_LAYER_PAGE,
+    ],
+)
+def test_circular_network_requires_editable_arrows_and_multi_layer_page(
+    missing_capability: OriginCapability,
+) -> None:
+    profile = get_template_capability_profile("circular_network")
+    assert {
+        OriginCapability.GRAPH_OBJECT_ARROW,
+        OriginCapability.MULTI_LAYER_PAGE,
+    }.issubset(profile.required)
+
+    decision = evaluate_template_compatibility(
+        "circular_network",
+        10.15,
+        ALL_ORIGIN_CAPABILITIES - {missing_capability},
+    )
+
+    assert decision.status == "blocked"
+    assert decision.missing_required == (missing_capability,)
+    assert decision.block_reason == "missing_required_capabilities"
+
+
 def test_profile_probe_and_decision_are_json_serializable() -> None:
     probe = CapabilityProbeResult(
         available_capabilities=ALL_ORIGIN_CAPABILITIES,

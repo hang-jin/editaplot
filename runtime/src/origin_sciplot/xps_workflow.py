@@ -21,7 +21,7 @@ from typing import Literal
 import pandas as pd
 
 from .data_loader import DataLoadError, LoadedTable, load_table
-
+from .scientific_visual import AdaptiveOriginStyle
 
 EnergyKind = Literal["binding", "kinetic", "unknown"]
 SpectrumRegion = str
@@ -31,6 +31,7 @@ XpsTemplateId = Literal["xps"]
 XpsRendererTemplateId = Literal["xps_c1s_fit", "xps_adaptive"]
 ComponentBasis = Literal["relative_to_background", "baseline_inclusive", "unresolved"]
 SeriesRole = Literal["raw", "background", "envelope", "component", "residual"]
+XpsLegendPosition = Literal["inside", "outside_right", "none"]
 
 FIXED_C1S_COLUMNS = (
     "BindingEnergy",
@@ -54,6 +55,29 @@ FIXED_C1S_LABELS = {
     "Peak_CeqO": "C=O",
     "Peak_OCeqO": "O-C=O",
 }
+
+_FIXED_COMPONENT_COLORS = ("#4C78A8", "#59A14F", "#E7A1AE", "#E39C37")
+_FIXED_COMPONENT_FILL_COLORS = ("#7FA8D1", "#8FC987", "#F0C4CB", "#EDBD78")
+_ADAPTIVE_COMPONENT_COLORS = (
+    "#3E9E96",
+    "#7C6CCF",
+    "#C7766A",
+    "#C49A2C",
+    "#5B8FD6",
+    "#8A5CA8",
+    "#6F8E5E",
+    "#767676",
+)
+_ADAPTIVE_COMPONENT_FILL_COLORS = (
+    "#7BCDC4",
+    "#A59ADE",
+    "#D69A8D",
+    "#D5B24A",
+    "#8DB7E8",
+    "#CAA3D5",
+    "#BBD6B2",
+    "#B0B0B0",
+)
 
 
 class XpsWorkflowError(ValueError):
@@ -193,6 +217,95 @@ class XpsPlotSpec:
 
 
 @dataclass(frozen=True)
+class XpsVisualContract:
+    """Renderer-shared style layer that cannot alter XPS scientific roles.
+
+    The contract contains only properties already written and read back by the
+    verified XPS runners: physical page/layer geometry, point-based strokes,
+    registered colours, plot transparency, and editable legend state.
+    """
+
+    profile_name: str
+    figure_style: AdaptiveOriginStyle
+    palette_id: str
+    raw_color: str
+    raw_fill_color: str
+    background_color: str
+    envelope_color: str
+    residual_color: str
+    component_colors: tuple[str, ...]
+    component_fill_colors: tuple[str, ...]
+    series_color_overrides: tuple[tuple[str, str], ...] = ()
+    legend_position: XpsLegendPosition = "inside"
+    legend_visible: bool = True
+    legend_frame: bool = False
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "profile_name": self.profile_name,
+            "figure_style": self.figure_style.to_dict(),
+            "palette_id": self.palette_id,
+            "raw_color": self.raw_color,
+            "raw_fill_color": self.raw_fill_color,
+            "background_color": self.background_color,
+            "envelope_color": self.envelope_color,
+            "residual_color": self.residual_color,
+            "component_colors": list(self.component_colors),
+            "component_fill_colors": list(self.component_fill_colors),
+            "series_color_overrides": [list(item) for item in self.series_color_overrides],
+            "legend_position": self.legend_position,
+            "legend_visible": self.legend_visible,
+            "legend_frame": self.legend_frame,
+        }
+
+
+def _default_xps_visual_contract(profile: VisualProfile) -> XpsVisualContract:
+    fixed = profile == "fixed_c1s_publication"
+    left = 14.0 if fixed else 23.0
+    width = 85.01 if fixed else 76.01
+    style = AdaptiveOriginStyle(
+        profile_name=f"xps_{profile}",
+        page_width_cm=22.31,
+        page_height_cm=16.82,
+        layer_left_percent=left,
+        layer_top_percent=2.995,
+        layer_width_percent=width,
+        layer_height_percent=82.51,
+        axis_title_size_pt=26.0,
+        tick_label_size_pt=24.0,
+        legend_size_pt=24.0,
+        plot_line_width_pt=5.0,
+        frame_line_width_pt=3.0,
+        major_tick_length_pt=7.0,
+        minor_tick_length_pt=4.0,
+        x_major_step=2.0,
+        x_minor_ticks_between_majors=1,
+        x_title_upshift_page_percent=3.0,
+        fill_transparency_percent=0.0,
+        palette_name="xps_semantic_default",
+    )
+    return XpsVisualContract(
+        profile_name=f"xps_{profile}",
+        figure_style=style,
+        palette_id="xps_semantic_default",
+        # Keep the verified fixed-C1s Origin default as the parity anchor.
+        raw_color="#808080" if fixed else "#0F4D92",
+        raw_fill_color="#7884B4",
+        background_color="#6F6887" if fixed else "#606060",
+        envelope_color="#D62728" if fixed else "#B64342",
+        residual_color="#5B6770",
+        component_colors=(
+            _FIXED_COMPONENT_COLORS if fixed else _ADAPTIVE_COMPONENT_COLORS
+        ),
+        component_fill_colors=(
+            _FIXED_COMPONENT_FILL_COLORS
+            if fixed
+            else _ADAPTIVE_COMPONENT_FILL_COLORS
+        ),
+    )
+
+
+@dataclass(frozen=True)
 class XpsPreparation:
     source_path: str
     source_sha256: str
@@ -207,6 +320,7 @@ class XpsPreparation:
     roles: XpsColumnRoles
     component_basis: ComponentBasis
     plot_spec: XpsPlotSpec
+    visual_contract: XpsVisualContract
     warnings: tuple[str, ...]
     confidence: float
     column_mapping: XpsColumnMapping | None
@@ -234,6 +348,7 @@ class XpsPreparation:
             "roles": self.roles.to_dict(),
             "component_basis": self.component_basis,
             "plot_spec": self.plot_spec.to_dict(),
+            "visual_contract": self.visual_contract.to_dict(),
             "warnings": list(self.warnings),
             "confidence": self.confidence,
             "column_mapping": self.column_mapping.to_dict() if self.column_mapping else None,
@@ -242,6 +357,38 @@ class XpsPreparation:
             "confirmation_reasons": list(self.confirmation_reasons),
             "plan_digest": self.plan_digest,
         }
+
+
+def _xps_plan_digest(preparation: XpsPreparation) -> str:
+    payload = preparation.to_dict()
+    payload.pop("source_path", None)
+    payload.pop("source_size_bytes", None)
+    payload.pop("column_mapping", None)
+    payload.pop("plan_digest", None)
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def replace_xps_visual_contract(
+    preparation: XpsPreparation,
+    visual_contract: XpsVisualContract,
+) -> XpsPreparation:
+    """Replace only the visual layer and bind it into the plan digest."""
+
+    from dataclasses import replace
+
+    updated = replace(
+        preparation,
+        visual_contract=visual_contract,
+        plan_digest="",
+    )
+    return replace(updated, plan_digest=_xps_plan_digest(updated))
 
 
 def select_xps_template_id(preparation: XpsPreparation) -> XpsTemplateId:
@@ -366,8 +513,12 @@ def _validate_energy_values(values: list[float], column: str) -> None:
         raise XpsWorkflowError(
             "energy_zero_range", f"Energy column {column!r} must contain a non-zero range.", column=column
         )
-    increasing = all(left <= right for left, right in zip(values, values[1:]))
-    decreasing = all(left >= right for left, right in zip(values, values[1:]))
+    increasing = all(
+        left <= right for left, right in zip(values, values[1:], strict=False)
+    )
+    decreasing = all(
+        left >= right for left, right in zip(values, values[1:], strict=False)
+    )
     if not (increasing or decreasing):
         raise XpsWorkflowError(
             "energy_not_monotonic", f"Energy column {column!r} must be monotonic.", column=column
@@ -555,7 +706,11 @@ def _fixed_c1s_axis_plan(values: list[float]) -> XpsAxisPlan:
 
 def _fixed_helpers(roles: XpsColumnRoles) -> tuple[XpsHelperExpression, ...]:
     helpers = [XpsHelperExpression("PlotX", f"-[{roles.x}]", "x_transform")]
-    assert roles.background is not None
+    if roles.background is None:
+        raise XpsWorkflowError(
+            "fixed_c1s_background_missing",
+            "The fixed C 1s helper contract requires a background column.",
+        )
     for component in roles.components:
         helpers.extend(
             (
@@ -728,7 +883,7 @@ def _numeric_rows(
     rows: list[list[float]] = []
     for row_number, values in enumerate(loaded.frame.itertuples(index=False, name=None), start=2):
         numeric_row: list[float] = []
-        for column, cell in zip(columns, values):
+        for column, cell in zip(columns, values, strict=True):
             if column in ignored:
                 numeric_row.append(math.nan)
                 continue
@@ -909,7 +1064,11 @@ def prepare_xps(
     )
     detection = XpsDetection(energy_kind, region, mode)
     axis = _fixed_c1s_axis_plan(energy_values) if is_fixed_c1s else _axis_plan(energy_kind, energy_values)
-    helpers = _fixed_helpers(roles) if is_fixed_c1s else _adaptive_helpers(roles, energy_kind, component_basis)
+    helpers = (
+        _fixed_helpers(roles)
+        if is_fixed_c1s
+        else _adaptive_helpers(roles, energy_kind, component_basis)
+    )
     plot_spec = XpsPlotSpec(
         visual_profile=profile,
         axis=axis,
@@ -919,6 +1078,7 @@ def prepare_xps(
         residual_policy="preserve_not_plotted",
         helpers=helpers,
     )
+    visual_contract = _default_xps_visual_contract(profile)
     warnings, confidence = _warnings_and_confidence(
         detection, roles, component_basis, loaded.ignored_empty_rows, raw_role_inferred
     )
@@ -954,6 +1114,7 @@ def prepare_xps(
         "roles": roles.to_dict(),
         "component_basis": component_basis,
         "plot_spec": plot_spec.to_dict(),
+        "visual_contract": visual_contract.to_dict(),
         "warnings": list(warnings),
         "confidence": confidence,
         "mapping_confirmed": column_mapping is not None,
@@ -977,6 +1138,7 @@ def prepare_xps(
         roles=roles,
         component_basis=component_basis,
         plot_spec=plot_spec,
+        visual_contract=visual_contract,
         warnings=warnings,
         confidence=confidence,
         column_mapping=column_mapping,
@@ -987,8 +1149,12 @@ def prepare_xps(
     )
 
 
-def load_xps_frame(path: str | Path, preparation: XpsPreparation) -> pd.DataFrame:
-    """Materialize the numeric runner frame for an already confirmed plan."""
+def _load_confirmed_xps_table(
+    path: str | Path,
+    preparation: XpsPreparation,
+) -> LoadedTable:
+    """Reload the immutable source represented by ``preparation``."""
+
     try:
         loaded = load_table(path)
     except DataLoadError as exc:
@@ -1005,10 +1171,64 @@ def load_xps_frame(path: str | Path, preparation: XpsPreparation) -> pd.DataFram
             "analysis_changed",
             "The source columns changed after analysis. Refresh and confirm the preview again.",
         )
+    return loaded
+
+
+def xps_render_columns(preparation: XpsPreparation) -> tuple[str, ...]:
+    """Columns allowed to cross the rendering boundary.
+
+    Confirmed ``ignored`` columns remain source evidence.  They are retained in
+    the editable project by the runners, but never enter plotting/helper logic.
+    """
+
+    ignored = set(preparation.roles.ignored)
+    return tuple(column for column in preparation.source_columns if column not in ignored)
+
+
+def validate_xps_render_frame(
+    frame: pd.DataFrame,
+    preparation: XpsPreparation,
+) -> None:
+    """Fail before Origin when a numeric render frame differs from its plan."""
+
+    if tuple(str(column) for column in frame.columns) != xps_render_columns(preparation):
+        raise XpsWorkflowError(
+            "analysis_changed",
+            "Validated XPS render columns no longer match the preparation plan.",
+        )
+    if len(frame.index) != preparation.row_count:
+        raise XpsWorkflowError(
+            "analysis_changed",
+            "Validated XPS row count no longer matches the preparation plan.",
+        )
+
+
+def load_xps_source_snapshot(
+    path: str | Path,
+    preparation: XpsPreparation,
+) -> pd.DataFrame:
+    """Return an unmodified, all-column source snapshot for the editable OPJU."""
+
+    loaded = _load_confirmed_xps_table(path, preparation)
+    snapshot = loaded.copy_frame()
+    if len(snapshot.index) != preparation.row_count:
+        raise XpsWorkflowError(
+            "analysis_changed",
+            "The source row count changed after analysis. Refresh and confirm the preview again.",
+        )
+    return snapshot
+
+
+def load_xps_frame(path: str | Path, preparation: XpsPreparation) -> pd.DataFrame:
+    """Materialize the numeric, render-only frame for an already confirmed plan."""
+
+    loaded = _load_confirmed_xps_table(path, preparation)
     columns, rows = _numeric_rows(loaded, ignored_columns=preparation.roles.ignored)
-    included = [column for column in columns if column not in preparation.roles.ignored]
+    included = list(xps_render_columns(preparation))
     indexes = [columns.index(column) for column in included]
-    return pd.DataFrame(
+    frame = pd.DataFrame(
         [[row[index] for index in indexes] for row in rows],
         columns=included,
     )
+    validate_xps_render_frame(frame, preparation)
+    return frame

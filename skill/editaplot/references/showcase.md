@@ -16,8 +16,8 @@ data, labels, conclusions, or private template assets.
 
 ## Current verified public gallery scope
 
-The retained verification inventory contains 45 reviewed, metadata-sanitized PNGs across 38 public
-plotting routes. The public page displays 43 cases. Keep inventory count, display count, and route
+The retained verification inventory contains 46 reviewed, metadata-sanitized PNGs across 39 public
+plotting routes. The public page displays 44 cases. Keep inventory count, display count, and route
 count separate: a case enters the inventory only after Origin artifacts, object readback, human
 visual QA, sanitized PNG, provenance record, and asset manifest all pass. Display visibility is a
 separate decision and does not delete retained verification evidence.
@@ -42,6 +42,9 @@ separate decision and does not delete retained verification evidence.
 18. CV, LSV, XAS, steady-state PL, TRPL with user-supplied fits, and UV-vis with a user-supplied Tauc inset.
 19. Medical ROC, PR, calibration, DCA, confusion matrix, Bland-Altman, paired trajectories,
     grouped box/raw observations, Raincloud, and precomputed SHAP evidence.
+20. A multi-panel circular directed weighted network with shared node positions, signed edges, one
+    global weight scale, and a borderless editable legend; the current showcase fixture uses two
+    periods.
 
 ## Newly verified materials and dense-matrix cases
 
