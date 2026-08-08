@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="280" viewBox="0 0 760 280" role="img">
+  <title>EditaPlot GitHub Star trend</title>
+  <desc>Anonymous daily aggregate Star totals for hang-jin/editaplot; no account-level data.</desc>
+  <defs>
+    <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2563eb" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+  <rect width="760" height="280" rx="18" fill="#ffffff"/>
+  <rect x="18" y="20" width="724" height="244" rx="15" fill="#cbd5e1" opacity="0.18"/>
+  <rect x="16" y="16" width="728" height="248" rx="15" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="42" y="48" fill="#0f172a" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="19" font-weight="700">GitHub Star Trend</text>
+  <text x="42" y="68" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5">Daily aggregate only · no account data</text>
+  <rect x="622" y="34" width="94" height="38" rx="11" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="669" y="59" text-anchor="middle" fill="#1d4ed8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="21" font-weight="750">146</text>
+  <line x1="86.0" y1="220.0" x2="726.0" y2="220.0" stroke="#dbe4ee" stroke-width="1" stroke-dasharray="3 5"/>
+  <text x="72" y="224.0" text-anchor="end" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">10</text>
+  <line x1="86.0" y1="151.4" x2="726.0" y2="151.4" stroke="#dbe4ee" stroke-width="1" stroke-dasharray="3 5"/>
+  <text x="72" y="155.4" text-anchor="end" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">88</text>
+  <line x1="86.0" y1="82.0" x2="726.0" y2="82.0" stroke="#dbe4ee" stroke-width="1" stroke-dasharray="3 5"/>
+  <text x="72" y="86.0" text-anchor="end" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">167</text>
+  <line x1="86.0" y1="220.0" x2="726.0" y2="220.0" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="86.0" y="246" text-anchor="middle" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">2026-07-22</text>
+  <path data-role="trend-area" d="M 86.0,220.0 L 86.0,201.5 L 123.6,191.9 L 161.3,183.1 L 198.9,172.5 L 236.6,172.5 L 274.2,165.5 L 311.9,160.2 L 349.5,154.1 L 387.2,147.0 L 424.8,137.4 L 462.5,132.1 L 500.1,127.7 L 537.8,124.2 L 575.4,116.3 L 613.1,111.0 L 650.7,106.6 L 688.4,104.0 L 726.0,100.5 L 726.0,220.0 Z" fill="url(#trendFill)"/>
+  <polyline data-role="trend-line" points="86.0,201.5 123.6,191.9 161.3,183.1 198.9,172.5 236.6,172.5 274.2,165.5 311.9,160.2 349.5,154.1 387.2,147.0 424.8,137.4 462.5,132.1 500.1,127.7 537.8,124.2 575.4,116.3 613.1,111.0 650.7,106.6 688.4,104.0 726.0,100.5" fill="none" stroke="#2563eb" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <text x="726.0" y="246" text-anchor="end" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">2026-08-08</text>
+  <circle data-role="series-point" data-date="2026-07-22" data-stars="31" cx="86.0" cy="201.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-23" data-stars="42" cx="123.6" cy="191.9" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-24" data-stars="52" cx="161.3" cy="183.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-25" data-stars="64" cx="198.9" cy="172.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-26" data-stars="64" cx="236.6" cy="172.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-27" data-stars="72" cx="274.2" cy="165.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-28" data-stars="78" cx="311.9" cy="160.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-29" data-stars="85" cx="349.5" cy="154.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-30" data-stars="93" cx="387.2" cy="147.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-31" data-stars="104" cx="424.8" cy="137.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-01" data-stars="110" cx="462.5" cy="132.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-02" data-stars="115" cx="500.1" cy="127.7" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-03" data-stars="119" cx="537.8" cy="124.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-04" data-stars="128" cx="575.4" cy="116.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-05" data-stars="134" cx="613.1" cy="111.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-06" data-stars="139" cx="650.7" cy="106.6" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-07" data-stars="142" cx="688.4" cy="104.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-08" data-stars="146" cx="726.0" cy="100.5" r="6.4" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <text x="724.0" y="88.5" text-anchor="end" fill="#0f172a" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">146</text>
+  <text x="718" y="258" text-anchor="end" fill="#94a3b8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5">hang-jin/editaplot</text>
+</svg>
