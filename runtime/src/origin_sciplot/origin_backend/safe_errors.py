@@ -62,11 +62,28 @@ class OriginExportError(_StructuredOriginError):
 
 
 _ACTIVATION_HRESULT_CODES = {
+    0x80004005: "origin_com_unspecified_failure",
+    0x80010001: "origin_com_call_rejected",
+    0x80010108: "origin_com_disconnected",
+    0x8001010A: "origin_com_server_busy",
     0x80080005: "origin_com_server_execution_failed",
     0x80040154: "origin_com_class_not_registered",
     0x80070005: "origin_com_activation_access_denied",
+    0x800706BA: "origin_com_server_unavailable",
 }
 _HRESULT_TEXT = re.compile(r"(?i)\b0x([0-9a-f]{8})\b")
+_HRESULT_ATTRIBUTES = ("hresult", "HResult", "winerror", "scode")
+_RETRYABLE_ACTIVATION_CODES = frozenset(
+    {
+        "origin_instance_start_failed",
+        "origin_com_unspecified_failure",
+        "origin_com_call_rejected",
+        "origin_com_disconnected",
+        "origin_com_server_busy",
+        "origin_com_server_execution_failed",
+        "origin_com_server_unavailable",
+    }
+)
 
 
 def classify_origin_activation_error(error: BaseException) -> str:
@@ -94,18 +111,23 @@ def classify_origin_activation_error(error: BaseException) -> str:
     return "origin_instance_start_failed"
 
 
+def is_retryable_origin_activation_error(code: str) -> bool:
+    """Return whether one fresh isolated-instance attempt is safe."""
+
+    return code in _RETRYABLE_ACTIVATION_CODES
+
+
 def origin_activation_recovery(code: str) -> dict[str, object] | None:
     """Return a bounded, non-mutating recovery policy for activation errors."""
 
-    if code in {
-        "origin_com_server_execution_failed",
-        "origin_com_activation_access_denied",
-    }:
+    if is_retryable_origin_activation_error(code):
         return {
-            "action": "retry_same_command_in_active_interactive_user_context",
+            "action": "retry_in_active_user_context_with_fresh_output_directory",
             "maximum_attempts": 1,
             "requires_user_approval": True,
             "must_preserve_execution_context_for_render": True,
+            "must_use_fresh_output_directory": True,
+            "preserve_previous_diagnostics": True,
             "automatic_fallback_to_attach_existing": False,
             "system_configuration_changes_allowed": False,
         }
@@ -132,6 +154,12 @@ def _iter_error_values(error: BaseException) -> Iterator[object]:
             continue
         seen.add(identity)
         if isinstance(value, BaseException):
+            for attribute in _HRESULT_ATTRIBUTES:
+                try:
+                    attribute_value = getattr(value, attribute)
+                except (AttributeError, OSError, RuntimeError):
+                    continue
+                pending.append(attribute_value)
             pending.extend(value.args)
             if value.__cause__ is not None:
                 pending.append(value.__cause__)

@@ -36,7 +36,9 @@ def _install_fake_originpro(
     fake_originpro = SimpleNamespace(
         oext=True,
         set_show=lambda show: events.append(("show", show)),
-        lt_float=lambda name: events.append(("read", name)) or raw_version,
+        lt_exec=lambda command: events.append(("lt_exec", command)) or True,
+        lt_float=lambda name: events.append(("read", name))
+        or (1.0 if name == "run.isOCready()" else raw_version),
         new=lambda **kwargs: events.append(("new", kwargs)),
         exit=lambda: events.append("exit"),
     )
@@ -73,6 +75,8 @@ def test_session_exposes_known_risks_without_blocking_instance_start(
     assert risks["origin_2025b_secondary_y_title"]["blocks_render"] is False
     assert events == [
         ("show", False),
+        ("lt_exec", "sec -poc 30;"),
+        ("read", "run.isOCready()"),
         ("read", "@V"),
         ("new", {"asksave": False}),
         "exit",

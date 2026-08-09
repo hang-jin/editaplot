@@ -143,6 +143,12 @@ With the environment ready and necessary confirmation complete, finishing the lo
 about four or five minutes is a reasonable range. If no reply or permission is pending and no new
 progress appears for 30–60 minutes, stop looped retries and use the
 [installation and stage-diagnosis guide](installation.md#runtime-duration).
+After a safely recoverable transient startup failure, the current runtime attempts to clean up the
+EditaPlot-owned partial instance and makes one fresh-instance attempt only if cleanup succeeds.
+Cleanup failure or a failed second activation stops the run; any approved retry must use a new empty
+sibling output directory so the first report is preserved. Do not force-kill a Python worker merely
+because it has run for a long time: it may be managing a hidden Origin instance. Preserve the
+diagnostics and identify the last stage first.
 
 ```text
 Use the confirmed plan. I do not need to open Origin first: run the real smoke test, start a

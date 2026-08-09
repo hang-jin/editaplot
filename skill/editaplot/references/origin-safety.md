@@ -21,9 +21,10 @@
 - A genuine Automation handshake/readback failure remains a technical failure. Report the stable
   stage and error code without guessing why it failed.
 - Classify common activation failures without exposing the original COM exception:
-  `0x80080005` as `origin_com_server_execution_failed`, `0x80040154` as
-  `origin_com_class_not_registered`, and `0x80070005` as
-  `origin_com_activation_access_denied`.
+  `0x80004005` as `origin_com_unspecified_failure`, `0x80080005` as
+  `origin_com_server_execution_failed`, `0x80040154` as `origin_com_class_not_registered`,
+  `0x80070005` as `origin_com_activation_access_denied`, and common RPC busy/disconnect conditions
+  by their dedicated stable codes. Inspect exception HRESULT attributes as well as nested args.
 
 ## Environment boundary
 
@@ -50,12 +51,22 @@
   state, overwrite work, hide the window, or call `exit()` in a user-owned session; detach instead.
 - Only an EditaPlot-owned instance may create a fresh project automatically or be closed by the
   runtime.
-- If isolated activation partially starts and raises, perform one best-effort `op.exit()` cleanup.
-  Do not call `set_show(True)` after that exception because it can trigger a second activation.
-- If activation fails in a restricted host but the registration is present, allow at most one
-  user-approved retry of the same smoke command in the active interactive Windows-user context.
-  Do not fall back to `ApplicationSI`; a render that follows a successful retry must use the same
-  execution context.
+- If isolated activation partially starts and raises, perform one `op.exit()` cleanup attempt. A
+  retryable code may start one fresh EditaPlot-owned `Application` instance automatically only when
+  that cleanup succeeds. Cleanup failure reports `origin_activation_cleanup_failed` and stops;
+  class-unavailable and access-denied codes also stop immediately. Do not call `set_show(True)`
+  after an entry failure.
+- After activation, wait with `sec -poc 30` and require a finite true `run.isOCready()` value before
+  version readback or project creation. A failed entry always attempts to exit the owned instance;
+  keep-open applies only after `__enter__` completed. Later entry failures stop without retry even
+  when their best-effort cleanup cannot be confirmed.
+- After the automatic attempt is exhausted, allow at most one user-approved retry in the active
+  interactive Windows-user context. Use a new empty sibling smoke directory and preserve the first
+  report. Do not fall back to `ApplicationSI`.
+- Do not force-terminate a smoke or render Python worker solely because of elapsed time. It may own
+  a hidden Origin instance, and Windows process termination skips Origin's normal cleanup path.
+  Preserve diagnostics, report the last progress stage, and require a proven cooperative cleanup
+  path before adding any automatic hard timeout.
 - Never use mouse or screen-coordinate automation.
 
 ## Version-sensitive rendering

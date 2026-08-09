@@ -109,14 +109,19 @@ rendering, exporting, and readback.
     and before formal rendering. `attach_existing` is an explicit advanced mode only; never reset,
     overwrite, or close a user-owned project, and detach instead of exiting. Report failures by
     technical stage and next step without speculation.
-    Never use mouse automation or provide application patches or bypass instructions. If activation
-    returns `origin_com_server_execution_failed` or `origin_com_activation_access_denied`, do not
-    loop, switch to `ApplicationSI`, edit DCOM/registry permissions, or tell a beginner to run the
-    whole workflow as administrator. Request approval for at most one retry of the identical smoke
-    command in the same active interactive Windows-user context; the subsequent render must use
-    that same context. If it still fails, stop with the stable code and the local compatibility
-    report. For `origin_com_class_not_registered`, report that the isolated Automation entry is not
-    callable and stop; installation/registration changes remain user-managed.
+    Never use mouse automation or provide application patches or bypass instructions. The runtime
+    must attempt to clean a partial EditaPlot-owned activation and may try one fresh isolated
+    instance for a retryable startup code only if cleanup succeeds. Cleanup failure returns
+    `origin_activation_cleanup_failed` and stops. It must then wait with `sec -poc 30` and confirm
+    `run.isOCready()` before reading the version or creating a project. Never loop, switch to
+    `ApplicationSI`, edit DCOM/registry permissions, or tell a beginner to run the whole workflow as
+    administrator. After the automatic attempt is exhausted, request approval for at most one retry
+    in the same active Windows-user context and use a fresh empty sibling smoke directory so the
+    first report remains intact. `origin_com_class_not_registered` and
+    `origin_com_activation_access_denied` stop without automatic retry. Do not force-terminate a
+    Python worker merely because it has run for a long time: it may own a hidden Origin instance.
+    Preserve diagnostics and report the last progress stage before proposing any user-controlled
+    cancellation.
 15. Only after that smoke passes, render an allowed template route with
     `editaplot.cmd render <plan>`. Keep an EditaPlot-owned Origin instance open after success unless
     the user requests otherwise. By default, let the runtime create a direct sibling of the source

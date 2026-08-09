@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import platform
 import struct
 from contextlib import suppress
@@ -16,7 +17,11 @@ from .capabilities import (
     SessionOwnership,
     parse_origin_version,
 )
-from .safe_errors import OriginEnvironmentError, classify_origin_activation_error
+from .safe_errors import (
+    OriginEnvironmentError,
+    classify_origin_activation_error,
+    is_retryable_origin_activation_error,
+)
 from .version_risks import ProbePriority, known_version_risks
 
 
@@ -135,25 +140,38 @@ class OriginSession:
         """Create and own a fresh Origin instance without requiring manual launch."""
 
         self.op = op
-        try:
-            # In external originpro mode this first call activates
-            # OriginExt.Application(), which always creates a new instance.
-            op.set_show(False)
-        except Exception as exc:  # noqa: BLE001 - redact local Automation failure details
-            # Activation may have created a partial EditaPlot-owned instance.
-            # Best-effort exit follows OriginLab's external-Python cleanup
-            # guidance.  Do not call set_show(True): that can perform a second
-            # activation and obscure the original failure.
-            with suppress(Exception):
-                op.exit()
-            self._clear_failed_entry()
-            raise OriginEnvironmentError(
-                "Origin Automation connection failed",
-                code=classify_origin_activation_error(exc),
-                stage="create_instance",
-            ) from exc
+        for attempt in range(2):
+            try:
+                # In external originpro mode this first call activates
+                # OriginExt.Application(), which always creates a new instance.
+                op.set_show(False)
+                break
+            except Exception as exc:  # noqa: BLE001 - redact local Automation failure details
+                code = classify_origin_activation_error(exc)
+                # Activation may have created a partial EditaPlot-owned
+                # instance. OriginLab's external-Python lifecycle permits
+                # best-effort Exit; its wrapper then creates a fresh
+                # Application object on the next access.
+                try:
+                    op.exit()
+                except Exception as cleanup_exc:  # noqa: BLE001 - redact local details
+                    self._clear_failed_entry()
+                    raise OriginEnvironmentError(
+                        "Origin startup cleanup failed",
+                        code="origin_activation_cleanup_failed",
+                        stage="cleanup_partial_instance",
+                    ) from cleanup_exc
+                if attempt == 0 and is_retryable_origin_activation_error(code):
+                    continue
+                self._clear_failed_entry()
+                raise OriginEnvironmentError(
+                    "Origin Automation connection failed",
+                    code=code,
+                    stage="create_instance",
+                ) from exc
 
         self.ownership = SessionOwnership.EDITAPLOT
+        self._wait_until_ready(op)
         version_info = self._read_supported_version(op)
 
         try:
@@ -169,6 +187,42 @@ class OriginSession:
 
         self.environment = self._environment(version_info)
         return self
+
+    def _wait_until_ready(self, op: ModuleType | Any) -> None:
+        """Wait for Origin C and verify readiness before touching the project."""
+
+        try:
+            command_ok = op.lt_exec("sec -poc 30;")
+        except Exception as exc:  # noqa: BLE001 - redact local Automation failure details
+            self._cleanup_failed_entry(op)
+            raise OriginEnvironmentError(
+                "Origin startup readiness could not be checked",
+                code="origin_startup_readiness_check_failed",
+                stage="wait_origin_ready",
+            ) from exc
+        if not command_ok:
+            self._cleanup_failed_entry(op)
+            raise OriginEnvironmentError(
+                "Origin did not finish starting",
+                code="origin_startup_not_ready",
+                stage="wait_origin_ready",
+            )
+        try:
+            ready = float(op.lt_float("run.isOCready()"))
+        except Exception as exc:  # noqa: BLE001 - redact local Automation failure details
+            self._cleanup_failed_entry(op)
+            raise OriginEnvironmentError(
+                "Origin startup readiness could not be checked",
+                code="origin_startup_readiness_check_failed",
+                stage="wait_origin_ready",
+            ) from exc
+        if not math.isfinite(ready) or ready < 0.5:
+            self._cleanup_failed_entry(op)
+            raise OriginEnvironmentError(
+                "Origin did not finish starting",
+                code="origin_startup_not_ready",
+                stage="wait_origin_ready",
+            )
 
     def _enter_attached(self, op: ModuleType | Any):
         """Attach to a user session without resetting, hiding, or owning it."""
@@ -245,12 +299,10 @@ class OriginSession:
             with suppress(Exception):
                 op.detach()
         elif self.ownership is SessionOwnership.EDITAPLOT:
-            if self.keep_open:
-                with suppress(Exception):
-                    op.set_show(True)
-            else:
-                with suppress(Exception):
-                    op.exit()
+            # Entry never completed, so keep_open does not apply. Leaving a
+            # visible instance here would discard the only management handle.
+            with suppress(Exception):
+                op.exit()
         self._clear_failed_entry()
 
     def _clear_failed_entry(self) -> None:

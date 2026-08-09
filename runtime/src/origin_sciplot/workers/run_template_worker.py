@@ -18,6 +18,7 @@ from origin_sciplot.origin_backend.safe_errors import (
     OriginEnvironmentError,
     OriginExportError,
     WorkerExitCode,
+    origin_activation_recovery,
     safe_error_message,
 )
 from origin_sciplot.origin_backend.template_capabilities import (
@@ -1022,7 +1023,13 @@ def main(argv: list[str] | None = None) -> int:
                 "Origin environment error "
                 f"[{exc.code}/{exc.stage}]: {safe_error_message(exc)}"
             )
-        proto.error(exc.code, safe_error_message(exc), stage=exc.stage)
+        recovery = origin_activation_recovery(exc.code)
+        proto.error(
+            exc.code,
+            safe_error_message(exc),
+            stage=exc.stage,
+            **({"recovery": recovery} if recovery is not None else {}),
+        )
         return WorkerExitCode.ORIGIN_ENVIRONMENT
     except OriginDrawError as exc:
         if logger:

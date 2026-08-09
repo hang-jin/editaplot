@@ -145,7 +145,7 @@ The current public capability set contains 40 Origin plotting routes. The reposi
 
 With an existing project environment, an ordinary-sized table, and the necessary confirmation already complete or unnecessary, I treat **up to about four or five minutes for local recognition, the live smoke test, Origin startup, rendering, export, and verification** as a reasonable range. This is not a fixed per-machine guarantee: first-time dependency installation, large Excel files, complex layers, slow storage, or Windows security scanning can add time.
 
-**When no reply or permission is pending and no new local progress event appears, thirty to sixty minutes is not a normal plotting duration.** In that situation I ask Codex to report the current stage and its elapsed time before applying the smallest relevant check:
+**When no reply or permission is pending and no new local progress event appears, thirty to sixty minutes is not a normal plotting duration.** After a safely recoverable transient startup failure, the current release attempts to clean up the EditaPlot-owned partial instance and retries once only when that cleanup succeeds. It deliberately does not force-kill a Python worker that may be managing a hidden Origin instance, because that could leave Origin unmanaged. In that situation I ask Codex to preserve the existing diagnostics, report the current stage and its elapsed time, and then apply the smallest relevant check:
 
 1. `setup` or dependency download: check GitHub, the Python package source, proxy, and network;
 2. data understanding and confirmation: check whether Codex is waiting for a reply or permission;
@@ -154,6 +154,10 @@ With an existing project environment, an ordinary-sized table, and the necessary
 5. `verify`: inspect OPJU, PNG, PDF, TIF, and readback instead of rendering again.
 
 Formal local rendering should not require a continuous network connection. Network access is mainly relevant to the initial download, updates, and locked dependency installation. If the stage is not changing, Codex should not loop retries, reinstall the environment repeatedly, or broaden system permissions.
+A transient activation failure receives one automatic fresh-instance attempt only after partial-startup
+cleanup succeeds. Cleanup failure or a failed second activation stops the run; any approved retry uses
+a new empty sibling output directory so the first diagnostic evidence is preserved. EditaPlot never
+silently takes over a user project.
 
 ## Scientific palettes
 
