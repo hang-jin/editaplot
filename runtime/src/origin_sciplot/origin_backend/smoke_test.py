@@ -448,17 +448,17 @@ def _read_axis(axis: Any) -> dict[str, Any]:
 
 def _position_smoke_titles(
     op: Any,
-    layer: Any,
     labels: dict[str, Any],
+    geometry: dict[str, Any],
 ) -> tuple[float, float]:
     """Place the two axis titles inside the physical page, independent of templates."""
 
     page_width = float(op.lt_float("page.width"))
     page_height = float(op.lt_float("page.height"))
-    layer_left = float(layer.get_float("left"))
-    layer_top = float(layer.get_float("top"))
-    layer_width = float(layer.get_float("width"))
-    layer_height = float(layer.get_float("height"))
+    layer_left = float(geometry["left_percent"])
+    layer_top = float(geometry["top_percent"])
+    layer_width = float(geometry["width_percent"])
+    layer_height = float(geometry["height_percent"])
     padding_x = page_width * 0.005
     padding_y = page_height * 0.005
 
@@ -624,7 +624,13 @@ def _style_smoke_graph(
     )
     if not graph.obj.LT_execute("doc -uw;"):
         raise RuntimeError("graph update failed")
-    page_width, page_height = _position_smoke_titles(op, layer, labels)
+    page_state = verify_page_and_layer(
+        graph,
+        layer,
+        origin=op,
+        style=SMOKE_STYLE,
+    )
+    page_width, page_height = _position_smoke_titles(op, labels, page_state)
     if not graph.obj.LT_execute("doc -uw;"):
         raise RuntimeError("title position update failed")
     for legend_name in ("legend", "Legend"):
@@ -637,6 +643,7 @@ def _style_smoke_graph(
     page_state = verify_page_and_layer(
         graph,
         layer,
+        origin=op,
         style=SMOKE_STYLE,
     )
     text_sizes = verify_text_sizes(

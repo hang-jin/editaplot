@@ -37,7 +37,11 @@ prove that every template is available. Apply the selected template's capability
 - For a reference-driven plan, confirm the image/spec hashes, essential mark bindings, applied and
   rejected style tokens, and that no reference pixels, OCR text, code, source values, author marks,
   logos, or watermarks entered the plan or output folder.
-- Confirm page dimensions and registered layer geometry.
+- Confirm page dimensions and registered layer geometry. The geometry report must include
+  `geometry_readback_source`, `layer_unit`, the canonical left/top/width/height values, the
+  correctly mapped `layer -x` values, raw bridge values when available, and
+  `bridge_geometry_consistent`. Accept a stale bridge only when the two native LabTalk paths agree
+  and still match the registered contract; otherwise fail closed.
 - Confirm required axes, titles, label tables, scale direction, tick visibility, text sizes and font codes,
   plot widths, frame widths, and special plot labels where applicable.
 - Confirm the X and Y tick-label font codes are identical to the registered profile after any

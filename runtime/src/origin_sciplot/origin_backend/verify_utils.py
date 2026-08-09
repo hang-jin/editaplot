@@ -14,6 +14,125 @@ from .base_style_contract import FIXED_ORIGIN_STYLE, pt_to_origin_width_units
 # gate accepts that quantization while remaining far below a visible layout
 # change.
 PAGE_SIZE_TOLERANCE_CM = 0.03
+LAYER_GEOMETRY_TOLERANCE_PERCENT = 0.03
+
+
+def _finite_float(value: Any, label: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise RuntimeError(f"Origin geometry readback is non-finite: {label}")
+    return number
+
+
+def _read_bridge_geometry(layer: Any) -> dict[str, float | None]:
+    """Read the originpro bridge for diagnostics without making it canonical."""
+
+    state: dict[str, float | None] = {}
+    for output_name, property_name in (
+        ("bridge_layer_unit", "unit"),
+        ("bridge_left_percent", "left"),
+        ("bridge_top_percent", "top"),
+        ("bridge_width_percent", "width"),
+        ("bridge_height_percent", "height"),
+        ("bridge_factor", "factor"),
+    ):
+        try:
+            value = float(layer.get_float(property_name))
+        except Exception:
+            value = math.nan
+        state[output_name] = value if math.isfinite(value) else None
+    return state
+
+
+def read_layer_geometry_percent(origin: Any, layer: Any) -> dict[str, Any]:
+    """Read percent-of-page geometry through two cross-checked LabTalk paths.
+
+    A reported Origin 2026b SR1 environment returned a conflicting ``left``
+    value through the originpro ``GetNumProp`` bridge. LabTalk's layer
+    properties and the documented ``layer -x`` command provide the native
+    cross-check needed to distinguish a bridge-only disagreement from a real
+    layout failure. The bridge values are retained as diagnostics, but never
+    override two agreeing native readbacks.
+
+    ``layer -x`` has a non-intuitive official order: ``v1=width``,
+    ``v2=height``, ``v3=left``, and ``v4=top``.
+    """
+
+    layer.activate()
+    # Clear the shared v-registers first.  If a version returns success without
+    # refreshing them, the finite-value gate below must fail instead of
+    # accepting geometry left behind by an earlier layer.
+    command_ok = layer.obj.LT_execute(
+        "v1=NA();v2=NA();v3=NA();v4=NA();layer -x;"
+    )
+    if not command_ok:
+        raise RuntimeError("Origin LabTalk layer geometry command failed: layer -x")
+
+    # Capture v1..v4 immediately; later LabTalk expression evaluations must
+    # not get a chance to replace the command result on another version.
+    layer_x = {
+        "width_percent": _finite_float(
+            origin.lt_float("v1"), "layer -x v1 (width)"
+        ),
+        "height_percent": _finite_float(
+            origin.lt_float("v2"), "layer -x v2 (height)"
+        ),
+        "left_percent": _finite_float(
+            origin.lt_float("v3"), "layer -x v3 (left)"
+        ),
+        "top_percent": _finite_float(
+            origin.lt_float("v4"), "layer -x v4 (top)"
+        ),
+    }
+    direct = {
+        "layer_unit": _finite_float(origin.lt_float("layer.unit"), "layer.unit"),
+        "left_percent": _finite_float(origin.lt_float("layer.left"), "layer.left"),
+        "top_percent": _finite_float(origin.lt_float("layer.top"), "layer.top"),
+        "width_percent": _finite_float(origin.lt_float("layer.width"), "layer.width"),
+        "height_percent": _finite_float(origin.lt_float("layer.height"), "layer.height"),
+        "factor": _finite_float(origin.lt_float("layer.factor"), "layer.factor"),
+    }
+    if abs(direct["layer_unit"] - 1.0) > LAYER_GEOMETRY_TOLERANCE_PERCENT:
+        raise RuntimeError(
+            "Origin layer geometry unit verification failed: "
+            f"got {direct['layer_unit']:.3f}, expected 1 (% of page)"
+        )
+    for key, layer_x_value in layer_x.items():
+        direct_value = direct[key]
+        if abs(direct_value - layer_x_value) > LAYER_GEOMETRY_TOLERANCE_PERCENT:
+            raise RuntimeError(
+                "Origin LabTalk layer geometry paths disagree: "
+                f"{key} direct={direct_value:.3f}, layer-x={layer_x_value:.3f}"
+            )
+
+    bridge = _read_bridge_geometry(layer)
+    bridge_geometry_consistent = (
+        bridge["bridge_layer_unit"] is not None
+        and abs(float(bridge["bridge_layer_unit"]) - direct["layer_unit"])
+        <= LAYER_GEOMETRY_TOLERANCE_PERCENT
+        and all(
+            bridge[f"bridge_{key}"] is not None
+        and abs(float(bridge[f"bridge_{key}"]) - direct[key])
+        <= LAYER_GEOMETRY_TOLERANCE_PERCENT
+            for key in (
+                "left_percent",
+                "top_percent",
+                "width_percent",
+                "height_percent",
+                "factor",
+            )
+        )
+    )
+    return {
+        **direct,
+        "geometry_readback_source": "labtalk_crosscheck",
+        "layer_x_left_percent": layer_x["left_percent"],
+        "layer_x_top_percent": layer_x["top_percent"],
+        "layer_x_width_percent": layer_x["width_percent"],
+        "layer_x_height_percent": layer_x["height_percent"],
+        **bridge,
+        "bridge_geometry_consistent": bridge_geometry_consistent,
+    }
 
 
 def require_nonempty(path: str | Path) -> None:
@@ -156,9 +275,10 @@ def verify_page_and_layer(
     graph: Any,
     layer: Any,
     *,
+    origin: Any,
     style: Any = FIXED_ORIGIN_STYLE,
     expected_layer: Mapping[str, float] | None = None,
-) -> dict[str, float]:
+) -> dict[str, Any]:
     expected = {
         "left_percent": style.layer_left_percent,
         "top_percent": style.layer_top_percent,
@@ -169,30 +289,25 @@ def verify_page_and_layer(
     if expected_layer is not None:
         expected.update(expected_layer)
 
-    for _attempt in range(3):
-        page_cm = {
-            "width_cm": graph.obj.GetWidth() * 2.54,
-            "height_cm": graph.obj.GetHeight() * 2.54,
-        }
-        layer_values = {
-            "left_percent": layer.get_float("left"),
-            "top_percent": layer.get_float("top"),
-            "width_percent": layer.get_float("width"),
-            "height_percent": layer.get_float("height"),
-            "factor": layer.get_float("factor"),
-        }
-        page_ok = (
-            abs(page_cm["width_cm"] - style.page_width_cm) <= PAGE_SIZE_TOLERANCE_CM
-            and abs(page_cm["height_cm"] - style.page_height_cm) <= PAGE_SIZE_TOLERANCE_CM
-        )
-        layer_ok = all(abs(layer_values[key] - value) <= 0.02 for key, value in expected.items())
-        if page_ok and layer_ok:
-            return {**page_cm, **layer_values}
+    def read_layer() -> dict[str, Any]:
+        return read_layer_geometry_percent(origin, layer)
 
+    def read_page() -> dict[str, float]:
+        return {
+            "width_cm": _finite_float(
+                graph.obj.GetWidth() * 2.54, "page.width_cm"
+            ),
+            "height_cm": _finite_float(
+                graph.obj.GetHeight() * 2.54, "page.height_cm"
+            ),
+        }
+
+    def restore_contract() -> None:
         graph.activate()
         graph.obj.LT_execute("page.updatetoprinter=0;page.kar=0;doc -uw;")
         graph.obj.PutWidth(style.page_width_cm / 2.54)
         graph.obj.PutHeight(style.page_height_cm / 2.54)
+        layer.activate()
         layer.set_int("unit", 1)
         layer.set_float("left", expected["left_percent"])
         layer.set_float("top", expected["top_percent"])
@@ -200,12 +315,43 @@ def verify_page_and_layer(
         layer.set_float("height", expected["height_percent"])
         layer.set_int("fixed", style.layer_fixed)
         layer.set_float("factor", expected["factor"])
-        graph.obj.LT_execute("doc -uw;")
+        # The property assignments are documented LabTalk and provide a
+        # version-neutral write path in addition to the originpro setters.
+        layer.obj.LT_execute(
+            "layer.unit=1;"
+            f"layer.left={expected['left_percent']:g};"
+            f"layer.top={expected['top_percent']:g};"
+            f"layer.width={expected['width_percent']:g};"
+            f"layer.height={expected['height_percent']:g};"
+            f"layer.fixed={int(style.layer_fixed)};"
+            f"layer.factor={expected['factor']:g};"
+            "doc -uw;"
+        )
 
-    page_cm = {
-        "width_cm": graph.obj.GetWidth() * 2.54,
-        "height_cm": graph.obj.GetHeight() * 2.54,
-    }
+    layer_values: dict[str, Any] = {}
+    for _attempt in range(3):
+        try:
+            page_cm = read_page()
+            layer_values = read_layer()
+        except RuntimeError:
+            page_cm = {}
+            layer_values = {}
+        page_ok = bool(page_cm) and (
+            abs(page_cm["width_cm"] - style.page_width_cm) <= PAGE_SIZE_TOLERANCE_CM
+            and abs(page_cm["height_cm"] - style.page_height_cm) <= PAGE_SIZE_TOLERANCE_CM
+        )
+        layer_ok = bool(layer_values) and all(
+            abs(float(layer_values[key]) - value) <= LAYER_GEOMETRY_TOLERANCE_PERCENT
+            for key, value in expected.items()
+        )
+        if page_ok and layer_ok:
+            return {**page_cm, **layer_values}
+        restore_contract()
+
+    try:
+        page_cm = read_page()
+    except RuntimeError as exc:
+        raise RuntimeError(f"Origin page geometry verification failed: {exc}") from exc
     if abs(page_cm["width_cm"] - style.page_width_cm) > PAGE_SIZE_TOLERANCE_CM:
         raise RuntimeError(
             f"Origin page width verification failed: got {page_cm['width_cm']:.3f} cm, "
@@ -216,17 +362,14 @@ def verify_page_and_layer(
             f"Origin page height verification failed: got {page_cm['height_cm']:.3f} cm, "
             f"expected {style.page_height_cm:.3f} cm"
         )
+    try:
+        layer_values = read_layer()
+    except RuntimeError as exc:
+        raise RuntimeError(f"Origin layer geometry verification failed: {exc}") from exc
     for key, value in expected.items():
-        actual = layer.get_float(key.removesuffix("_percent") if key.endswith("_percent") else key)
-        if abs(actual - value) > 0.02:
+        actual = float(layer_values[key])
+        if abs(actual - value) > LAYER_GEOMETRY_TOLERANCE_PERCENT:
             raise RuntimeError(
                 f"Origin layer {key} verification failed: got {actual:.3f}, expected {value:.3f}"
             )
-    return {
-        **page_cm,
-        "left_percent": layer.get_float("left"),
-        "top_percent": layer.get_float("top"),
-        "width_percent": layer.get_float("width"),
-        "height_percent": layer.get_float("height"),
-        "factor": layer.get_float("factor"),
-    }
+    return {**page_cm, **layer_values}

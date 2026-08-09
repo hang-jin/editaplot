@@ -41,6 +41,7 @@ from .scientific_renderer import _figure_style, _origin_font_code, _style_label
 from .session import OriginSession
 from .verify_utils import (
     PAGE_SIZE_TOLERANCE_CM,
+    read_layer_geometry_percent,
     require_nonempty,
     verify_plot_color,
     verify_plot_line_widths,
@@ -345,7 +346,11 @@ def _set_page_size(graph: Any, preparation: ScientificPreparation) -> dict[str, 
     )
 
 
-def _apply_layer_geometry(layer: Any, geometry: NetworkLayerGeometry) -> dict[str, float]:
+def _apply_layer_geometry(
+    op: Any,
+    layer: Any,
+    geometry: NetworkLayerGeometry,
+) -> dict[str, Any]:
     layer.set_int("unit", 1)
     layer.set_float("left", geometry.left)
     layer.set_float("top", geometry.top)
@@ -353,12 +358,17 @@ def _apply_layer_geometry(layer: Any, geometry: NetworkLayerGeometry) -> dict[st
     layer.set_float("height", geometry.height)
     layer.set_int("fixed", 1)
     layer.set_float("factor", 1.0)
-    state = {
-        "left": float(layer.get_float("left")),
-        "top": float(layer.get_float("top")),
-        "width": float(layer.get_float("width")),
-        "height": float(layer.get_float("height")),
-        "factor": float(layer.get_float("factor")),
+    layer.obj.LT_execute("doc -uw;")
+    readback = read_layer_geometry_percent(op, layer)
+    state: dict[str, Any] = {
+        "left": float(readback["left_percent"]),
+        "top": float(readback["top_percent"]),
+        "width": float(readback["width_percent"]),
+        "height": float(readback["height_percent"]),
+        "factor": float(readback["factor"]),
+        "geometry_readback_source": readback["geometry_readback_source"],
+        "bridge_geometry_consistent": readback["bridge_geometry_consistent"],
+        "bridge_left_percent": readback["bridge_left_percent"],
     }
     expected = {**geometry.to_dict(), "factor": 1.0}
     if any(abs(state[key] - expected[key]) > 0.03 for key in expected):
@@ -566,7 +576,7 @@ def _draw_panel(
     style = _figure_style(preparation)
     font_code = _origin_font_code(op, style.font_family)
     panel = layout.panels[panel_index]
-    geometry_state = _apply_layer_geometry(layer, geometry)
+    geometry_state = _apply_layer_geometry(op, layer, geometry)
     axis_state = _set_layer_limits(layer, _scale_limits(preparation, geometry))
     axis_state.update(_hide_axes(layer))
     _remove_template_labels(layer)
@@ -761,7 +771,7 @@ def _draw_legend(
         raise OriginDrawError("Circular-network geometry is missing.")
     style = _figure_style(preparation)
     font_code = _origin_font_code(op, style.font_family)
-    geometry_state = _apply_layer_geometry(layer, geometry)
+    geometry_state = _apply_layer_geometry(op, layer, geometry)
     layer.axis("x").set_limits(0.0, 1.0)
     layer.axis("y").set_limits(0.0, 1.0)
     axis_state = {

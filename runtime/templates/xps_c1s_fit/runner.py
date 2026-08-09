@@ -139,7 +139,7 @@ def _apply_page_layer(
     layer.set_int("fixed", style.layer_fixed)
     layer.set_float("factor", style.layer_factor)
     op.set_show(True)
-    return verify_page_and_layer(graph, layer, style=style)
+    return verify_page_and_layer(graph, layer, origin=op, style=style)
 
 
 def _style_axis(

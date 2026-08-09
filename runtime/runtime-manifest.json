@@ -85,13 +85,13 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/categorical_renderer.py",
-      "size_bytes": 63128,
-      "sha256": "8c7c3589763572f11321af9aa4d30266dad859e9c6841f30939572c2abd900c3"
+      "size_bytes": 63283,
+      "sha256": "23d7f56d1fcb1f5c6d38583d26d6a38cd0d9da9f747b98a60ef237bc6a248771"
     },
     {
       "path": "src/origin_sciplot/origin_backend/density_ridgeline3d_renderer.py",
-      "size_bytes": 43436,
-      "sha256": "c58fcf7a4baccf13d3ca65cd26cdb5e9c7db4ffb6b61c193c2f2a6293a3c294a"
+      "size_bytes": 43207,
+      "sha256": "3450c568dd6e46d3d827f0cbe07346e892310573e11c544d9d9b6e762eba5f70"
     },
     {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
@@ -105,8 +105,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/network_renderer.py",
-      "size_bytes": 37813,
-      "sha256": "efc6726aec4c2afd1fc1f274a92d31def378130b0813948fa032fb856f6ca384"
+      "size_bytes": 38196,
+      "sha256": "9b6bf313e8ad83678974770c3f0300736d9a191e0e408c51a4107b01887f1db5"
     },
     {
       "path": "src/origin_sciplot/origin_backend/safe_errors.py",
@@ -115,8 +115,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/scientific_renderer.py",
-      "size_bytes": 70808,
-      "sha256": "da0ad09b145d9a4ccbc224d258d8bd6b1475f142418cd39fbf3d592c292b98f7"
+      "size_bytes": 71215,
+      "sha256": "598eeb189898522e7ea474956eecf158333905f3b4ff7f098da510d33bc66f52"
     },
     {
       "path": "src/origin_sciplot/origin_backend/session.py",
@@ -125,8 +125,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/smoke_test.py",
-      "size_bytes": 36701,
-      "sha256": "56ef52b80fd8b5636b07ee3b5dece6c315b83df1bcc96d0188c437000a7cdb29"
+      "size_bytes": 36865,
+      "sha256": "b2576adbf2cc8b25f8b0d9d6796014726d67b1e2e2e990c9247fb85661d7b0f8"
     },
     {
       "path": "src/origin_sciplot/origin_backend/template_capabilities.py",
@@ -135,13 +135,13 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/trajectory3d_renderer.py",
-      "size_bytes": 19727,
-      "sha256": "a4ab63e0e0b2231d09bfe055d261c99821b115bcf740c70993409d53e9f48026"
+      "size_bytes": 19498,
+      "sha256": "1ae662d2ca320e29e9ab34fbcd8b0a7c2ef8ecea754986e88e51190780e1c141"
     },
     {
       "path": "src/origin_sciplot/origin_backend/verify_utils.py",
-      "size_bytes": 8844,
-      "sha256": "79192d848bc5a58268f3b9c7a6301eb9da5a75afdb9f508816f9f9435f803048"
+      "size_bytes": 14534,
+      "sha256": "e93874c8f73439b35aa8bd50c9b80e65aaea4bc5b127395b6b9835ac920cf9c9"
     },
     {
       "path": "src/origin_sciplot/origin_backend/version_risks.py",
@@ -1860,8 +1860,8 @@
     },
     {
       "path": "templates/xps_adaptive/runner.py",
-      "size_bytes": 40369,
-      "sha256": "a045c6d2194dda4f86ca91e014602e2c8ae946db7a151a3772cd7f6216bdb62d"
+      "size_bytes": 40388,
+      "sha256": "63f13e08aeae740bb0704ca05e9196f94e621172bd18fb41ea1adb501a88e961"
     },
     {
       "path": "templates/xps_adaptive/schema.json",
@@ -1900,8 +1900,8 @@
     },
     {
       "path": "templates/xps_c1s_fit/runner.py",
-      "size_bytes": 34044,
-      "sha256": "f227f20bbd4b13306fef4491d00140b99981ab1a04a49783ff5dd558d3791a78"
+      "size_bytes": 34055,
+      "sha256": "9b2cca6aa0fb3fad8e0bbe3c43197ece595412becb68242eeda9dfdff48f2116"
     },
     {
       "path": "templates/xps_c1s_fit/schema.json",
