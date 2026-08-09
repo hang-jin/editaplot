@@ -68,6 +68,13 @@
 - A known fixed build still receives its required probe at normal priority. A known affected or
   unknown build receives the probe at high priority.
 - Never modify global Graph Options, system themes, or `@GGO` to make one render pass.
+- For percent-of-page layer geometry, require `layer.unit=1`. Cross-check the documented LabTalk
+  `layer.left/top/width/height` properties against `layer -x`; map `v1=width`, `v2=height`,
+  `v3=left`, and `v4=top`. Never treat `v1` as the left margin.
+- Keep originpro `GetNumProp` geometry as bridge diagnostics. If both native LabTalk paths are
+  finite, agree, and match the registered contract, a stale bridge value may be reported without
+  blocking. If the native paths disagree, the unit is not 1, or either path is unavailable, fail
+  closed. Do not hard-code an Origin-version bypass or a tolerated `70.06` value.
 
 ## Stable execution routes
 

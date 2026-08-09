@@ -108,6 +108,7 @@ def _apply_page_layer(op: Any, graph: Any, layer: Any, style: Any) -> dict[str, 
     return verify_page_and_layer(
         graph,
         layer,
+        origin=op,
         style=style,
         expected_layer={
             "left_percent": style.layer_left_percent,

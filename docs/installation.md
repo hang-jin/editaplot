@@ -200,6 +200,12 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 对象反读、验证与 provenance 集中保存。源文件不会被覆盖。只有你明确要求其他目的地时，
 才可为 render 指定 `--output-dir`。
 
+如果旧版本曾在 `style_graph` 阶段提示左边距应为 `17`、却读回约 `70.06`，请先更新仓库的
+`main`，再重新运行 `setup` 和同一条 smoke。这个问题来自旧版几何反读兼容层，不需要改 Origin、
+注册表或 DCOM，也不需要管理员权限。新版会用两条 Origin 原生 LabTalk 路径交叉确认图层几何；
+两条路径不一致时仍会安全停止。若更新后仍失败，只需记录失败阶段、短错误代码和 Origin 产品版本，
+公开截图前遮住所有与技术故障无关的信息和本地路径。
+
 ## 如果电脑完全没有兼容 Python
 
 如果电脑完全没有兼容 Python，我会要求 Codex 先用中文告诉你：接下来可能安装一个

@@ -33,6 +33,7 @@ from .export_utils import export_graph
 from .safe_errors import OriginDrawError
 from .session import OriginSession
 from .verify_utils import (
+    read_layer_geometry_percent,
     require_nonempty,
     verify_page_and_layer,
     verify_plot_color,
@@ -481,6 +482,7 @@ def _apply_page_layer(
     return verify_page_and_layer(
         graph,
         layer,
+        origin=op,
         style=style,
         expected_layer={"left_percent": left, "width_percent": width},
     )
@@ -698,10 +700,11 @@ def _position_axis_titles_on_page(
 
     page_width = float(op.lt_float("page.width"))
     page_height = float(op.lt_float("page.height"))
-    layer_left = float(layer.get_float("left"))
-    layer_top = float(layer.get_float("top"))
-    layer_width = float(layer.get_float("width"))
-    layer_height = float(layer.get_float("height"))
+    geometry = read_layer_geometry_percent(op, layer)
+    layer_left = float(geometry["left_percent"])
+    layer_top = float(geometry["top_percent"])
+    layer_width = float(geometry["width_percent"])
+    layer_height = float(geometry["height_percent"])
     layer_right = layer_left + layer_width
     padding_x = page_width * 0.005
     padding_y = page_height * 0.005
@@ -1471,7 +1474,13 @@ def _add_uv_vis_inset(
         annotation.color = op.ocolor("#27343D")
     inset.activate()
     op.lt_exec("doc -uw;")
-    geometry = {key: float(inset.get_float(key)) for key in ("left", "top", "width", "height")}
+    geometry_readback = read_layer_geometry_percent(op, inset)
+    geometry = {
+        "left": float(geometry_readback["left_percent"]),
+        "top": float(geometry_readback["top_percent"]),
+        "width": float(geometry_readback["width_percent"]),
+        "height": float(geometry_readback["height_percent"]),
+    }
     if geometry["left"] + geometry["width"] > 100.05 or geometry["top"] + geometry["height"] > 100.05:
         raise OriginDrawError("Origin Tauc inset extends beyond the page.")
     axis_state = {
@@ -1523,6 +1532,7 @@ def _add_uv_vis_inset(
         "command": "layadd type:=inset;",
         "layer_count": len(graph),
         "geometry_percent": geometry,
+        "geometry_readback": geometry_readback,
         "axis_state": axis_state,
         "text_state": text_state,
         "plots": plots,
@@ -1563,6 +1573,7 @@ def _build_origin_graph(
         geometry = verify_page_and_layer(
             graph,
             layer,
+            origin=op,
             style=style,
             expected_layer={
                 "left_percent": style.layer_left_percent,

@@ -54,6 +54,7 @@ from .scientific_renderer import (
 from .session import OriginSession
 from .verify_utils import (
     PAGE_SIZE_TOLERANCE_CM,
+    read_layer_geometry_percent,
     require_nonempty,
     verify_page_and_layer,
     verify_plot_line_widths,
@@ -386,7 +387,10 @@ def _position_horizontal_value_title(op: Any, layer: Any, label: Any) -> None:
     op.lt_exec("doc -uw;")
     page_width = float(op.lt_float("page.width"))
     page_height = float(op.lt_float("page.height"))
-    layer_center = page_width * (layer.get_float("left") + layer.get_float("width") / 2.0) / 100.0
+    geometry = read_layer_geometry_percent(op, layer)
+    layer_center = page_width * (
+        float(geometry["left_percent"]) + float(geometry["width_percent"]) / 2.0
+    ) / 100.0
     label.set_float("left", layer_center - label.get_float("width") / 2.0)
     label.set_float("top", page_height - label.get_float("height") - page_height * 0.015)
     op.lt_exec("doc -uw;")
@@ -507,6 +511,7 @@ def _build_bar_graph(
     geometry = verify_page_and_layer(
         graph,
         layer,
+        origin=op,
         style=style,
     )
     initial_plots = list(layer.plot_list())
@@ -1182,6 +1187,7 @@ def _build_heatmap_graph(
     geometry = verify_page_and_layer(
         graph,
         layer,
+        origin=op,
         style=style,
     )
     _style_axes(op, layer, preparation)

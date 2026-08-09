@@ -34,7 +34,7 @@ from .base_style_contract import pt_to_origin_width_units
 from .export_utils import export_graph
 from .safe_errors import OriginDrawError
 from .session import OriginSession
-from .verify_utils import require_nonempty
+from .verify_utils import read_layer_geometry_percent, require_nonempty
 
 PLOTXYZ_TYPE = 240
 GLTRAJECT_TEMPLATE = "glTraject"
@@ -930,14 +930,11 @@ def _build_graph(
         _close(state["pt"], style.axis_title_size_pt, f"{name}.fsize")
         title_state[name] = state
 
+    layer_geometry = read_layer_geometry_percent(op, layer)
     geometry = {
         "page_width_cm": graph.obj.GetWidth() * 2.54,
         "page_height_cm": graph.obj.GetHeight() * 2.54,
-        "layer_unit": int(layer.get_int("unit")),
-        "left_percent": _finite(layer.get_float("left"), "layer.left"),
-        "top_percent": _finite(layer.get_float("top"), "layer.top"),
-        "width_percent": _finite(layer.get_float("width"), "layer.width"),
-        "height_percent": _finite(layer.get_float("height"), "layer.height"),
+        **layer_geometry,
     }
     for actual, expected, name in (
         (geometry["page_width_cm"], style.page_width_cm, "page width"),

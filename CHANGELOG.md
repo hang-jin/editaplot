@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-08-09 — Cross-version Origin layer-geometry readback
+
+- Addressed a user-reported OriginPro 2026b SR1 compatibility failure in which the `originpro`
+  Automation bridge reported a graph-layer left margin of approximately the layer width (`70.06`
+  instead of `17`).
+- Made the documented LabTalk layer properties and `layer -x` result the cross-checked geometry
+  source of truth. The official `layer -x` order is locked as width, height, left, top; the bridge
+  values remain in verification reports as diagnostics; a bridge-only disagreement no longer
+  blocks when both native paths agree with the registered contract.
+- Kept the gate fail-closed: `layer.unit` must be `1` (% of page), both native readback paths must be
+  finite and agree, and the result must still match the registered page/layer contract. A real
+  native mismatch continues to stop rendering.
+- Applied the shared reader to the smoke, title placement, XPS, generic scientific, categorical,
+  network, trajectory3d, and density-ridgeline3d routes. Added deterministic regression coverage
+  for stale bridge values, wrong units, non-finite values, command failures, and the non-intuitive
+  `v1/v2/v3/v4` mapping.
+- Re-ran the complete isolated smoke on the Origin 2024b / 10.15 baseline: editable OPJU,
+  PNG/PDF/TIF, page/layer and axis readback, and human PNG inspection all passed. Origin 2026b is
+  still a compatibility target, not a newly declared complete real-machine baseline; its user-side
+  smoke must be rerun with this release before recording that machine as compatible.
+
 ## 2026-08-01 — Verified 3D dual-density ridgeline and baseline locators
 
 - Added the public `density_ridgeline3d` route for a frozen six-role mixed-wide table: condition ID,
