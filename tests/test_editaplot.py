@@ -933,6 +933,7 @@ def test_origin_connection_failure_is_reported_as_neutral_technical_error(
         set_show=fail_connection,
         new=lambda **_kwargs: None,
         lt_float=lambda _name: 10.15,
+        exit=lambda: None,
     )
     monkeypatch.setitem(sys.modules, "originpro", fake_originpro)
 
@@ -943,7 +944,7 @@ def test_origin_connection_failure_is_reported_as_neutral_technical_error(
     assert "private local" not in str(raised.value)
 
 
-def test_origin_connection_failure_restores_application_visibility(
+def test_origin_project_initialization_failure_closes_owned_application(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     runtime_src = RUNTIME / "src"
@@ -952,6 +953,7 @@ def test_origin_connection_failure_restores_application_visibility(
     from origin_sciplot.origin_backend.session import OriginSession
 
     visibility: list[bool] = []
+    closed: list[bool] = []
 
     def record_visibility(show: bool) -> None:
         visibility.append(show)
@@ -963,14 +965,17 @@ def test_origin_connection_failure_restores_application_visibility(
         oext=True,
         set_show=record_visibility,
         new=fail_new,
-        lt_float=lambda _name: 10.15,
+        lt_exec=lambda _command: True,
+        lt_float=lambda name: 1.0 if name == "run.isOCready()" else 10.15,
+        exit=lambda: closed.append(True),
     )
     monkeypatch.setitem(sys.modules, "originpro", fake_originpro)
 
     with pytest.raises(OriginEnvironmentError, match="Origin Automation connection failed"):
         OriginSession().__enter__()
 
-    assert visibility == [False, True]
+    assert visibility == [False]
+    assert closed == [True]
 
 
 def test_origin_session_ignores_broken_optional_package_metadata(
@@ -986,7 +991,8 @@ def test_origin_session_ignores_broken_optional_package_metadata(
         oext=True,
         set_show=lambda _show: None,
         new=lambda **_kwargs: None,
-        lt_float=lambda _name: 10.15,
+        lt_exec=lambda _command: True,
+        lt_float=lambda name: 1.0 if name == "run.isOCready()" else 10.15,
         exit=lambda: closed.append(True),
     )
 

@@ -141,10 +141,12 @@ def test_smoke_worker_emits_bounded_activation_recovery_policy(
 
     assert returncode == WorkerExitCode.ORIGIN_ENVIRONMENT
     assert lines[-1]["recovery"] == {
-        "action": "retry_same_command_in_active_interactive_user_context",
+        "action": "retry_in_active_user_context_with_fresh_output_directory",
         "maximum_attempts": 1,
         "requires_user_approval": True,
         "must_preserve_execution_context_for_render": True,
+        "must_use_fresh_output_directory": True,
+        "preserve_previous_diagnostics": True,
         "automatic_fallback_to_attach_existing": False,
         "system_configuration_changes_allowed": False,
     }

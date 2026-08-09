@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-08-09 — Bounded Origin startup recovery
+
+- Split isolated-instance startup into activation, Origin C readiness, version readback, and project
+  initialization so a generic `origin_instance_start_failed` no longer pretends to prove a product,
+  data, or installation cause.
+- Added one automatic fresh-instance retry for transient activation failures, but only after the
+  partial-instance cleanup call returns successfully. Cleanup failure now stops with
+  `origin_activation_cleanup_failed`; non-retryable class or access errors also stop immediately.
+  No route attaches to a user project or changes DCOM, the registry, administrator settings, or the
+  Origin installation.
+- Added the documented `sec -poc 30` / `run.isOCready()` readiness gate before version readback or
+  project creation. Failed session entry now attempts to close the partially owned instance even
+  when successful runs were configured to remain open. An activation-stage cleanup error is reported
+  explicitly and blocks every automatic retry.
+- Unified redacted recovery metadata between smoke and formal render workers. A user-approved retry
+  after both automatic attempts must use a fresh sibling output directory and preserve the first
+  diagnostic report.
+- Kept worker progress live without force-terminating a Python process that may own a hidden Origin
+  instance. If local progress stops for an abnormal duration, preserve the current diagnostics and
+  report the last stage instead of risking an unmanaged Origin process.
+
 ## 2026-08-09 — Cross-version Origin layer-geometry readback
 
 - Addressed a user-reported OriginPro 2026b SR1 compatibility failure in which the `originpro`

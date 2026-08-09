@@ -110,8 +110,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/safe_errors.py",
-      "size_bytes": 4786,
-      "sha256": "0e558af795e94a32e24a4a9e47c122da132f7e84bb7f977e35fcde75f3ac77cf"
+      "size_bytes": 5907,
+      "sha256": "adc35a67b9ca80eb5efd95aa1e991545fc692587a66a4c2dbcac6db9bf861f8c"
     },
     {
       "path": "src/origin_sciplot/origin_backend/scientific_renderer.py",
@@ -120,8 +120,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/session.py",
-      "size_bytes": 13023,
-      "sha256": "e611150bf075f3f69fdd0b07595ad268ccfd1a1f00a57f8eb307fcf8f0f67df5"
+      "size_bytes": 15332,
+      "sha256": "5b0a952772ad74dbc6eb84b5b7a3c662ef9c951e63105c5f8dedb182626177a1"
     },
     {
       "path": "src/origin_sciplot/origin_backend/smoke_test.py",
@@ -260,8 +260,8 @@
     },
     {
       "path": "src/origin_sciplot/workers/run_template_worker.py",
-      "size_bytes": 42472,
-      "sha256": "580b496b6a7dd4116972b18bdf188ed6ee1f1639301ee5b934e14b640c234820"
+      "size_bytes": 42679,
+      "sha256": "72aee2ab8827221296657f41066a794bb32ee38f6925a51fce9a6bec04fc38ed"
     },
     {
       "path": "src/origin_sciplot/xps_adaptive.py",

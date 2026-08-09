@@ -26,7 +26,9 @@ def test_default_session_launches_and_owns_an_isolated_instance(
     fake_originpro = SimpleNamespace(
         oext=True,
         set_show=lambda show: events.append(("show", show)),
-        lt_float=lambda name: events.append(("read", name)) or 10.15,
+        lt_exec=lambda command: events.append(("lt_exec", command)) or True,
+        lt_float=lambda name: events.append(("read", name))
+        or (1.0 if name == "run.isOCready()" else 10.15),
         new=lambda **kwargs: events.append(("new", kwargs)),
         exit=lambda: events.append("exit"),
     )
@@ -65,6 +67,8 @@ def test_default_session_launches_and_owns_an_isolated_instance(
 
     assert events == [
         ("show", False),
+        ("lt_exec", "sec -poc 30;"),
+        ("read", "run.isOCready()"),
         ("read", "@V"),
         ("new", {"asksave": False}),
         "exit",
@@ -105,7 +109,10 @@ def test_session_preserves_build_suffixed_origin_version_in_environment_report(
     fake_originpro = SimpleNamespace(
         oext=True,
         set_show=lambda _show: None,
-        lt_float=lambda _name: 10.150132000000001,
+        lt_exec=lambda _command: True,
+        lt_float=lambda name: (
+            1.0 if name == "run.isOCready()" else 10.150132000000001
+        ),
         new=lambda **_kwargs: None,
         exit=lambda: None,
     )
@@ -129,7 +136,8 @@ def test_keep_open_restores_owned_window_after_early_drawing_error(
     fake_originpro = SimpleNamespace(
         oext=True,
         set_show=lambda show: events.append(("show", show)),
-        lt_float=lambda _name: 10.15,
+        lt_exec=lambda _command: True,
+        lt_float=lambda name: 1.0 if name == "run.isOCready()" else 10.15,
         new=lambda **_kwargs: events.append("new"),
         exit=lambda: events.append("unexpected_exit"),
     )
@@ -170,8 +178,8 @@ def test_start_failure_has_stable_redacted_diagnostics(
     assert raised.value.code == "origin_instance_start_failed"
     assert raised.value.stage == "create_instance"
     assert "private" not in str(raised.value)
-    assert visibility == [False]
-    assert exits == ["exit"]
+    assert visibility == [False, False]
+    assert exits == ["exit", "exit"]
 
 
 @pytest.mark.parametrize(
@@ -205,7 +213,8 @@ def test_start_failure_classifies_hresult_without_exposing_com_payload(
     assert raised.value.code == expected
     assert raised.value.stage == "create_instance"
     assert str(raised.value) == "Origin Automation connection failed"
-    assert events == ["exit"]
+    expected_exits = 2 if expected == "origin_com_server_execution_failed" else 1
+    assert events == ["exit"] * expected_exits
 
 
 def test_version_is_read_before_project_initialization_and_rejects_pre_2021(
@@ -215,7 +224,9 @@ def test_version_is_read_before_project_initialization_and_rejects_pre_2021(
     fake_originpro = SimpleNamespace(
         oext=True,
         set_show=lambda show: events.append(("show", show)),
-        lt_float=lambda name: events.append(("read", name)) or 9.70,
+        lt_exec=lambda command: events.append(("lt_exec", command)) or True,
+        lt_float=lambda name: events.append(("read", name))
+        or (1.0 if name == "run.isOCready()" else 9.70),
         new=lambda **kwargs: events.append(("unexpected_new", kwargs)),
         exit=lambda: events.append("exit"),
     )
@@ -227,7 +238,13 @@ def test_version_is_read_before_project_initialization_and_rejects_pre_2021(
     assert raised.value.code == "origin_version_unsupported"
     assert raised.value.stage == "validate_version"
     assert str(raised.value) == "Origin 2021 or later is required"
-    assert events == [("show", False), ("read", "@V"), "exit"]
+    assert events == [
+        ("show", False),
+        ("lt_exec", "sec -poc 30;"),
+        ("read", "run.isOCready()"),
+        ("read", "@V"),
+        "exit",
+    ]
 
 
 def test_attached_version_failure_detaches_without_closing(
@@ -261,7 +278,8 @@ def test_broken_package_metadata_never_breaks_live_session(
     fake_originpro = SimpleNamespace(
         oext=True,
         set_show=lambda _show: None,
-        lt_float=lambda _name: 9.80,
+        lt_exec=lambda _command: True,
+        lt_float=lambda name: 1.0 if name == "run.isOCready()" else 9.80,
         new=lambda **_kwargs: None,
         exit=lambda: None,
     )

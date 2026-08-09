@@ -135,14 +135,24 @@ git pull --ff-only origin main
 `0x80080005` 表示 COM Server 没有在规定时间内完成启动注册；它本身不能证明是 Origin 版本、
 Python 包或数据文件的问题。EditaPlot 会把常见启动错误收敛成短代码：
 
+- `origin_com_unspecified_failure`：对应 `0x80004005`；
+- `origin_com_call_rejected` / `origin_com_server_busy`：Origin 暂时拒绝或延后调用；
+- `origin_com_disconnected` / `origin_com_server_unavailable`：连接中断或服务暂不可达；
 - `origin_com_server_execution_failed`：对应 `0x80080005`；
 - `origin_com_class_not_registered`：对应 `0x80040154`；
 - `origin_com_activation_access_denied`：对应 `0x80070005`。
 
-如果只读检查已经发现 `Origin.Application`，但真实 smoke 在受限执行上下文中失败，EditaPlot
-最多会在征得同意后，在当前活动的 Windows 交互桌面会话中重试**同一条** smoke 命令一次。它不会
-循环重试、自动改 DCOM/注册表、切换到 `ApplicationSI`，也不会把管理员模式作为普通用法。
-再次失败就停止，并保留脱敏兼容报告。
+对通用或明确可重试的瞬时启动错误，EditaPlot 会先尝试退出可能存在的半启动自有实例；只有清理
+调用成功，才自动创建一个全新的隔离实例，最多一次。清理失败会返回
+`origin_activation_cleanup_failed` 并停止。成功激活后，它执行 `sec -poc 30` 并用
+`run.isOCready()` 确认 Origin C 已就绪，未就绪时不会读取版本或新建项目。类别入口不存在和访问
+被拒绝不会自动循环。
+
+如果两次自动尝试都失败，EditaPlot 会停止并保留脱敏兼容报告。只有用户同意后，才允许在同一
+活动 Windows 用户上下文再执行一次；新的 smoke 必须使用新的空白同级输出目录，不能覆盖第一次
+的诊断。它不会切换到 `ApplicationSI`、自动改 DCOM/注册表或把管理员模式作为普通用法。它也不会
+仅凭经过时间就强杀可能正在管理隐藏 Origin 的 Python worker；长时间无进度时应先保留报告并定位
+最后阶段。
 
 smoke 或正式绘图失败时，Python 预览以及单独生成的 PNG/PDF/SVG 只能算预览，不能写成
 “Origin 已完成”。正式完成仍须同时具备 OPJU、PNG、PDF、TIF、对象反读和人工视觉检查。
