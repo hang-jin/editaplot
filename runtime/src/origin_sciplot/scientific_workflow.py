@@ -29,6 +29,12 @@ from .data_loader import DataLoadError, LoadedTable, load_table
 from .heatmap_layout import heatmap_cell_labels_enabled
 from .palette_catalog import get_palette
 from .scientific_visual import AdaptiveOriginStyle, resolve_adaptive_style
+from .shap_composite import (
+    SHAP_COMPOSITE_PROFILES,
+    ShapCompositeError,
+    ShapCompositePlan,
+    build_shap_composite_plan,
+)
 from .xrd_semantics import (
     GSAS_II_PUBLICATION_CSV,
     XrdSemanticError,
@@ -263,6 +269,7 @@ class ScientificPlotSpec:
     source_profile: str | None = None
     focal_x_column: str | None = None
     condition_positions: tuple[tuple[str, float], ...] = ()
+    shap_plan: ShapCompositePlan | None = None
 
 
 @dataclass(frozen=True)
@@ -1055,6 +1062,55 @@ _FEATURE_VALUE_ALIASES = (
     "特征值",
     "原始特征值",
 )
+_SAMPLE_ID_ALIASES = (
+    "sampleid",
+    "sample id",
+    "caseid",
+    "case id",
+    "patientid",
+    "patient id",
+    "样本编号",
+    "样本id",
+    "病例编号",
+)
+_FEATURE_ORDER_ALIASES = (
+    "featureorder",
+    "feature order",
+    "displayorder",
+    "display order",
+    "特征顺序",
+    "显示顺序",
+    "特征排序",
+)
+_MEAN_ABS_SHAP_ALIASES = (
+    "meanabsoluteshap",
+    "mean absolute shap",
+    "meanabsshap",
+    "mean abs shap",
+    "mean|shap|",
+    "平均绝对shap",
+    "平均绝对shap值",
+    "平均绝对贡献",
+)
+_FEATURE_GROUP_ALIASES = (
+    "featuregroup",
+    "feature group",
+    "domain",
+    "featuredomain",
+    "特征组",
+    "指标类别",
+    "特征领域",
+)
+_GROUP_CONTRIBUTION_ALIASES = (
+    "groupcontribution",
+    "group contribution",
+    "groupcontributionpercent",
+    "group contribution percent",
+    "grouppercent",
+    "组贡献百分比",
+    "分组贡献",
+    "组占比",
+)
 
 _ROLE_LABELS: dict[str, str] = {
     "x": "X / 自变量",
@@ -1095,6 +1151,11 @@ _ROLE_LABELS: dict[str, str] = {
     "feature": "Feature / 特征",
     "shap": "SHAP value / SHAP 值",
     "feature_value": "Feature value / 特征值",
+    "sample_id": "Sample ID / 样本编号",
+    "feature_order": "Feature order / 特征顺序",
+    "mean_abs_shap": "Mean |SHAP| / 平均绝对 SHAP",
+    "feature_group": "Feature group / 特征组",
+    "group_contribution": "Group contribution (%) / 组贡献百分比",
     "fit": "Fit / 用户提供拟合",
     "photon_energy": "Photon energy / 光子能量",
     "tauc": "Tauc value / 用户提供 Tauc 值",
@@ -1184,8 +1245,18 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
         )
         unique = {"x", "photon_energy", "tauc", "tauc_fit", "bandgap"}
     elif template_id == "shap_summary":
-        keys = ("feature", "shap", "feature_value", "ignored")
-        unique = {"feature", "shap", "feature_value"}
+        keys = (
+            "feature",
+            "shap",
+            "feature_value",
+            "sample_id",
+            "feature_order",
+            "mean_abs_shap",
+            "feature_group",
+            "group_contribution",
+            "ignored",
+        )
+        unique = set(keys) - {"ignored"}
     elif template_id == "bubble":
         keys = ("x", "series", "size", "ignored")
         unique = {"x", "size"}
@@ -1232,6 +1303,12 @@ def mapping_context_options(template_id: str) -> tuple[tuple[str, str], ...]:
         )
     if template_id == "eis":
         return (("nyquist", "Nyquist"), ("bode", "Bode"))
+    if template_id == "shap_summary":
+        return (
+            ("beeswarm_only", "仅 SHAP 蜂群图"),
+            ("beeswarm_mean_abs", "蜂群图 + Mean |SHAP|"),
+            ("beeswarm_mean_abs_grouped", "蜂群图 + Mean |SHAP| + 分组贡献"),
+        )
     if template_id == "diagnostic_curve":
         return (("roc", "ROC"), ("pr", "Precision–Recall"))
     if template_id == "pl":
@@ -2404,9 +2481,10 @@ def _automatic_uv_vis_mapping(loaded: LoadedTable) -> _AutoMapping:
 def _automatic_shap_summary_mapping(loaded: LoadedTable) -> _AutoMapping:
     """Map a long table of externally precomputed SHAP values.
 
-    The workflow intentionally does not calculate SHAP values or reorder
-    features by a derived importance statistic.  It only identifies the three
-    columns needed to display values already supplied by the user.
+    The workflow intentionally does not calculate SHAP values or train a model.
+    It identifies the three required source roles plus optional, explicitly
+    named ordering and summary roles.  Any summary derived from supplied rows is
+    frozen separately and must pass the semantic approval gate.
     """
     frame = loaded.frame
     assignments = {str(column): "ignored" for column in frame.columns}
@@ -2483,16 +2561,50 @@ def _automatic_shap_summary_mapping(loaded: LoadedTable) -> _AutoMapping:
             "shap_roles_conflict",
             "Feature, SHAP value, and Feature value must use different source columns.",
         )
+
+    optional_roles = (
+        ("sample_id", _SAMPLE_ID_ALIASES),
+        ("feature_order", _FEATURE_ORDER_ALIASES),
+        ("mean_abs_shap", _MEAN_ABS_SHAP_ALIASES),
+        ("feature_group", _FEATURE_GROUP_ALIASES),
+        ("group_contribution", _GROUP_CONTRIBUTION_ALIASES),
+    )
+    for role, aliases in optional_roles:
+        column, ambiguous = _select_semantic_column(
+            frame,
+            aliases,
+            excluded=set(selected.values()),
+        )
+        if ambiguous:
+            reasons.append(f"{role}_role_ambiguous")
+        if column is not None:
+            selected[role] = column
+            if role == "feature_group" and _canonical(column) == "domain":
+                reasons.append("generic_domain_role_requires_confirmation")
+    if "group_contribution" in selected and "feature_group" not in selected:
+        reasons.append("group_contribution_requires_feature_group")
+    derivation_warnings: list[str] = []
+    if "mean_abs_shap" not in selected:
+        derivation_warnings.append("mean_abs_shap_derivation_requires_confirmation")
+    if "feature_group" in selected and "group_contribution" not in selected:
+        derivation_warnings.append("group_contribution_derivation_requires_confirmation")
+
     for role, column in selected.items():
         assignments[column] = role
     confidence = 0.98 if not reasons else 0.68
     unique_reasons = tuple(dict.fromkeys(reasons))
+    unique_warnings = tuple(dict.fromkeys((*reasons, *derivation_warnings)))
+    profile = (
+        "beeswarm_mean_abs_grouped"
+        if "feature_group" in selected
+        else "beeswarm_mean_abs"
+    )
     return _AutoMapping(
         assignments,
-        "precomputed_long",
+        profile,
         confidence,
         unique_reasons,
-        unique_reasons,
+        unique_warnings,
     )
 
 
@@ -2917,6 +3029,14 @@ def _validate_assignment_shape(
         mode = mapping.plot_mode or inferred_xrd_mode
     elif template_id in {"dsc", "nmr", "ftir", "xps_compare"}:
         mode = mapping.plot_mode or "overlay"
+    elif template_id == "shap_summary":
+        mode = mapping.plot_mode or (
+            "beeswarm_mean_abs_grouped"
+            if "feature_group" in assignments.values()
+            else "beeswarm_mean_abs"
+        )
+        if mode == "precomputed_long":
+            mode = "beeswarm_only"
     else:
         mode = mapping.plot_mode or ("nyquist" if template_id == "eis" else "default")
     if template_id == "xrd" and mode not in {"ordinary_scan", "rietveld_refinement"}:
@@ -2943,6 +3063,11 @@ def _validate_assignment_shape(
         raise ScientificWorkflowError("mapping_plot_mode", "Select ROC or Precision-Recall mode.")
     if template_id == "pl" and mode not in {"steady_state", "trpl"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select steady-state PL or TRPL mode.")
+    if template_id == "shap_summary" and mode not in SHAP_COMPOSITE_PROFILES:
+        raise ScientificWorkflowError(
+            "mapping_plot_mode",
+            "Select SHAP beeswarm only, beeswarm with Mean |SHAP|, or the grouped composite profile.",
+        )
     if template_id in {"dsc", "nmr", "ftir", "xps_compare"} and mode not in {
         "overlay",
         "stacked_offset",
@@ -3028,6 +3153,9 @@ def _coerced_selected_frame(
         "treat_none",
         "shap",
         "feature_value",
+        "feature_order",
+        "mean_abs_shap",
+        "group_contribution",
         "fit",
         "photon_energy",
         "tauc",
@@ -4199,6 +4327,7 @@ def _build_raw_distribution_spec(
 def _build_shap_summary_spec(
     frame: pd.DataFrame,
     assignments: dict[str, str],
+    plot_mode: str,
 ) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
     feature_column = _require_one(assignments, "feature")
     shap_column = _require_one(assignments, "shap")
@@ -4224,14 +4353,14 @@ def _build_shap_summary_spec(
         )
 
     feature_names = [str(value).strip() for value in frame[feature_column].tolist()]
-    category_order = tuple(dict.fromkeys(feature_names))
-    if len(category_order) < 2:
+    input_order = tuple(dict.fromkeys(feature_names))
+    if len(input_order) < 2:
         raise ScientificWorkflowError(
             "shap_feature_count",
             "SHAP summary needs at least two distinct features.",
             column=feature_column,
         )
-    for feature in category_order:
+    for feature in input_order:
         count = feature_names.count(feature)
         if count < 3:
             raise ScientificWorkflowError(
@@ -4239,6 +4368,21 @@ def _build_shap_summary_spec(
                 f"Feature {feature!r} needs at least three supplied observations.",
                 column=feature_column,
             )
+
+    try:
+        shap_plan = build_shap_composite_plan(
+            frame,
+            assignments,
+            profile=plot_mode,
+        )
+    except ShapCompositeError as exc:
+        raise ScientificWorkflowError(
+            exc.code,
+            str(exc),
+            column=exc.column,
+            row=exc.row,
+        ) from exc
+    category_order = shap_plan.feature_order
 
     shap_values = frame[shap_column].to_numpy(dtype=float, copy=True)
     x_axis = _nice_axis(shap_values, include_zero=True, padding_fraction=0.08)
@@ -4251,6 +4395,14 @@ def _build_shap_summary_spec(
         signed_values=True,
     )
     warnings = ["feature_value_color_normalized_within_feature"]
+    if shap_plan.mean_abs_source == "derived_from_supplied_shap":
+        warnings.append("mean_abs_shap_derived_from_supplied_rows_requires_confirmation")
+    elif shap_plan.mean_abs_source == "provided":
+        warnings.append("provided_mean_abs_shap_validated_against_supplied_rows")
+    if shap_plan.group_contribution_source == "derived_from_supplied_shap":
+        warnings.append("group_contribution_derived_from_supplied_rows_requires_confirmation")
+    elif shap_plan.group_contribution_source == "provided":
+        warnings.append("provided_group_contribution_validated_against_supplied_rows")
     for feature in category_order:
         mask = np.asarray(feature_names, dtype=object) == feature
         values = frame.loc[mask, feature_value_column].to_numpy(dtype=float)
@@ -4260,7 +4412,7 @@ def _build_shap_summary_spec(
     return (
         ScientificPlotSpec(
             plot_kind="shap_summary",
-            plot_mode="precomputed_long",
+            plot_mode=shap_plan.profile,
             x_column=shap_column,
             category_column=feature_column,
             series=(
@@ -4297,6 +4449,8 @@ def _build_shap_summary_spec(
             jitter_rule="deterministic_binned_symmetric_v1",
             color_rule="within_feature_minmax_low_blue_high_red_v1",
             category_order=category_order,
+            group_order=shap_plan.group_order,
+            shap_plan=shap_plan,
         ),
         tuple(dict.fromkeys(warnings)),
     )
@@ -5747,7 +5901,7 @@ def _build_plot_spec(
     if template_id in {"raw_summary", "violin", "histogram", "raincloud"}:
         return _build_raw_distribution_spec(template_id, frame, assignments)
     if template_id == "shap_summary":
-        return _build_shap_summary_spec(frame, assignments)
+        return _build_shap_summary_spec(frame, assignments, plot_mode)
     if template_id == "bubble":
         return _build_bubble_spec(frame, assignments)
     if template_id == "forest":

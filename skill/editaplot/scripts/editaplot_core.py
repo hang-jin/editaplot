@@ -463,6 +463,25 @@ _SEMANTIC_ALIASES: dict[str, tuple[str, ...]] = {
     "feature": ("feature", "featurename", "variable", "predictor", "特征", "特征名", "变量", "预测因子"),
     "shap_value": ("shapvalue", "shap", "shap值", "特征贡献", "贡献值"),
     "feature_value": ("featurevalue", "rawfeaturevalue", "特征值", "原始特征值"),
+    "shap_sample_id": ("sampleid", "caseid", "patientid", "样本编号", "样本id", "病例编号"),
+    "shap_feature_order": ("featureorder", "displayorder", "特征顺序", "显示顺序", "特征排序"),
+    "shap_mean_abs": (
+        "meanabsoluteshap",
+        "meanabsshap",
+        "mean|shap|",
+        "平均绝对shap",
+        "平均绝对shap值",
+        "平均绝对贡献",
+    ),
+    "shap_feature_group": ("featuregroup", "featuredomain", "特征组", "指标类别", "特征领域"),
+    "shap_group_contribution": (
+        "groupcontribution",
+        "groupcontributionpercent",
+        "grouppercent",
+        "组贡献百分比",
+        "分组贡献",
+        "组占比",
+    ),
     "series_id": ("series", "seriesid", "sampleid", "conditionname", "系列", "样品编号", "组别"),
     "condition_id": (
         "conditionid",
@@ -701,6 +720,10 @@ def inspect_data(path: str | Path, *, engine_home: str | Path | None = None) -> 
         layouts.append("paired_wide")
     if {"feature", "shap_value", "feature_value"}.issubset(tags) and categorical_columns:
         layouts.append("shap_long")
+        if "shap_mean_abs" in tags:
+            layouts.append("shap_mean_abs_long")
+        if "shap_feature_group" in tags:
+            layouts.append("shap_grouped_composite_long")
     density_required_roles = (
         "condition_id",
         "condition_position",
@@ -896,9 +919,13 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "shap_summary": (
         "shapsummary",
         "shapbeeswarm",
+        "shapcomposite",
+        "meanabsoluteshap",
         "featurecontribution",
         "shap汇总",
         "shap蜂群",
+        "shap复合图",
+        "平均绝对shap",
         "特征贡献",
     ),
     "grouped_box": ("groupedbox", "boxplot", "boxanddots", "分组箱线", "箱线图", "箱体图"),

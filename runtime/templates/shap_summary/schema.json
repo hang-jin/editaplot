@@ -2,7 +2,19 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "template_id": "shap_summary",
   "required_roles": ["feature", "shap", "feature_value"],
+  "optional_roles": [
+    "sample_id",
+    "feature_order",
+    "mean_abs_shap",
+    "feature_group",
+    "group_contribution"
+  ],
   "layout": "precomputed_long",
+  "profiles": [
+    "beeswarm_only",
+    "beeswarm_mean_abs",
+    "beeswarm_mean_abs_grouped"
+  ],
   "min_columns": 3,
   "min_rows": 6,
   "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"]

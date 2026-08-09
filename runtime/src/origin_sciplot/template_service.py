@@ -403,11 +403,31 @@ class ScientificTemplateService:
             )
         elif spec.plot_kind == "shap_summary":
             series = spec.series[0]
+            shap_plan = spec.shap_plan
+
+            def shap_column(role: str) -> str:
+                return next(
+                    (column for column, assigned_role in assignments.items() if assigned_role == role),
+                    "—",
+                )
+
             roles = (
                 ("Feature", spec.category_column or "—"),
                 ("SHAP value", series.source_column),
                 ("Feature value / color", series.color_column or "—"),
+                ("Sample ID / support", shap_column("sample_id")),
+                ("Feature order / support", shap_column("feature_order")),
+                ("Mean |SHAP|", shap_column("mean_abs_shap")),
+                ("Feature group", shap_column("feature_group")),
+                ("Group contribution (%)", shap_column("group_contribution")),
             )
+            if shap_plan is not None:
+                facts = (
+                    *facts,
+                    ("SHAP 视觉 Profile", shap_plan.profile),
+                    ("Mean |SHAP| 来源", shap_plan.mean_abs_source),
+                    ("分组贡献来源", shap_plan.group_contribution_source),
+                )
         else:
             roles = (
                 ("X", x_value),

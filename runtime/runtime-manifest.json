@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 409,
+  "file_count": 410,
   "files": [
     {
       "path": "LICENSE",
@@ -200,18 +200,23 @@
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 215293,
-      "sha256": "05cef1f863910a48d1af821d87c7559a4f348e4ca8b2d74d738d510dfd86236e"
+      "size_bytes": 220426,
+      "sha256": "af5b41a95653bf5e6f4fc476efe1c94ba3880b8fd4e94ba5628c524a53f5ce46"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
-      "size_bytes": 19424,
-      "sha256": "cd562ecbf3411766beb9253d3a8a5a628711f9d1b34163b8d0fc79ea11d88afb"
+      "size_bytes": 27560,
+      "sha256": "4f7125af721fd6be4eed104d4152d6591d76132fd9a8e2bd02a00038144bfd4e"
     },
     {
       "path": "src/origin_sciplot/semantic_contract.py",
-      "size_bytes": 45491,
-      "sha256": "ff2a9119b00588b54ca130c0d58123d0a58aa9da8146f38c0f3d243c1f3fd409"
+      "size_bytes": 45656,
+      "sha256": "e8b58de8605ed37179620b126516f14ef70b1d57f52b416f786b482b15afe4b7"
+    },
+    {
+      "path": "src/origin_sciplot/shap_composite.py",
+      "size_bytes": 14678,
+      "sha256": "11d6b4043854fbb9cd5e3f9f7da6ad0bf0d376b7650b171e3a1ef3395ca15cad"
     },
     {
       "path": "src/origin_sciplot/template_registry.py",
@@ -220,8 +225,8 @@
     },
     {
       "path": "src/origin_sciplot/template_service.py",
-      "size_bytes": 23108,
-      "sha256": "d78c133f659e37b4f23a6880a05853a8cee0ba2708b271af21806f7d86eca3d8"
+      "size_bytes": 24049,
+      "sha256": "1d8ffd4ea3515bb08a4957887c324f9c8a70d6c2f0c058f42146fa8b0f5afc5d"
     },
     {
       "path": "src/origin_sciplot/validation/__init__.py",
@@ -1530,8 +1535,8 @@
     },
     {
       "path": "templates/shap_summary/data_contract.md",
-      "size_bytes": 654,
-      "sha256": "e424ea53a7bec76037bb6d214cdc97cf0c08576a545a02080d39b8aa48c71b9b"
+      "size_bytes": 1711,
+      "sha256": "1b950d3b5419d058f5f4d6c325523025883ee8d2b005fb844bf702b18954331c"
     },
     {
       "path": "templates/shap_summary/data_template.csv",
@@ -1545,8 +1550,8 @@
     },
     {
       "path": "templates/shap_summary/manifest.yaml",
-      "size_bytes": 1288,
-      "sha256": "323837456d946fb8ae5259eafbfe6614b337c9847da1fe1c4ea81db34220657b"
+      "size_bytes": 1750,
+      "sha256": "8b13ecb8cb82fbe4228afec63fa684c122c27c842db515074aff6301c812541e"
     },
     {
       "path": "templates/shap_summary/runner.py",
@@ -1555,8 +1560,8 @@
     },
     {
       "path": "templates/shap_summary/schema.json",
-      "size_bytes": 285,
-      "sha256": "15e42dc9c20ebbbe918db8ad6f62b93bcbd81f2fef6d36a93a4611d87c6934c3"
+      "size_bytes": 516,
+      "sha256": "b3a835211b0e6bce86dcc153ab20860e1f70521e83eb3ea75c4c09a982ff3c99"
     },
     {
       "path": "templates/shap_summary/service.py",
@@ -1565,8 +1570,8 @@
     },
     {
       "path": "templates/shap_summary/visual_contract.md",
-      "size_bytes": 699,
-      "sha256": "183394dc607c961052b9763e91c4f8c2f9c6e01f0ab6cc1edef79e62eafc5ed4"
+      "size_bytes": 957,
+      "sha256": "e1dbf20982eccf4934f11b2a51edbaad3127994a9e6df37486de0552a5a9b225"
     },
     {
       "path": "templates/stacked_bar/data_contract.md",
