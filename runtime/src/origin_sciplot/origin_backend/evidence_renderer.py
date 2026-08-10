@@ -37,6 +37,7 @@ from origin_sciplot.shap_layout import (
     ShapCompositeGeometry,
     ShapCompositeRegion,
     resolve_shap_composite_geometry,
+    resolve_shap_mean_axis,
 )
 from origin_sciplot.template_registry import TemplateManifest
 
@@ -1445,6 +1446,47 @@ def _require_close_sequence(
         raise OriginDrawError(message, code=code)
 
 
+def _validate_shap_plot_binding(
+    panel: Mapping[str, object],
+    *,
+    expected_x: str,
+    expected_y: str,
+) -> None:
+    binding = _readback_mapping(panel, "plot_binding")
+    if not str(binding.get("plot_range", "")):
+        raise OriginDrawError(
+            "Origin SHAP plot-binding readback is missing its graph range.",
+            code="shap_composite_plot_binding_mismatch",
+        )
+    for designation, expected_helper in (("x", expected_x), ("y", expected_y)):
+        component = _readback_mapping(binding, designation)
+        if (
+            component.get("helper_column") != expected_helper
+            or not _shap_binding_identity_matches(component)
+        ):
+            raise OriginDrawError(
+                "Origin SHAP plot is not bound to the exact planned helper columns.",
+                code="shap_composite_plot_binding_mismatch",
+            )
+
+
+def _validate_shap_template_cleanup(panel: Mapping[str, object]) -> None:
+    cleanup = _readback_mapping(panel, "template_cleanup")
+    requested = cleanup.get("requested")
+    remaining = cleanup.get("remaining")
+    if (
+        cleanup.get("verified") is not True
+        or not isinstance(requested, (list, tuple))
+        or tuple(requested) != ("Legend", "legend", "xb", "yl", "yr")
+        or not isinstance(remaining, (list, tuple))
+        or tuple(remaining)
+    ):
+        raise OriginDrawError(
+            "Origin SHAP template-object cleanup is incomplete.",
+            code="shap_composite_template_cleanup_mismatch",
+        )
+
+
 def validate_shap_composite_readback(
     plan: ShapCompositePlan,
     geometry: ShapCompositeGeometry,
@@ -1567,6 +1609,51 @@ def validate_shap_composite_readback(
             code="shap_composite_plot_mismatch",
         )
 
+    beeswarm = _readback_mapping(state, "beeswarm")
+    if int(_readback_number(beeswarm, "pid")) != 201:
+        raise OriginDrawError(
+            "Origin SHAP beeswarm is not the planned editable scatter primitive.",
+            code="shap_composite_beeswarm_mismatch",
+        )
+    reference = _readback_mapping(beeswarm, "reference")
+    if (
+        reference.get("present") is not True
+        or reference.get("text_present") is not False
+        or not math.isclose(
+            _readback_number(reference, "value"),
+            0.0,
+            rel_tol=0.0,
+            abs_tol=1e-9,
+        )
+        or reference.get("color") != SHAP_ZERO_LINE_COLOR
+    ):
+        raise OriginDrawError(
+            "Origin SHAP zero-reference evidence does not match the frozen design.",
+            code="shap_composite_beeswarm_mismatch",
+        )
+    symbol = _readback_mapping(beeswarm, "symbol")
+    if (
+        _readback_number(symbol, "symbol_size_pt") <= 0.0
+        or not math.isclose(
+            _readback_number(symbol, "symbol_edge_percent_of_radius"),
+            20.0,
+            rel_tol=0.0,
+            abs_tol=0.05,
+        )
+        or int(_readback_number(symbol, "symbol_kind")) != 2
+        or int(_readback_number(symbol, "symbol_interior")) != 0
+    ):
+        raise OriginDrawError(
+            "Origin SHAP scatter-symbol readback is incomplete or changed.",
+            code="shap_composite_beeswarm_mismatch",
+        )
+    _validate_shap_plot_binding(
+        beeswarm,
+        expected_x="__SHAP_X",
+        expected_y="__SHAP_Y",
+    )
+    _validate_shap_template_cleanup(beeswarm)
+
     colorbar = _readback_mapping(state, "colorbar")
     if colorbar.get("present") is not True:
         raise OriginDrawError(
@@ -1645,11 +1732,83 @@ def validate_shap_composite_readback(
             mean_abs.get("source") != plan.mean_abs_source
             or mean_abs.get("label_dataset") != "__MeanAbsFeature"
             or mean_abs.get("value_dataset") != "__MeanAbsValue"
+            or int(_readback_number(mean_abs, "pid")) != 215
         ):
             raise OriginDrawError(
                 "Origin Mean |SHAP| datasets/source do not match the frozen plan.",
                 code="shap_composite_mean_abs_mismatch",
             )
+        _mean_from, expected_mean_to, expected_mean_step = resolve_shap_mean_axis(
+            max(expected_values, default=0.0)
+        )
+        _require_close_sequence(
+            _readback_number_sequence(mean_abs, "mean_axis_limits"),
+            (0.0, expected_mean_to),
+            code="shap_composite_mean_abs_mismatch",
+            message="Origin Mean |SHAP| axis limits are not publication-readable.",
+        )
+        if not math.isclose(
+            _readback_number(mean_abs, "mean_axis_step"),
+            expected_mean_step,
+            rel_tol=0.0,
+            abs_tol=1e-9,
+        ):
+            raise OriginDrawError(
+                "Origin Mean |SHAP| axis increment changed from the frozen nice step.",
+                code="shap_composite_mean_abs_mismatch",
+            )
+        layer_link = _readback_mapping(mean_abs, "layer_link")
+        expected_layer_link: dict[str, object] = {
+            "parent_layer": 1,
+            "expected_parent_layer": 1,
+            "child_layer": 2,
+            "expected_child_layer": 2,
+            "parent_role": "shap_mean_abs",
+            "child_role": "shap_beeswarm",
+            "unit": 1,
+            "expected_unit": 1,
+            "requested_x_axis_link": 0,
+            "requested_y_axis_link": 0,
+            "verified": True,
+            "final_parent_layer": 1,
+            "final_unit": 1,
+        }
+        if set(layer_link) != set(expected_layer_link) or any(
+            layer_link.get(key) != expected
+            for key, expected in expected_layer_link.items()
+        ):
+            raise OriginDrawError(
+                "Origin Mean |SHAP| and beeswarm layers lost their frozen geometry link.",
+                code="shap_composite_mean_link_mismatch",
+            )
+        title_collision = _readback_mapping(mean_abs, "title_collision")
+        expected_maximum = geometry.region("shap_mean_abs").top_percent - 3.2
+        title_bottom = _readback_number(title_collision, "bottom_percent")
+        maximum_bottom = _readback_number(
+            title_collision,
+            "maximum_bottom_percent",
+        )
+        if (
+            title_collision.get("object") != "SHAPMeanTitle"
+            or title_collision.get("verified") is not True
+            or not math.isclose(
+                maximum_bottom,
+                expected_maximum,
+                rel_tol=0.0,
+                abs_tol=LAYER_GEOMETRY_TOLERANCE_PERCENT,
+            )
+            or title_bottom > maximum_bottom
+        ):
+            raise OriginDrawError(
+                "Origin Mean |SHAP| title collision evidence is missing or invalid.",
+                code="shap_composite_mean_title_overlap",
+            )
+        _validate_shap_plot_binding(
+            mean_abs,
+            expected_x="__MeanAbsFeature",
+            expected_y="__MeanAbsValue",
+        )
+        _validate_shap_template_cleanup(mean_abs)
     group_inset = _readback_mapping(state, "group_inset")
     expected_group_inset = plan.profile == "beeswarm_mean_abs_grouped"
     if (group_inset.get("present") is True) is not expected_group_inset:
@@ -1677,6 +1836,7 @@ def validate_shap_composite_readback(
             or group_inset.get("label_dataset") != "__GroupLabel"
             or group_inset.get("value_dataset") != "__GroupContribution"
             or group_inset.get("color_dataset") != "__PieColor"
+            or int(_readback_number(group_inset, "pid")) != 225
             or int(group_inset.get("data_labels_enabled", -1)) != 0
             or set(pie_label_theme)
             != {"values", "percentages", "categories", "custom"}
@@ -1686,6 +1846,26 @@ def validate_shap_composite_readback(
                 "Origin SHAP group pie datasets/source do not match the frozen plan.",
                 code="shap_composite_group_inset_mismatch",
             )
+        expected_legend_objects = tuple(
+            object_name
+            for index in range(1, len(plan.group_contributions) + 1)
+            for object_name in (f"SHAPGroupKey{index}", f"SHAPGroupLabel{index}")
+        )
+        legend_objects = group_inset.get("legend_objects")
+        if (
+            not isinstance(legend_objects, (list, tuple))
+            or tuple(legend_objects) != expected_legend_objects
+        ):
+            raise OriginDrawError(
+                "Origin SHAP group legend objects do not match the frozen contribution rows.",
+                code="shap_composite_group_legend_mismatch",
+            )
+        _validate_shap_plot_binding(
+            group_inset,
+            expected_x="__GroupLabel",
+            expected_y="__GroupContribution",
+        )
+        _validate_shap_template_cleanup(group_inset)
 
 
 def _shap_column_letter(index: int) -> str:
@@ -2286,6 +2466,8 @@ def _read_shap_scatter_mapping(
             plot,
             expected_size_pt=preparation.plot_spec.display_plan.marker_size_pt,
             expected_edge_percent=20.0,
+            expected_symbol_kind=2,
+            expected_symbol_interior=0,
         )
     except RuntimeError as exc:
         raise OriginDrawError(str(exc)) from exc
@@ -2411,6 +2593,7 @@ def _style_shap_scatter_layer(
     return (
         geometry_state,
         {
+            "pid": 201,
             "axis": axis_state,
             "reference": reference_state,
             "symbol": symbol_state,
@@ -2700,7 +2883,7 @@ def _style_shap_mean_layer(
         region,
     )
     mean_max = max((float(value) for _feature, value in plan.mean_abs_values), default=0.0)
-    mean_to = mean_max * 1.08 if mean_max > 0.0 else 1.0
+    mean_from, mean_to, mean_step = resolve_shap_mean_axis(mean_max)
     # PID 215 has ``exchangexy=1``: Origin's X scale is the categorical
     # feature-row coordinate while Y is the Mean-|SHAP| numeric magnitude.
     # Keeping X identical to the beeswarm Y scale makes the bars line up with
@@ -2710,7 +2893,7 @@ def _style_shap_mean_layer(
         preparation.plot_spec.axis_plan.y_to,
         preparation.plot_spec.axis_plan.y_step,
     )
-    layer.axis("y").set_limits(0.0, mean_to, mean_to / 4.0)
+    layer.axis("y").set_limits(mean_from, mean_to, mean_step)
     font_code = _origin_font_code(op, style.font_family)
     _style_axis(
         layer,
@@ -2824,6 +3007,7 @@ def _style_shap_mean_layer(
     x_to = float(layer.get_float("x.to"))
     y_from = float(layer.get_float("y.from"))
     y_to = float(layer.get_float("y.to"))
+    y_step = float(layer.get_float("y.inc"))
     x_hidden = (
         int(layer.get_int("x.showLabels")) == 0
         and int(layer.get_int("x.showlabel")) == 0
@@ -2845,8 +3029,9 @@ def _style_shap_mean_layer(
             rel_tol=0.0,
             abs_tol=1e-6,
         )
-        and math.isclose(y_from, 0.0, rel_tol=0.0, abs_tol=1e-6)
+        and math.isclose(y_from, mean_from, rel_tol=0.0, abs_tol=1e-6)
         and math.isclose(y_to, mean_to, rel_tol=0.0, abs_tol=1e-6)
+        and math.isclose(y_step, mean_step, rel_tol=0.0, abs_tol=1e-6)
     ):
         raise OriginDrawError("Origin Mean |SHAP| exchanged-axis limits changed.")
     if not x_hidden:
@@ -2872,9 +3057,16 @@ def _style_shap_mean_layer(
         "mean_value_axis": "y",
         "category_axis_limits": [x_from, x_to],
         "mean_axis_limits": [y_from, y_to],
+        "mean_axis_step": y_step,
         "category_axis_hidden": x_hidden,
         "top_axis_pair": "y",
         "top_axis_only": top_axis_only,
+        "title_collision": {
+            "object": "SHAPMeanTitle",
+            "bottom_percent": title_bottom_percent,
+            "maximum_bottom_percent": region.top_percent - 3.2,
+            "verified": True,
+        },
         "template_cleanup": template_cleanup_state,
     }
     return geometry_state, state, title_state

@@ -53,6 +53,7 @@ from .shap_layout import (
     SHAP_MEAN_ABS_BAR_EDGE_COLOR,
     SHAP_ZERO_LINE_COLOR,
     resolve_shap_composite_geometry,
+    resolve_shap_mean_axis,
 )
 
 mpl.rcParams.update(
@@ -1283,7 +1284,8 @@ def _draw_shap_composite(
             zorder=1,
         )
         mean_max = float(np.max(widths)) if widths.size else 0.0
-        mean_axis.set_xlim(0.0, mean_max * 1.08 if mean_max > 0.0 else 1.0)
+        mean_from, mean_to, mean_step = resolve_shap_mean_axis(mean_max)
+        mean_axis.set_xlim(mean_from, mean_to)
         mean_axis.set_ylim(spec.axis_plan.y_from, spec.axis_plan.y_to)
         mean_axis.set_yticks(positions)
         mean_axis.set_yticklabels([])
@@ -1295,7 +1297,9 @@ def _draw_shap_composite(
         )
         mean_axis.xaxis.set_label_position("top")
         mean_axis.xaxis.tick_top()
-        mean_axis.xaxis.set_major_locator(MaxNLocator(nbins=5, min_n_ticks=3))
+        mean_axis.set_xticks(
+            np.arange(mean_from, mean_to + mean_step * 0.5, mean_step),
+        )
         mean_axis.tick_params(
             axis="x",
             which="major",

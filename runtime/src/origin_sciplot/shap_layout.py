@@ -112,6 +112,33 @@ def _region(
     )
 
 
+def resolve_shap_mean_axis(maximum: float) -> tuple[float, float, float]:
+    """Return a padded, publication-readable Mean-|SHAP| axis."""
+
+    maximum = float(maximum)
+    if not math.isfinite(maximum) or maximum < 0.0:
+        raise ValueError("Mean |SHAP| maximum must be finite and non-negative.")
+    if maximum == 0.0:
+        return (0.0, 1.0, 0.2)
+    padded = maximum * 1.08
+    raw_step = padded / 5.0
+    magnitude = 10.0 ** math.floor(math.log10(raw_step))
+    fraction = raw_step / magnitude
+    if fraction <= 1.0:
+        nice_fraction = 1.0
+    elif fraction <= 2.0:
+        nice_fraction = 2.0
+    elif fraction <= 2.5:
+        nice_fraction = 2.5
+    elif fraction <= 5.0:
+        nice_fraction = 5.0
+    else:
+        nice_fraction = 10.0
+    step = nice_fraction * magnitude
+    upper = math.ceil((padded - step * 1e-12) / step) * step
+    return (0.0, float(upper), float(step))
+
+
 def resolve_shap_composite_geometry(
     profile: str,
     style: Any | None = None,
@@ -230,4 +257,5 @@ __all__ = [
     "ShapCompositeGeometry",
     "ShapCompositeRegion",
     "resolve_shap_composite_geometry",
+    "resolve_shap_mean_axis",
 ]

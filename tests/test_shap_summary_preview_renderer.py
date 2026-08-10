@@ -31,7 +31,11 @@ from origin_sciplot.scientific_workflow import (  # noqa: E402
     ScientificColumnMapping,
     prepare_scientific,
 )
-from origin_sciplot.shap_layout import resolve_shap_composite_geometry  # noqa: E402
+from origin_sciplot.shap_layout import (  # noqa: E402
+    SHAP_ZERO_LINE_COLOR,
+    resolve_shap_composite_geometry,
+    resolve_shap_mean_axis,
+)
 from origin_sciplot.workers.run_template_worker import (  # noqa: E402
     _activated_optional_capabilities,
 )
@@ -161,6 +165,40 @@ def _geometry_payload(profile: str) -> dict[str, object]:
     payload = geometry.to_dict() if hasattr(geometry, "to_dict") else geometry
     assert isinstance(payload, dict)
     return payload
+
+
+def _binding_contract(
+    x_helper: str,
+    y_helper: str,
+    *,
+    count: int,
+    layer_index: int,
+) -> dict[str, object]:
+    def component(helper: str, designation: str) -> dict[str, object]:
+        return {
+            "helper_column": helper,
+            "helper_column_index": 1 if designation == "x" else 2,
+            "actual_range": f'[Book3]Sheet1!{designation.upper()}"{helper}"',
+            "expected_range": f"[Book3]1!col({1 if designation == 'x' else 2})",
+            "actual_dataset": f"Book3_{designation.upper()}",
+            "expected_dataset": f"Book3_{designation.upper()}",
+            "actual_count": count,
+            "expected_count": count,
+        }
+
+    return {
+        "plot_range": f"[SHAPComposite]{layer_index}!1",
+        "x": component(x_helper, "x"),
+        "y": component(y_helper, "y"),
+    }
+
+
+def _template_cleanup_contract() -> dict[str, object]:
+    return {
+        "requested": ["Legend", "legend", "xb", "yl", "yr"],
+        "remaining": [],
+        "verified": True,
+    }
 
 
 @pytest.mark.parametrize("profile", tuple(PROFILE_AXES))
@@ -426,6 +464,27 @@ def test_origin_geometry_plan_is_profile_specific_and_physically_bounded(
         assert float(inset["top_percent"]) + float(inset["height_percent"]) <= (
             float(beeswarm["top_percent"]) + float(beeswarm["height_percent"]) + 0.05
         )
+        assert float(payload["page_width_cm"]) * float(inset["width_percent"]) / 100.0 <= (
+            4.8 + 0.03
+        )
+        assert float(payload["page_height_cm"]) * float(inset["height_percent"]) / 100.0 <= (
+            4.8 + 0.03
+        )
+
+
+@pytest.mark.parametrize(
+    ("maximum", "expected"),
+    [
+        (0.0, (0.0, 1.0, 0.2)),
+        (0.36893, (0.0, 0.4, 0.1)),
+        (0.99, (0.0, 1.25, 0.25)),
+    ],
+)
+def test_mean_shap_axis_uses_readable_frozen_increments(
+    maximum: float,
+    expected: tuple[float, float, float],
+) -> None:
+    assert resolve_shap_mean_axis(maximum) == pytest.approx(expected)
 
 
 def _valid_readback_contract(tmp_path: Path, profile: str):
@@ -449,6 +508,28 @@ def _valid_readback_contract(tmp_path: Path, profile: str):
         "helper_columns": helper_columns,
         "regions": geometry.to_dict()["regions"],
         "plot_counts": plot_counts,
+        "beeswarm": {
+            "pid": 201,
+            "reference": {
+                "present": True,
+                "text_present": False,
+                "value": 0.0,
+                "color": SHAP_ZERO_LINE_COLOR,
+            },
+            "symbol": {
+                "symbol_size_pt": 6.8,
+                "symbol_edge_percent_of_radius": 20.0,
+                "symbol_kind": 2,
+                "symbol_interior": 0,
+            },
+            "plot_binding": _binding_contract(
+                "__SHAP_X",
+                "__SHAP_Y",
+                count=len(_rows()),
+                layer_index=1 if profile == "beeswarm_only" else 2,
+            ),
+            "template_cleanup": _template_cleanup_contract(),
+        },
         "colorbar": {
             "present": True,
             "dataset": "__FeatureValueNormalized",
@@ -468,19 +549,54 @@ def _valid_readback_contract(tmp_path: Path, profile: str):
     if profile != "beeswarm_only":
         helper_columns.extend(["__MeanAbsFeature", "__MeanAbsValue"])
         plot_counts["shap_mean_abs"] = 1
+        mean_from, mean_to, mean_step = resolve_shap_mean_axis(
+            max(float(value) for _feature, value in plan.mean_abs_values)
+        )
         state["mean_abs"] = {
             "present": True,
+            "pid": 215,
             "labels": [feature for feature, _value in plan.mean_abs_values],
             "values": [float(value) for _feature, value in plan.mean_abs_values],
             "source": plan.mean_abs_source,
             "label_dataset": "__MeanAbsFeature",
             "value_dataset": "__MeanAbsValue",
+            "mean_axis_limits": [mean_from, mean_to],
+            "mean_axis_step": mean_step,
+            "plot_binding": _binding_contract(
+                "__MeanAbsFeature",
+                "__MeanAbsValue",
+                count=len(plan.mean_abs_values),
+                layer_index=1,
+            ),
+            "layer_link": {
+                "parent_layer": 1,
+                "expected_parent_layer": 1,
+                "child_layer": 2,
+                "expected_child_layer": 2,
+                "parent_role": "shap_mean_abs",
+                "child_role": "shap_beeswarm",
+                "unit": 1,
+                "expected_unit": 1,
+                "requested_x_axis_link": 0,
+                "requested_y_axis_link": 0,
+                "verified": True,
+                "final_parent_layer": 1,
+                "final_unit": 1,
+            },
+            "title_collision": {
+                "object": "SHAPMeanTitle",
+                "bottom_percent": geometry.region("shap_mean_abs").top_percent - 4.0,
+                "maximum_bottom_percent": geometry.region("shap_mean_abs").top_percent - 3.2,
+                "verified": True,
+            },
+            "template_cleanup": _template_cleanup_contract(),
         }
     if profile == "beeswarm_mean_abs_grouped":
         helper_columns.extend(["__GroupLabel", "__GroupContribution", "__PieColor"])
         plot_counts["shap_group_contribution"] = 1
         state["group_inset"] = {
             "present": True,
+            "pid": 225,
             "labels": [group for group, _value in plan.group_contributions],
             "values": [float(value) for _group, value in plan.group_contributions],
             "source": plan.group_contribution_source,
@@ -494,6 +610,18 @@ def _valid_readback_contract(tmp_path: Path, profile: str):
                 "categories": 0,
                 "custom": 0,
             },
+            "legend_objects": [
+                object_name
+                for index in range(1, len(plan.group_contributions) + 1)
+                for object_name in (f"SHAPGroupKey{index}", f"SHAPGroupLabel{index}")
+            ],
+            "plot_binding": _binding_contract(
+                "__GroupLabel",
+                "__GroupContribution",
+                count=len(plan.group_contributions),
+                layer_index=3,
+            ),
+            "template_cleanup": _template_cleanup_contract(),
         }
     return plan, geometry, state
 
@@ -527,6 +655,119 @@ def test_origin_readback_validator_fails_closed_on_missing_evidence(
     profile = "beeswarm_mean_abs_grouped"
     plan, geometry, state = _valid_readback_contract(tmp_path, profile)
     state[field] = replacement
+
+    with pytest.raises(OriginDrawError):
+        _renderer_seam("validate_shap_composite_readback")(plan, geometry, state)
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [
+        ("symbol_size_pt", 0.0),
+        ("symbol_edge_percent_of_radius", 35.0),
+        ("symbol_kind", 1),
+        ("symbol_interior", 2),
+    ],
+)
+def test_origin_readback_validator_rejects_changed_beeswarm_symbol_contract(
+    tmp_path: Path,
+    field: str,
+    replacement: object,
+) -> None:
+    plan, geometry, state = _valid_readback_contract(tmp_path, "beeswarm_only")
+    beeswarm = deepcopy(state["beeswarm"])
+    beeswarm["symbol"][field] = replacement
+    state["beeswarm"] = beeswarm
+
+    with pytest.raises(OriginDrawError):
+        _renderer_seam("validate_shap_composite_readback")(plan, geometry, state)
+
+
+def test_origin_readback_validator_rejects_wrong_beeswarm_dataset_binding(
+    tmp_path: Path,
+) -> None:
+    plan, geometry, state = _valid_readback_contract(tmp_path, "beeswarm_only")
+    beeswarm = deepcopy(state["beeswarm"])
+    beeswarm["plot_binding"]["x"]["actual_dataset"] = "Book3_WRONG"
+    state["beeswarm"] = beeswarm
+
+    with pytest.raises(OriginDrawError):
+        _renderer_seam("validate_shap_composite_readback")(plan, geometry, state)
+
+
+@pytest.mark.parametrize(
+    ("section", "field", "replacement"),
+    [
+        ("reference", "present", False),
+        ("reference", "value", 1.0),
+        ("template_cleanup", "verified", False),
+        ("template_cleanup", "remaining", ["Legend"]),
+    ],
+)
+def test_origin_readback_validator_rejects_incomplete_beeswarm_object_evidence(
+    tmp_path: Path,
+    section: str,
+    field: str,
+    replacement: object,
+) -> None:
+    plan, geometry, state = _valid_readback_contract(tmp_path, "beeswarm_only")
+    beeswarm = deepcopy(state["beeswarm"])
+    beeswarm[section][field] = replacement
+    state["beeswarm"] = beeswarm
+
+    with pytest.raises(OriginDrawError):
+        _renderer_seam("validate_shap_composite_readback")(plan, geometry, state)
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [
+        ("parent_layer", 2),
+        ("child_layer", 1),
+        ("unit", 0),
+        ("final_parent_layer", 0),
+        ("final_unit", 0),
+        ("verified", False),
+    ],
+)
+def test_origin_readback_validator_rejects_changed_mean_layer_link(
+    tmp_path: Path,
+    field: str,
+    replacement: object,
+) -> None:
+    plan, geometry, state = _valid_readback_contract(tmp_path, "beeswarm_mean_abs")
+    mean_abs = deepcopy(state["mean_abs"])
+    mean_abs["layer_link"][field] = replacement
+    state["mean_abs"] = mean_abs
+
+    with pytest.raises(OriginDrawError):
+        _renderer_seam("validate_shap_composite_readback")(plan, geometry, state)
+
+
+def test_origin_readback_validator_rejects_mean_title_tick_collision(
+    tmp_path: Path,
+) -> None:
+    plan, geometry, state = _valid_readback_contract(tmp_path, "beeswarm_mean_abs")
+    mean_abs = deepcopy(state["mean_abs"])
+    mean_abs["title_collision"]["bottom_percent"] = (
+        mean_abs["title_collision"]["maximum_bottom_percent"] + 0.5
+    )
+    state["mean_abs"] = mean_abs
+
+    with pytest.raises(OriginDrawError):
+        _renderer_seam("validate_shap_composite_readback")(plan, geometry, state)
+
+
+def test_origin_readback_validator_rejects_missing_group_legend_object(
+    tmp_path: Path,
+) -> None:
+    plan, geometry, state = _valid_readback_contract(
+        tmp_path,
+        "beeswarm_mean_abs_grouped",
+    )
+    group_inset = deepcopy(state["group_inset"])
+    group_inset["legend_objects"] = group_inset["legend_objects"][:-1]
+    state["group_inset"] = group_inset
 
     with pytest.raises(OriginDrawError):
         _renderer_seam("validate_shap_composite_readback")(plan, geometry, state)
@@ -592,6 +833,8 @@ def test_origin_readback_validator_rejects_an_extra_plot_role(tmp_path: Path) ->
         ("source", "calculated"),
         ("label_dataset", "__WrongMeanLabel"),
         ("value_dataset", "__WrongMeanValue"),
+        ("mean_axis_limits", [0.0, 0.333333]),
+        ("mean_axis_step", 0.033333),
     ],
 )
 def test_origin_readback_validator_rejects_wrong_mean_summary_evidence(
