@@ -425,6 +425,7 @@ class ScientificTemplateService:
                 facts = (
                     *facts,
                     ("SHAP 视觉 Profile", shap_plan.profile),
+                    ("SHAP 布局合同", shap_plan.layout_version),
                     ("Mean |SHAP| 来源", shap_plan.mean_abs_source),
                     ("分组贡献来源", shap_plan.group_contribution_source),
                 )

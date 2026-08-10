@@ -25,6 +25,7 @@ from origin_sciplot.origin_backend.template_capabilities import (
     OriginCapability,
     evaluate_template_compatibility,
     get_template_capability_profile,
+    resolve_activated_optional_capabilities,
 )
 from origin_sciplot.origin_backend.verify_utils import require_nonempty
 from origin_sciplot.output_manager import (
@@ -318,20 +319,8 @@ def _activated_optional_capabilities(
     template_id: str,
     scientific_analysis: Any,
 ) -> frozenset[OriginCapability]:
-    if scientific_analysis is None:
-        return frozenset()
-    profile = get_template_capability_profile(template_id)
-    spec = scientific_analysis.plot_spec
-    route_capabilities: set[OriginCapability] = set()
-    if getattr(spec, "aggregate_error_column", None) or any(
-        getattr(series, "error_column", None) for series in spec.series
-    ):
-        route_capabilities.add(OriginCapability.ERROR_BARS)
-    if getattr(spec, "inset_series", ()):
-        route_capabilities.add(OriginCapability.INSET_LAYER)
-    if any(getattr(spec, name, None) == "log10" for name in ("x_scale", "y_scale")):
-        route_capabilities.add(OriginCapability.LOG_AXIS)
-    return frozenset(route_capabilities & profile.optional)
+    plot_spec = None if scientific_analysis is None else scientific_analysis.plot_spec
+    return resolve_activated_optional_capabilities(template_id, plot_spec)
 
 
 def _record_template_compatibility(

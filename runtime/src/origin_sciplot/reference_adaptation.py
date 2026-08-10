@@ -58,7 +58,6 @@ _PRIMITIVE_CAPABILITIES: dict[str, frozenset[str]] = {
     "box": frozenset({"statistical_plot"}),
     "violin": frozenset({"statistical_plot"}),
     "heatmap_cell": frozenset({"matrix_heatmap"}),
-    "colorbar": frozenset({"matrix_heatmap"}),
     "inset": frozenset({"inset_layer"}),
 }
 _RENDERABLE_DISPOSITIONS = frozenset(
@@ -185,6 +184,8 @@ TEMPLATE_MODE_PRIMITIVE_EXTENSIONS: dict[tuple[str, str], frozenset[str]] = {
         }
     ),
     ("uv_vis", "uv_vis_with_tauc"): frozenset({"inset"}),
+    ("shap_summary", "beeswarm_mean_abs"): frozenset({"bar"}),
+    ("shap_summary", "beeswarm_mean_abs_grouped"): frozenset({"bar"}),
 }
 
 
@@ -507,7 +508,20 @@ def _capability_gate(
 ) -> dict[str, object]:
     required: set[str] = set()
     for primitive in primitives:
-        required.update(_PRIMITIVE_CAPABILITIES.get(str(primitive["primitive"]), ()))
+        primitive_kind = str(primitive["primitive"])
+        if primitive_kind == "colorbar":
+            # A colorbar is not synonymous with a matrix heatmap.  SHAP uses
+            # an editable XY scatter whose symbol edge/fill are bound to a
+            # numeric worksheet dataset; heatmaps retain their matrix route.
+            required.add(
+                "dataset_color_scale"
+                if template_id == "shap_summary"
+                else "matrix_heatmap"
+            )
+        elif primitive_kind == "bar" and template_id == "shap_summary":
+            required.update({"horizontal_bar_layer", "multi_layer_page"})
+        else:
+            required.update(_PRIMITIVE_CAPABILITIES.get(primitive_kind, ()))
     return {
         "template_profile_id": (
             template_id if route is ReferenceAdaptationRoute.TEMPLATE_ADAPTATION else None

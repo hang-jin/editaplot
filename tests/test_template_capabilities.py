@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -17,6 +18,7 @@ from origin_sciplot.origin_backend.template_capabilities import (  # noqa: E402
     OriginCapability,
     evaluate_template_compatibility,
     get_template_capability_profile,
+    resolve_activated_optional_capabilities,
 )
 
 
@@ -100,6 +102,100 @@ def test_optional_data_dependent_capability_does_not_block_basic_mode() -> None:
     assert inset_decision.missing_required == (OriginCapability.INSET_LAYER,)
     assert inset_decision.activated_optional == frozenset(
         {OriginCapability.INSET_LAYER}
+    )
+
+
+@pytest.mark.parametrize(
+    ("shap_profile", "expected"),
+    [
+        (
+            "beeswarm_only",
+            frozenset({OriginCapability.DATASET_COLOR_SCALE}),
+        ),
+        (
+            "beeswarm_mean_abs",
+            frozenset(
+                {
+                    OriginCapability.DATASET_COLOR_SCALE,
+                    OriginCapability.HORIZONTAL_BAR_LAYER,
+                    OriginCapability.MULTI_LAYER_PAGE,
+                }
+            ),
+        ),
+        (
+            "beeswarm_mean_abs_grouped",
+            frozenset(
+                {
+                    OriginCapability.DATASET_COLOR_SCALE,
+                    OriginCapability.HORIZONTAL_BAR_LAYER,
+                    OriginCapability.MULTI_LAYER_PAGE,
+                    OriginCapability.PIE,
+                    OriginCapability.PIE_IN_MULTI_LAYER_PAGE,
+                }
+            ),
+        ),
+    ],
+)
+def test_shap_profile_resolver_activates_exact_origin_primitives(
+    shap_profile: str,
+    expected: frozenset[OriginCapability],
+) -> None:
+    plot_spec = SimpleNamespace(
+        shap_plan=SimpleNamespace(profile=shap_profile),
+        plot_mode=shap_profile,
+        series=(),
+        inset_series=(),
+        x_scale="linear",
+        y_scale="linear",
+    )
+
+    assert resolve_activated_optional_capabilities("shap_summary", plot_spec) == expected
+    assert expected.issubset(get_template_capability_profile("shap_summary").optional)
+
+
+def test_shap_template_declares_only_the_five_profile_dependent_capabilities() -> None:
+    assert get_template_capability_profile("shap_summary").optional == frozenset(
+        {
+            OriginCapability.DATASET_COLOR_SCALE,
+            OriginCapability.HORIZONTAL_BAR_LAYER,
+            OriginCapability.MULTI_LAYER_PAGE,
+            OriginCapability.PIE,
+            OriginCapability.PIE_IN_MULTI_LAYER_PAGE,
+        }
+    )
+
+
+def test_shared_resolver_preserves_existing_non_shap_optional_routes() -> None:
+    error_spec = SimpleNamespace(
+        aggregate_error_column="SD",
+        series=(),
+        inset_series=(),
+        x_scale="linear",
+        y_scale="linear",
+    )
+    inset_spec = SimpleNamespace(
+        aggregate_error_column=None,
+        series=(),
+        inset_series=(object(),),
+        x_scale="linear",
+        y_scale="linear",
+    )
+    log_spec = SimpleNamespace(
+        aggregate_error_column=None,
+        series=(),
+        inset_series=(),
+        x_scale="linear",
+        y_scale="log10",
+    )
+
+    assert resolve_activated_optional_capabilities("bar", error_spec) == frozenset(
+        {OriginCapability.ERROR_BARS}
+    )
+    assert resolve_activated_optional_capabilities("uv_vis", inset_spec) == frozenset(
+        {OriginCapability.INSET_LAYER}
+    )
+    assert resolve_activated_optional_capabilities("pl", log_spec) == frozenset(
+        {OriginCapability.LOG_AXIS}
     )
 
 

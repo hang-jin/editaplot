@@ -36,6 +36,9 @@ class OriginCapability(str, Enum):
     OPEN_GL_3D = "open_gl_3d"
     GRAPH_OBJECT_ARROW = "graph_object_arrow"
     MULTI_LAYER_PAGE = "multi_layer_page"
+    DATASET_COLOR_SCALE = "dataset_color_scale"
+    HORIZONTAL_BAR_LAYER = "horizontal_bar_layer"
+    PIE_IN_MULTI_LAYER_PAGE = "pie_in_multi_layer_page"
 
 
 @dataclass(frozen=True)
@@ -200,7 +203,17 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
     ),
     "sankey": _profile("sankey", OriginCapability.SANKEY),
     "scatter": _profile("scatter"),
-    "shap_summary": _profile("shap_summary", OriginCapability.CATEGORICAL_AXIS),
+    "shap_summary": _profile(
+        "shap_summary",
+        OriginCapability.CATEGORICAL_AXIS,
+        optional=(
+            OriginCapability.DATASET_COLOR_SCALE,
+            OriginCapability.HORIZONTAL_BAR_LAYER,
+            OriginCapability.MULTI_LAYER_PAGE,
+            OriginCapability.PIE,
+            OriginCapability.PIE_IN_MULTI_LAYER_PAGE,
+        ),
+    ),
     "stacked_bar": _profile(
         "stacked_bar",
         OriginCapability.CATEGORICAL_AXIS,
@@ -251,6 +264,78 @@ def get_template_capability_profile(template_id: str) -> TemplateCapabilityProfi
         return TEMPLATE_CAPABILITY_PROFILES[template_id]
     except KeyError as exc:
         raise KeyError(f"Unknown public template capability profile: {template_id!r}") from exc
+
+
+def resolve_activated_optional_capabilities(
+    template_id: str,
+    plot_spec: object | None,
+) -> frozenset[OriginCapability]:
+    """Resolve the exact data-dependent Origin route shared by CLI and worker.
+
+    SHAP profiles are cumulative: every route needs an editable dataset-bound
+    color scale; Mean |SHAP| adds a linked horizontal-bar layer; and the
+    grouped route additionally needs a native pie embedded in that multi-layer
+    page.  Other templates retain their established error-bar, inset and
+    logarithmic-axis activation rules.
+    """
+
+    if plot_spec is None:
+        return frozenset()
+    profile = get_template_capability_profile(template_id)
+    route_capabilities: set[OriginCapability] = set()
+    series = getattr(plot_spec, "series", ())
+    if getattr(plot_spec, "aggregate_error_column", None) or any(
+        getattr(item, "error_column", None) for item in series
+    ):
+        route_capabilities.add(OriginCapability.ERROR_BARS)
+    if getattr(plot_spec, "inset_series", ()):
+        route_capabilities.add(OriginCapability.INSET_LAYER)
+    if any(
+        getattr(plot_spec, axis_name, None) == "log10"
+        for axis_name in ("x_scale", "y_scale")
+    ):
+        route_capabilities.add(OriginCapability.LOG_AXIS)
+
+    if template_id == "shap_summary":
+        shap_plan = getattr(plot_spec, "shap_plan", None)
+        shap_profile = str(
+            getattr(
+                shap_plan,
+                "profile",
+                getattr(plot_spec, "plot_mode", "beeswarm_only"),
+            )
+        )
+        profile_capabilities = {
+            "beeswarm_only": {
+                OriginCapability.DATASET_COLOR_SCALE,
+            },
+            "beeswarm_mean_abs": {
+                OriginCapability.DATASET_COLOR_SCALE,
+                OriginCapability.HORIZONTAL_BAR_LAYER,
+                OriginCapability.MULTI_LAYER_PAGE,
+            },
+            "beeswarm_mean_abs_grouped": {
+                OriginCapability.DATASET_COLOR_SCALE,
+                OriginCapability.HORIZONTAL_BAR_LAYER,
+                OriginCapability.MULTI_LAYER_PAGE,
+                OriginCapability.PIE,
+                OriginCapability.PIE_IN_MULTI_LAYER_PAGE,
+            },
+        }
+        try:
+            route_capabilities.update(profile_capabilities[shap_profile])
+        except KeyError as exc:
+            raise ValueError(
+                f"Unknown SHAP composite profile for Origin capabilities: {shap_profile!r}"
+            ) from exc
+
+    invalid = route_capabilities - (profile.required | profile.optional)
+    if invalid:
+        names = ", ".join(_capability_values(invalid))
+        raise ValueError(
+            f"Template capability profile {template_id!r} does not allow: {names}"
+        )
+    return frozenset(route_capabilities & profile.optional)
 
 
 def evaluate_template_compatibility(
@@ -326,4 +411,5 @@ __all__ = [
     "TemplateCompatibilityDecision",
     "evaluate_template_compatibility",
     "get_template_capability_profile",
+    "resolve_activated_optional_capabilities",
 ]

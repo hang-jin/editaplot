@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import math
 import sys
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import pytest
@@ -13,8 +14,12 @@ sys.path.insert(0, str(RUNTIME_SRC))
 from origin_sciplot.scientific_workflow import (  # noqa: E402
     ScientificColumnMapping,
     ScientificWorkflowError,
+    _scientific_plan_digest,
     prepare_scientific,
     role_options,
+)
+from origin_sciplot.shap_composite import (  # noqa: E402
+    SHAP_COMPOSITE_LAYOUT_VERSION,
 )
 
 
@@ -142,6 +147,8 @@ def test_legacy_three_column_input_remains_valid_and_derives_mean_abs(
     }
     assert preparation.plot_spec.plot_mode == "beeswarm_mean_abs"
     plan = preparation.plot_spec.shap_plan
+    assert plan.layout_version == SHAP_COMPOSITE_LAYOUT_VERSION
+    assert asdict(plan)["layout_version"] == SHAP_COMPOSITE_LAYOUT_VERSION
     assert plan.profile == "beeswarm_mean_abs"
     assert plan.feature_order == ("Texture", "Shape")
     assert plan.mean_abs_source == "derived_from_supplied_shap"
@@ -150,6 +157,19 @@ def test_legacy_three_column_input_remains_valid_and_derives_mean_abs(
     )
     assert plan.feature_groups == ()
     assert plan.group_contributions == ()
+
+
+def test_layout_version_is_part_of_the_frozen_scientific_plan_digest(
+    tmp_path: Path,
+) -> None:
+    source = _write_csv(tmp_path / "layout_version.csv", _base_rows())
+    preparation = prepare_scientific(source, "shap_summary")
+    plan = preparation.plot_spec.shap_plan
+
+    changed_plan = replace(plan, layout_version="shap-composite-layout-test-next")
+    changed_spec = replace(preparation.plot_spec, shap_plan=changed_plan)
+
+    assert _scientific_plan_digest(preparation, changed_spec) != preparation.plan_digest
 
 
 @pytest.mark.parametrize("chinese", [False, True], ids=["english", "chinese"])

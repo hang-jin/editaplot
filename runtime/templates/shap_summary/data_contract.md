@@ -11,4 +11,5 @@
 - Feature Order 与 Mean absolute SHAP 可按每个特征只填写 1 个单元格，Group contribution (%) 可按每组只填写 1 个单元格；同一特征或同一组的多个非空值必须一致。
 - 纵向防遮挡偏移与特征内颜色归一化都是仅用于显示的 helper，具有明确 lineage，也会进入派生项确认清单；它们不会改写 SHAP 横坐标或原始特征值。
 - 用户提供的 Mean absolute SHAP 或组贡献必须与逐行 SHAP 数据一致；不一致时失败关闭，不会悄悄选用其中一套。
+- 当前复合布局版本为 `shap-composite-layout-v1`；该版本随 SHAP 计划一同冻结并进入计划摘要，布局合同变化后旧绘图计划不会被静默复用。
 - Skill 不训练模型、不调用 SHAP 库、不推断解释、不修改或补造源数据。

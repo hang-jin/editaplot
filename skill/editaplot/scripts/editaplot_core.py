@@ -2090,8 +2090,8 @@ def build_plan(
     root = bootstrap_engine(engine_home)
     try:
         from origin_sciplot.origin_backend.template_capabilities import (
-            OriginCapability,
             get_template_capability_profile,
+            resolve_activated_optional_capabilities,
         )
         from origin_sciplot.palette_catalog import get_palette, palette_to_dict
         from origin_sciplot.scientific_workflow import (
@@ -2206,26 +2206,16 @@ def build_plan(
     if hasattr(plot_spec, "visual_profile"):
         display_transform = plot_spec.visual_profile
     capability_profile = get_template_capability_profile(template_id)
-    route_capabilities: set[OriginCapability] = set()
-    if plot_spec is not None:
-        if getattr(plot_spec, "aggregate_error_column", None) or any(
-            getattr(series, "error_column", None) for series in getattr(plot_spec, "series", ())
-        ):
-            route_capabilities.add(OriginCapability.ERROR_BARS)
-        if getattr(plot_spec, "inset_series", ()):
-            route_capabilities.add(OriginCapability.INSET_LAYER)
-        if any(getattr(plot_spec, axis_name, None) == "log10" for axis_name in ("x_scale", "y_scale")):
-            route_capabilities.add(OriginCapability.LOG_AXIS)
-    invalid_route_capabilities = route_capabilities - (
-        capability_profile.required | capability_profile.optional
-    )
-    if invalid_route_capabilities:
-        invalid_names = ", ".join(sorted(capability.value for capability in invalid_route_capabilities))
+    try:
+        activated_optional_capabilities = resolve_activated_optional_capabilities(
+            template_id,
+            plot_spec,
+        )
+    except ValueError as exc:
         raise EditaPlotError(
             "origin_capability_profile_invalid",
-            f"The template capability profile does not allow: {invalid_names}.",
-        )
-    activated_optional_capabilities = route_capabilities & capability_profile.optional
+            str(exc),
+        ) from exc
 
     summary_facts = [list(item) for item in prepared.summary.facts]
     if plot_spec is not None and axis_title_overrides:

@@ -21,6 +21,8 @@ ShapCompositeProfile = Literal[
 ]
 ShapSummarySource = Literal["not_used", "provided", "derived_from_supplied_shap"]
 
+SHAP_COMPOSITE_LAYOUT_VERSION = "shap-composite-layout-v1"
+
 SHAP_COMPOSITE_PROFILES = frozenset(
     {
         "beeswarm_only",
@@ -51,6 +53,7 @@ class ShapCompositeError(ValueError):
 class ShapCompositePlan:
     """Source-bound summaries shared by preview, Origin, and semantic review."""
 
+    layout_version: str
     profile: ShapCompositeProfile
     feature_order: tuple[str, ...]
     feature_order_column: str | None
@@ -336,6 +339,7 @@ def build_shap_composite_plan(
     )
     if profile == "beeswarm_only":
         return ShapCompositePlan(
+            layout_version=SHAP_COMPOSITE_LAYOUT_VERSION,
             profile=profile,
             feature_order=feature_order,
             feature_order_column=order_column,
@@ -360,6 +364,7 @@ def build_shap_composite_plan(
     )
     if profile == "beeswarm_mean_abs":
         return ShapCompositePlan(
+            layout_version=SHAP_COMPOSITE_LAYOUT_VERSION,
             profile=profile,
             feature_order=feature_order,
             feature_order_column=order_column,
@@ -401,6 +406,7 @@ def build_shap_composite_plan(
         contribution_column=contribution_column,
     )
     return ShapCompositePlan(
+        layout_version=SHAP_COMPOSITE_LAYOUT_VERSION,
         profile=profile,
         feature_order=feature_order,
         feature_order_column=order_column,
@@ -418,6 +424,7 @@ def build_shap_composite_plan(
 
 
 __all__ = [
+    "SHAP_COMPOSITE_LAYOUT_VERSION",
     "SHAP_COMPOSITE_PROFILES",
     "ShapCompositeError",
     "ShapCompositePlan",

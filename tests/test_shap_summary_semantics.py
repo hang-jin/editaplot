@@ -20,6 +20,9 @@ from origin_sciplot.semantic_contract import (  # noqa: E402
     SemanticContractError,
     parse_semantic_proposal,
 )
+from origin_sciplot.shap_composite import (  # noqa: E402
+    SHAP_COMPOSITE_LAYOUT_VERSION,
+)
 
 
 def _write_csv(path: Path, rows: list[dict[str, object]]) -> Path:
@@ -103,6 +106,10 @@ def test_legacy_input_declares_all_visual_derivations_with_complete_lineage(
 ) -> None:
     source = _write_csv(tmp_path / "legacy.csv", _legacy_rows())
     preparation = prepare_scientific(source, "shap_summary")
+
+    assert preparation.plot_spec.shap_plan.layout_version == (
+        SHAP_COMPOSITE_LAYOUT_VERSION
+    )
 
     proposal = propose_prepared_semantics(_wrapped(preparation))
 

@@ -548,6 +548,12 @@ def test_declared_bar_primitive_remains_available_to_controlled_composition(
         ("bar", "default", "bar", "categorical_axis"),
         ("grouped_box", "wide_category_group_raw", "box", "statistical_plot"),
         ("heatmap", "default", "heatmap_cell", "matrix_heatmap"),
+        (
+            "shap_summary",
+            "beeswarm_mean_abs",
+            "colorbar",
+            "dataset_color_scale",
+        ),
     ],
 )
 def test_data_primitives_pass_only_their_compatible_public_template(
@@ -580,6 +586,32 @@ def test_data_primitives_pass_only_their_compatible_public_template(
     assert required_capability in payload["origin_capability_gate"][
         "additional_required_capabilities"
     ]
+
+
+def test_shap_mean_bar_reference_uses_the_verified_multilayer_bar_route(
+    tmp_path: Path,
+) -> None:
+    semantics = _confirmed_domain_contract(
+        "shap_summary",
+        "beeswarm_mean_abs",
+        (("mean_abs", "mean_absolute_shap", DataDisposition.RENDER_SECONDARY),),
+    )
+    reference = _primitive_reference(
+        tmp_path,
+        (("mean_abs_bar", "bar", "mean_abs", True),),
+    )
+
+    payload = build_reference_adaptation_plan(
+        semantics,
+        reference,
+        route="template_adaptation",
+        template_id="shap_summary",
+    ).to_dict()
+
+    assert set(payload["origin_capability_gate"]["additional_required_capabilities"]) == {
+        "horizontal_bar_layer",
+        "multi_layer_page",
+    }
 
 
 @pytest.mark.parametrize("primitive", ["bar", "box", "heatmap_cell"])
