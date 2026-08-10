@@ -23,6 +23,7 @@ from origin_sciplot.origin_backend.template_capabilities import (  # noqa: E402
     evaluate_template_compatibility,
     get_template_capability_profile,
 )
+from origin_sciplot.origin_backend.verify_utils import verify_symbol_style  # noqa: E402
 from origin_sciplot.scientific_preview import (  # noqa: E402
     ScientificPreviewError,
     _build_scientific_preview_figure,
@@ -81,6 +82,80 @@ def test_shap_binding_accepts_equivalent_origin_range_spellings() -> None:
             "expected_count": 48,
         }
     )
+
+
+class _SymbolProbeLayer:
+    def __init__(self, *, fail_option: str | None = None) -> None:
+        self.fail_option = fail_option
+        self.commands: list[str] = []
+
+    def LT_execute(self, command: str) -> int:
+        self.commands.append(command)
+        if self.fail_option is not None and f" {self.fail_option} " in command:
+            return 0
+        return 1
+
+
+class _SymbolProbePlot:
+    def __init__(self, layer: _SymbolProbeLayer) -> None:
+        self.layer = layer
+
+    @staticmethod
+    def lt_range() -> str:
+        return "[SHAPComposite]2!1"
+
+
+def test_symbol_verifier_reads_kind_and_interior_from_origin_commands() -> None:
+    layer = _SymbolProbeLayer()
+    plot = _SymbolProbePlot(layer)
+    origin = SimpleNamespace(
+        lt_float=lambda name: {
+            "__osc_symbol_size": 6.8,
+            "__osc_symbol_edge": 20.0,
+            "__osc_symbol_kind": 2.0,
+            "__osc_symbol_interior": 0.0,
+        }[name]
+    )
+
+    state = verify_symbol_style(
+        origin,
+        plot,
+        expected_size_pt=6.8,
+        expected_edge_percent=20.0,
+        expected_symbol_kind=2,
+        expected_symbol_interior=0,
+    )
+
+    assert state["symbol_kind"] == pytest.approx(2.0)
+    assert state["symbol_interior"] == pytest.approx(0.0)
+    assert any("get rr -k __osc_symbol_kind" in command for command in layer.commands)
+    assert any("get rr -kf __osc_symbol_interior" in command for command in layer.commands)
+
+
+@pytest.mark.parametrize("fail_option", ("-k", "-kf"))
+def test_symbol_verifier_fails_closed_when_origin_option_read_fails(
+    fail_option: str,
+) -> None:
+    layer = _SymbolProbeLayer(fail_option=fail_option)
+    plot = _SymbolProbePlot(layer)
+    origin = SimpleNamespace(
+        lt_float=lambda name: {
+            "__osc_symbol_size": 6.8,
+            "__osc_symbol_edge": 20.0,
+            "__osc_symbol_kind": 2.0,
+            "__osc_symbol_interior": 0.0,
+        }[name]
+    )
+
+    with pytest.raises(RuntimeError, match="Origin plot verification command failed"):
+        verify_symbol_style(
+            origin,
+            plot,
+            expected_size_pt=6.8,
+            expected_edge_percent=20.0,
+            expected_symbol_kind=2,
+            expected_symbol_interior=0,
+        )
 
 
 def test_shap_binding_rejects_a_different_origin_dataset() -> None:
@@ -470,6 +545,23 @@ def test_origin_geometry_plan_is_profile_specific_and_physically_bounded(
         assert float(payload["page_height_cm"]) * float(inset["height_percent"]) / 100.0 <= (
             4.8 + 0.03
         )
+
+
+def test_grouped_inset_hits_the_frozen_4_8_cm_cap_on_a_large_page() -> None:
+    geometry = resolve_shap_composite_geometry(
+        "beeswarm_mean_abs_grouped",
+        SimpleNamespace(page_width_cm=40.0, page_height_cm=30.0),
+    )
+    inset = geometry.region("shap_group_contribution")
+
+    assert geometry.page_width_cm * inset.width_percent / 100.0 == pytest.approx(
+        4.8,
+        abs=0.002,
+    )
+    assert geometry.page_height_cm * inset.height_percent / 100.0 == pytest.approx(
+        4.8,
+        abs=0.002,
+    )
 
 
 @pytest.mark.parametrize(
