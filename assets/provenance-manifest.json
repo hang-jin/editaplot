@@ -7,7 +7,7 @@
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
-    "sha256": "a5fe3c3c11440f96c3ebd5519c39665665adab88e03efc6b73e120c468f4d2ed"
+    "sha256": "9608eea3510498335ed63650ef22fb364bb942ba8b79329289e0deb7b23f177e"
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
@@ -539,8 +539,8 @@
     {
       "path": "assets/gallery/medical-shap.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 40511,
-      "sha256": "5a76ff47a1db9d46c881a89f16919e5d53e84f1abd6270dd5880889640850c4e",
+      "size_bytes": 107557,
+      "sha256": "6437540e2e4ec05a9d1cdab32aac259f432dda15c2db54a934cb08f78ff0ad41",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -1318,8 +1318,8 @@
     {
       "path": "examples/gallery/medical_shap_summary.csv",
       "kind": "synthetic_public_example",
-      "size_bytes": 4511,
-      "sha256": "f21188fa30283e1f489b4d13bc4fa77bc09192d9f94b05fcc7a513d9736e9dbc",
+      "size_bytes": 32461,
+      "sha256": "2929a0ba4278e7d8f9e434bc50a3e578322bbef2510cf957e84e1cf82691b862",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

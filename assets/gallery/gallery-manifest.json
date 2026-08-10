@@ -214,11 +214,11 @@
     },
     {
       "id": "medical-shap",
-      "title_zh": "预计算 SHAP 特征贡献图",
-      "title_en": "medical imaging precomputed SHAP summary beeswarm feature contribution",
+      "title_zh": "复合 SHAP 特征贡献图",
+      "title_en": "medical imaging composite SHAP beeswarm mean importance and grouped contribution",
       "display_in_gallery": true,
-      "sha256": "5a76ff47a1db9d46c881a89f16919e5d53e84f1abd6270dd5880889640850c4e",
-      "size_bytes": 40511
+      "sha256": "6437540e2e4ec05a9d1cdab32aac259f432dda15c2db54a934cb08f78ff0ad41",
+      "size_bytes": 107557
     },
     {
       "id": "nmr-comparison",

@@ -444,30 +444,92 @@ def generate_medical_distribution_interpretability() -> None:
         raincloud_rows,
     )
 
+    # Eight features x 72 observations make the beeswarm density visible in
+    # the public gallery while keeping the table fast enough for a beginner's
+    # first Origin render.  Values are original deterministic teaching data;
+    # they do not represent a patient cohort or a trained model.
     feature_specs = (
-        ("Tumor volume", 8.0, 46.0, 0.92, 0.3),
-        ("ADC mean", 0.72, 1.38, -0.84, 1.0),
-        ("Texture entropy", 3.8, 6.3, 0.66, 1.7),
-        ("Enhancement ratio", 0.78, 1.90, 0.52, 2.3),
-        ("Age", 35.0, 76.0, 0.30, 2.9),
+        ("Lesion volume", 4.0, 62.0, 1.34, 0.20, "Morphology"),
+        ("ADC mean", 0.62, 1.48, -1.16, 0.75, "Diffusion"),
+        ("Texture entropy", 3.1, 7.2, 1.01, 1.30, "Texture"),
+        ("Enhancement ratio", 0.55, 2.15, 0.88, 1.85, "Enhancement"),
+        ("Surface irregularity", 0.08, 0.91, -0.75, 2.40, "Morphology"),
+        ("ADC heterogeneity", 0.04, 0.38, 0.64, 2.95, "Diffusion"),
+        ("Perfusion slope", 0.12, 1.42, 0.51, 3.50, "Enhancement"),
+        ("Clinical score", 0.0, 10.0, -0.39, 4.05, "Clinical"),
     )
+    observations_by_feature: list[list[tuple[float, float]]] = []
+    for feature_index, (_feature, lower, upper, effect, phase, _group) in enumerate(
+        feature_specs
+    ):
+        observations: list[tuple[float, float]] = []
+        for sample_index in range(72):
+            wave = (
+                0.58 * math.sin(sample_index * (0.319 + feature_index * 0.011) + phase)
+                + 0.29 * math.cos(sample_index * (0.173 + feature_index * 0.007) + phase * 0.7)
+                + 0.13 * math.sin(sample_index * 0.811 + feature_index * 0.63)
+            )
+            unit = max(0.0, min(1.0, 0.5 + wave * 0.48))
+            centered = unit - 0.5
+            contribution = (
+                effect * (1.30 * centered + 0.72 * centered**3)
+                + 0.075 * math.sin(sample_index * 1.37 + feature_index * 0.81)
+                + 0.028 * math.cos(sample_index * 0.57 + phase)
+            )
+            # Freeze the exact values written to CSV before deriving summary
+            # columns so supplied and derived Mean |SHAP| remain identical.
+            observations.append((round(contribution, 6), lower + (upper - lower) * unit))
+        observations_by_feature.append(observations)
+
+    mean_abs_by_feature = [
+        sum(abs(shap_value) for shap_value, _feature_value in observations) / len(observations)
+        for observations in observations_by_feature
+    ]
+    group_totals: dict[str, float] = {}
+    for spec, mean_abs in zip(feature_specs, mean_abs_by_feature, strict=True):
+        group = spec[-1]
+        group_totals[group] = group_totals.get(group, 0.0) + mean_abs
+    all_groups_total = sum(group_totals.values())
+    group_contributions = {
+        group: total / all_groups_total * 100.0
+        for group, total in group_totals.items()
+    }
+
     shap_rows = []
-    for feature_index, (feature, lower, upper, effect, phase) in enumerate(feature_specs):
-        for sample_index in range(28):
-            unit = (math.sin(sample_index * (0.71 + feature_index * 0.035) + phase) + 1.0) / 2.0
-            feature_value = lower + (upper - lower) * unit
-            contribution = effect * (unit - 0.5) + 0.065 * math.sin(sample_index * 1.43 + feature_index * 0.8)
+    emitted_groups: set[str] = set()
+    for feature_index, ((feature, _lower, _upper, _effect, _phase, group), observations) in enumerate(
+        zip(feature_specs, observations_by_feature, strict=True),
+        start=1,
+    ):
+        for sample_index, (shap_value, feature_value) in enumerate(observations, start=1):
+            first_feature_row = sample_index == 1
+            first_group_row = first_feature_row and group not in emitted_groups
             shap_rows.append(
                 (
                     feature,
-                    f"{contribution:.4f}",
-                    f"{feature_value:.4f}",
-                    f"S{sample_index + 1:03d}",
+                    f"{shap_value:.6f}",
+                    f"{feature_value:.6f}",
+                    f"CASE{sample_index:03d}",
+                    feature_index if first_feature_row else "",
+                    f"{mean_abs_by_feature[feature_index - 1]:.10f}" if first_feature_row else "",
+                    group,
+                    f"{group_contributions[group]:.10f}" if first_group_row else "",
                 )
             )
+            if first_group_row:
+                emitted_groups.add(group)
     _write(
         "medical_shap_summary.csv",
-        ["Feature", "SHAP value", "Feature value", "Sample ID"],
+        [
+            "Feature",
+            "SHAP value",
+            "Feature value",
+            "Sample ID",
+            "Feature Order",
+            "Mean absolute SHAP",
+            "Feature Group",
+            "Group contribution (%)",
+        ],
         shap_rows,
     )
 

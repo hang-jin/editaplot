@@ -47,7 +47,7 @@ or clinical claim. The public source tree retains only sanitized PNGs.
 <img src="../assets/gallery/medical-pr.png" alt="medical imaging precision recall PR curve" width="31%" />
 <img src="../assets/gallery/medical-raincloud.png" alt="medical imaging Raincloud raw distribution" width="31%" />
 <img src="../assets/gallery/medical-roc.png" alt="medical imaging ROC diagnostic curve" width="31%" />
-<img src="../assets/gallery/medical-shap.png" alt="medical imaging precomputed SHAP summary beeswarm feature contribution" width="31%" />
+<img src="../assets/gallery/medical-shap.png" alt="medical imaging composite SHAP beeswarm mean importance and grouped contribution" width="31%" />
 <img src="../assets/gallery/nmr-comparison.png" alt="19F NMR spectrum comparison" width="31%" />
 <img src="../assets/gallery/percent-composition.png" alt="percentage composition with confirmed row denominator" width="31%" />
 <img src="../assets/gallery/pie-five-parts.png" alt="pie part-to-whole" width="31%" />

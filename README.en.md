@@ -104,9 +104,17 @@ I store only the date and aggregate repository count. I do not read or store use
 | Materials and spectra | XPS scan/fit, XPS multi-spectrum comparison, ordinary XRD, GSAS/GSAS-II XRD Rietveld, XAS, FTIR/IR, NMR, DSC, PL/TRPL, UV–Vis/Tauc, EIS, CV, LSV, multi-condition 3D Nyquist |
 | General statistics | bars, horizontal bars, error bars, stacked/percentage composition, pie, Sankey, multi-panel circular directed weighted networks, line, trend, scatter, bubble, radar, and adaptive dense-matrix heatmaps |
 | Distributions and effects | raw summaries, box, violin, Raincloud, histogram, forest plot, and 3D dual-density ridgelines with supplied baseline focal locators |
-| Medical and deep learning | ROC, PR, calibration, DCA, confusion matrix, Bland–Altman, paired longitudinal trajectories, grouped boxes, precomputed SHAP, medical panel planning |
+| Medical and deep learning | ROC, PR, calibration, DCA, confusion matrix, Bland–Altman, paired longitudinal trajectories, grouped boxes, composite precomputed SHAP (beeswarm + Mean \|SHAP\| + a real color scale + optional grouped contribution), medical panel planning |
 
 I do not silently smooth data, remove outliers, invent peaks, derive error bars, fit curves, identify phases, or train models. Lifetime, band-gap, SHAP, and similar analysis results are drawn only when you explicitly provide them.
+
+The SHAP route reads only an upstream precomputed long table. Its minimum columns are
+`Feature + SHAP value + Feature value`; optional roles are `Sample ID`, `Feature Order`,
+`Mean absolute SHAP`, `Feature Group`, and `Group contribution (%)`. EditaPlot selects among
+beeswarm-only, beeswarm plus Mean |SHAP|, and the grouped composite profile from the columns that
+are actually present. If a missing summary must be derived from supplied SHAP values, its formula,
+lineage, and display purpose are listed for explicit confirmation first. The source CSV is never
+rewritten. Start with [`medical_shap_summary.csv`](examples/gallery/medical_shap_summary.csv).
 
 ### Preparing the new materials and relationship routes
 
@@ -133,13 +141,13 @@ I made and manually checked these examples with synthetic teaching data. Metadat
   <img src="assets/gallery/medical-grouped-box.png" alt="Medical grouped box" width="31%">
   <img src="assets/gallery/uv-vis-tauc.png" alt="UV–Vis and Tauc inset" width="31%">
   <img src="assets/gallery/percent-composition.png" alt="Percentage composition" width="31%">
-  <img src="assets/gallery/medical-roc.png" alt="Medical ROC" width="31%">
+  <img src="assets/gallery/medical-shap.png" alt="Composite SHAP feature contribution" width="31%">
   <img src="assets/gallery/circular-network.png" alt="Multi-panel circular directed weighted network" width="31%">
 </div>
 
 ➡️ [Browse the 45 public showcase examples](docs/gallery.en.md)
 
-The current public capability set contains 40 Origin plotting routes. The repository retains 47 verification PNGs that passed live artifacts, object readback, human visual review, and the public-asset audit; 45 are displayed, while two hidden heatmap cases remain only as regression evidence. DSC, NMR, FTIR/IR, XPS comparison, multi-condition PL, multi-sample UV–Vis, the 30×30 dense heatmap, the multi-period circular directed weighted network, and the 3D dual-density baseline-locator route have all completed the Origin 2024b gate.
+The current public capability set contains 40 Origin plotting routes. The repository retains 47 verification PNGs that passed live artifacts, object readback, human visual review, and the public-asset audit; 45 are displayed, while two hidden heatmap cases remain only as regression evidence. DSC, NMR, FTIR/IR, XPS comparison, multi-condition PL, multi-sample UV–Vis, the 30×30 dense heatmap, the 576-point composite SHAP figure, the multi-period circular directed weighted network, and the 3D dual-density baseline-locator route have all completed the Origin 2024b gate.
 
 ### How long should one run take?
 

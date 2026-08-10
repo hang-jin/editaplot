@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-08-10 — Editable composite SHAP workflow
+
+- Expanded the existing precomputed SHAP route into three column-driven profiles: editable
+  beeswarm only, beeswarm plus a linked Mean |SHAP| bar layer, and the full grouped composite with
+  an editable contribution pie inset. The source table remains immutable and no model is trained.
+- Added optional roles for sample ID, feature order, supplied Mean |SHAP|, feature group, and supplied
+  group contribution. Any missing summary derived from supplied SHAP values, within-feature color
+  normalization, and deterministic beeswarm offset remain explicit semantic items that require
+  confirmation before rendering.
+- Implemented the live Origin route with PID201 scatter, a true `Spectrum1` dataset color scale,
+  PID215 horizontal bars linked to the beeswarm rows, and optional PID225 Pie2D. Exact helper-column
+  bindings, palette direction, layer geometry/linkage, symbol kind/interior, nice top-axis limits,
+  default-object cleanup, pie-label state, editable legend objects, and source-X preservation are
+  read back and fail closed.
+- Replaced the former sparse public fixture with a deterministic 576-row, eight-feature teaching
+  table and a real Origin-rendered composite preview. The final run produced editable OPJU plus
+  PNG/PDF/TIF, passed object and axis readback, retained the original source values, and passed
+  hash-bound human visual review.
+
 ## 2026-08-09 — Bounded Origin startup recovery
 
 - Split isolated-instance startup into activation, Origin C readiness, version readback, and project
