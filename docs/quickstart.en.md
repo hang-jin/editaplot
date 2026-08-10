@@ -75,6 +75,20 @@ I keep the `inspect → recommend → understand → plan` pipeline behind the s
 hear only what was detected, what will and will not be drawn, what is recommended, and what decision
 still belongs to them.
 
+## Precomputed SHAP data
+
+When per-sample SHAP values already exist from Python, R, or a model-training workflow, the smallest
+accepted long table has `Feature`, `SHAP value`, and `Feature value`. Optional roles are `Sample ID`,
+`Feature Order`, `Mean absolute SHAP`, `Feature Group`, and `Group contribution (%)`; equivalent
+Chinese column names are also recognized.
+
+EditaPlot selects beeswarm-only, beeswarm with a top Mean |SHAP| axis, or the full grouped composite
+from the roles actually present. If Mean |SHAP| or grouped percentages are absent but requested, I
+first list the formula and lineage and wait for explicit approval of those derived items. The
+within-feature color normalization and deterministic beeswarm offset are also disclosed in the
+understanding checklist. The source file stays read-only. Use
+[`medical_shap_summary.csv`](../examples/gallery/medical_shap_summary.csv) as a starting table.
+
 ## GSAS / GSAS-II XRD refinement data
 
 For Powder or Publication CSV files, EditaPlot distinguishes:

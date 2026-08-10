@@ -220,7 +220,24 @@ def test_render_plan_freezes_data_dependent_optional_capabilities() -> None:
         ),
         engine_home=runtime,
     )
+    shap_plan = build_plan(
+        runtime / "templates" / "shap_summary" / "example_standard.csv",
+        template_id="shap_summary",
+        claim="The supplied SHAP values rank the teaching features.",
+        evidence_role="model explanation",
+        semantic_confirmation=_semantic_confirmation(
+            runtime / "templates" / "shap_summary" / "example_standard.csv",
+            "shap_summary",
+            runtime,
+        ),
+        engine_home=runtime,
+    )
 
     assert bar_plan["template"]["activated_optional_capabilities"] == ["error_bars"]
     assert uv_plan["template"]["activated_optional_capabilities"] == ["inset_layer"]
     assert stacked_plan["template"]["activated_optional_capabilities"] == ["error_bars"]
+    assert shap_plan["template"]["activated_optional_capabilities"] == [
+        "dataset_color_scale",
+        "horizontal_bar_layer",
+        "multi_layer_page",
+    ]

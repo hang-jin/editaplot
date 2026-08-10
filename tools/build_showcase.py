@@ -421,9 +421,10 @@ CASES = (
         "medical-shap",
         "shap_summary",
         "medical_shap_summary.csv",
-        "Externally precomputed per-sample SHAP contributions preserve feature order and exact horizontal values while feature magnitude is encoded from low blue to high red.",
+        "Externally precomputed per-sample SHAP contributions preserve 576 exact horizontal values while supplied Mean absolute SHAP and group contributions remain linked, editable evidence.",
         "interpretability",
-        "medical imaging precomputed SHAP summary beeswarm feature contribution",
+        "medical imaging composite SHAP beeswarm mean importance and grouped contribution",
+        title_zh="复合 SHAP 特征贡献图",
     ),
 )
 

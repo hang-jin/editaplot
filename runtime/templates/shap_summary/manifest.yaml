@@ -1,8 +1,8 @@
 id: shap_summary
 name: 预计算 SHAP 汇总图
 category: medical-ai/interpretability
-version: 0.1.0
-description: 可编辑展示外部预计算的 SHAP 贡献值与特征值颜色映射
+version: 0.2.0
+description: 可编辑展示外部预计算的 SHAP 蜂群、Mean |SHAP| 与可选分组贡献
 requires_origin: true
 runner: runner.py
 schema: schema.json
@@ -23,10 +23,14 @@ blank_template: data_template.csv
 data_guide:
   headline_zh: 展示模型外部预计算的逐样本 SHAP 值，不在 Origin 中运行解释算法。
   required_columns: [Feature, SHAP value, Feature value]
-  optional_columns: [Sample ID]
+  optional_columns:
+    [Sample ID, Feature Order, Mean absolute SHAP, Feature Group, Group contribution (%)]
   accepted_layouts: [长表，每行是一个样本-特征观测]
-  aliases: [特征, SHAP值, 特征值, 特征贡献]
+  aliases:
+    [特征, SHAP值, 特征值, 样本编号, 特征顺序, 平均绝对SHAP, 特征组, 组贡献百分比]
   notes_zh:
     - 每个特征至少 3 个完整观测，至少 2 个不同特征。
     - Feature value 仅在每个特征内部归一化为颜色；原 SHAP 横坐标保持不变。
-    - 不训练模型、不运行 SHAP、不推断特征重要性、不静默重排特征。
+    - 未提供 Mean absolute SHAP 时，可从用户给出的逐行 SHAP 值计算 mean(abs(SHAP))，但必须在元素清单中明确并由用户确认。
+    - 提供 Feature Group 后，可生成分组贡献面板；未提供百分比时，按组汇总 Mean |SHAP| 后归一到 100%，同样需要确认。
+    - 不训练模型、不运行 SHAP、不补造模型输出、不静默重排特征。

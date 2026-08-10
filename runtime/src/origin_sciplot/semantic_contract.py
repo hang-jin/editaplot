@@ -31,6 +31,10 @@ ALLOWED_DERIVED_OPERATIONS = frozenset(
         "offset_by_constant",
         "mask_by_column",
         "fraction_of_row_total",
+        "mean_absolute_by_category",
+        "fraction_of_group_total",
+        "normalize_within_category_minmax",
+        "deterministic_binned_symmetric_offset",
     }
 )
 

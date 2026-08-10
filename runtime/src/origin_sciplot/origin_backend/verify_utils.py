@@ -196,7 +196,7 @@ def verify_text_fonts(
 def _read_plot_option(op: Any, plot: Any, option: str, variable_name: str) -> float:
     command = f"{{range rr={plot.lt_range()};get rr {option} {variable_name};}}"
     result = plot.layer.LT_execute(command)
-    if result is False:
+    if not result:
         raise RuntimeError(f"Origin plot verification command failed: {option}")
     value = float(op.lt_float(variable_name))
     if not math.isfinite(value):
@@ -254,11 +254,23 @@ def verify_symbol_style(
     *,
     expected_size_pt: float,
     expected_edge_percent: float,
+    expected_symbol_kind: int | None = None,
+    expected_symbol_interior: int | None = None,
     tolerance: float = 0.05,
 ) -> dict[str, float]:
-    """Read back a scatter symbol's point size and radius-relative edge thickness."""
+    """Read back the requested scatter-symbol contract from the merged plot."""
     size = _read_plot_option(op, plot, "-z", "__osc_symbol_size")
     edge = _read_plot_option(op, plot, "-kh", "__osc_symbol_edge")
+    kind = (
+        _read_plot_option(op, plot, "-k", "__osc_symbol_kind")
+        if expected_symbol_kind is not None
+        else None
+    )
+    interior = (
+        _read_plot_option(op, plot, "-kf", "__osc_symbol_interior")
+        if expected_symbol_interior is not None
+        else None
+    )
     if abs(size - expected_size_pt) > tolerance:
         raise RuntimeError(
             f"Origin symbol size verification failed: {size:g} pt, expected {expected_size_pt:g} pt"
@@ -268,7 +280,25 @@ def verify_symbol_style(
             "Origin symbol edge verification failed: "
             f"{edge:g}% of radius, expected {expected_edge_percent:g}%"
         )
-    return {"symbol_size_pt": size, "symbol_edge_percent_of_radius": edge}
+    if kind is not None and abs(kind - float(expected_symbol_kind)) > tolerance:
+        raise RuntimeError(
+            f"Origin symbol kind verification failed: {kind:g}, "
+            f"expected {expected_symbol_kind}"
+        )
+    if interior is not None and abs(interior - float(expected_symbol_interior)) > tolerance:
+        raise RuntimeError(
+            f"Origin symbol interior verification failed: {interior:g}, "
+            f"expected {expected_symbol_interior}"
+        )
+    state = {
+        "symbol_size_pt": size,
+        "symbol_edge_percent_of_radius": edge,
+    }
+    if kind is not None:
+        state["symbol_kind"] = kind
+    if interior is not None:
+        state["symbol_interior"] = interior
+    return state
 
 
 def verify_page_and_layer(

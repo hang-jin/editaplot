@@ -46,6 +46,15 @@ from .scientific_workflow import (
     shap_beeswarm_offsets,
     shap_within_feature_color_values,
 )
+from .shap_layout import (
+    SHAP_FEATURE_VALUE_COLORS,
+    SHAP_GROUP_COLORS,
+    SHAP_MEAN_ABS_BAR_COLOR,
+    SHAP_MEAN_ABS_BAR_EDGE_COLOR,
+    SHAP_ZERO_LINE_COLOR,
+    resolve_shap_composite_geometry,
+    resolve_shap_mean_axis,
+)
 
 mpl.rcParams.update(
     {
@@ -1204,12 +1213,34 @@ def _draw_raincloud(axis: Any, frame: Any, preparation: ScientificPreparation) -
     axis.yaxis.set_minor_locator(AutoMinorLocator(2))
 
 
-def _draw_shap_summary(axis: Any, frame: Any, preparation: ScientificPreparation) -> None:
-    """Display supplied SHAP values without fitting or feature re-ranking."""
+def _draw_shap_composite(
+    figure: Figure,
+    frame: Any,
+    preparation: ScientificPreparation,
+) -> None:
+    """Draw the selected SHAP profile from frozen, source-bound summaries."""
+
     spec = preparation.plot_spec
-    style = _preview_style(axis.figure)
+    plan = spec.shap_plan
+    origin_style = spec.display_plan.figure_style
+    if plan is None or origin_style is None:
+        raise ScientificPreviewError(
+            "shap_composite_plan_missing",
+            "The frozen SHAP composite plan or adaptive style is missing.",
+        )
+    geometry = resolve_shap_composite_geometry(plan.profile, origin_style)
+    if plan.layout_version != geometry.layout_version:
+        raise ScientificPreviewError(
+            "shap_composite_layout_version_mismatch",
+            "The frozen SHAP plan and preview layout contract do not match.",
+        )
+    style = _preview_style(figure)
     series = spec.series[0]
-    assert spec.category_column and series.color_column
+    if spec.category_column is None or series.color_column is None:
+        raise ScientificPreviewError(
+            "shap_composite_roles_missing",
+            "The SHAP feature or feature-value color role is missing.",
+        )
     features = np.asarray(
         [str(value).strip() for value in frame[spec.category_column]],
         dtype=object,
@@ -1221,11 +1252,76 @@ def _draw_shap_summary(axis: Any, frame: Any, preparation: ScientificPreparation
         series.color_column,
     )
     colormap = mpl.colors.LinearSegmentedColormap.from_list(
-        "OriginRedWhiteBlue",
-        ("#3B4CC0", "#F7F7F7", "#B40426"),
+        "EditaPlotShapFeatureValue",
+        SHAP_FEATURE_VALUE_COLORS,
     )
-    count = len(spec.category_order)
-    for index, feature in enumerate(spec.category_order):
+    color_norm = mpl.colors.Normalize(vmin=0.0, vmax=1.0)
+    count = len(plan.feature_order)
+    positions = np.arange(count, 0, -1, dtype=float)
+    main_bounds = geometry.region("shap_beeswarm").matplotlib_bounds()
+
+    if plan.profile != "beeswarm_only":
+        mean_axis = figure.add_axes(
+            main_bounds,
+            facecolor="none",
+            label="shap_mean_abs",
+            zorder=1,
+        )
+        _style_axis(mean_axis)
+        mean_values = dict(plan.mean_abs_values)
+        widths = np.asarray(
+            [float(mean_values[feature]) for feature in plan.feature_order],
+            dtype=float,
+        )
+        mean_axis.barh(
+            positions,
+            widths,
+            height=0.68,
+            color=SHAP_MEAN_ABS_BAR_COLOR,
+            edgecolor=SHAP_MEAN_ABS_BAR_EDGE_COLOR,
+            linewidth=max(0.35, style.bar_border_pt * 0.55),
+            alpha=0.42,
+            zorder=1,
+        )
+        mean_max = float(np.max(widths)) if widths.size else 0.0
+        mean_from, mean_to, mean_step = resolve_shap_mean_axis(mean_max)
+        mean_axis.set_xlim(mean_from, mean_to)
+        mean_axis.set_ylim(spec.axis_plan.y_from, spec.axis_plan.y_to)
+        mean_axis.set_yticks(positions)
+        mean_axis.set_yticklabels([])
+        mean_axis.set_xlabel(
+            "Mean |SHAP value|",
+            fontsize=style.axis_title_pt,
+            fontweight="bold",
+            labelpad=max(2.0, style.major_tick_pt * 0.45),
+        )
+        mean_axis.xaxis.set_label_position("top")
+        mean_axis.xaxis.tick_top()
+        mean_axis.set_xticks(
+            np.arange(mean_from, mean_to + mean_step * 0.5, mean_step),
+        )
+        mean_axis.tick_params(
+            axis="x",
+            which="major",
+            top=True,
+            labeltop=True,
+            bottom=False,
+            labelbottom=False,
+        )
+        mean_axis.tick_params(axis="y", which="both", left=False, right=False)
+        mean_axis.spines["left"].set_visible(False)
+        mean_axis.spines["right"].set_visible(False)
+        mean_axis.spines["bottom"].set_visible(False)
+
+    axis = figure.add_axes(
+        main_bounds,
+        facecolor="none",
+        label="shap_beeswarm",
+        zorder=2,
+    )
+    _style_axis(axis)
+    axis.patch.set_alpha(0.0)
+    for index, feature in enumerate(plan.feature_order):
         row = float(count - index)
         members = np.flatnonzero(features == feature)
         offsets = shap_beeswarm_offsets(shap_values[members])
@@ -1234,23 +1330,21 @@ def _draw_shap_summary(axis: Any, frame: Any, preparation: ScientificPreparation
             np.full(members.size, row) + offsets,
             c=color_values[members],
             cmap=colormap,
-            vmin=0.0,
-            vmax=1.0,
+            norm=color_norm,
             s=style.marker_pt**2,
             edgecolors="white",
             linewidths=max(0.25, style.frame_line_pt * 0.28),
-            alpha=0.88,
+            alpha=0.90,
             zorder=3,
         )
     axis.axvline(
         0.0,
-        color="#7A7A7A",
+        color=SHAP_ZERO_LINE_COLOR,
         linewidth=style.frame_line_pt,
         linestyle="--",
         zorder=1,
     )
-    positions = np.arange(count, 0, -1, dtype=float)
-    axis.set_yticks(positions, list(spec.category_order))
+    axis.set_yticks(positions, list(plan.feature_order))
     axis.set_xlim(spec.axis_plan.x_from, spec.axis_plan.x_to)
     axis.set_ylim(spec.axis_plan.y_from, spec.axis_plan.y_to)
     axis.set_xlabel(_matplotlib_label(spec.x_title), fontsize=style.axis_title_pt, fontweight="bold")
@@ -1258,26 +1352,104 @@ def _draw_shap_summary(axis: Any, frame: Any, preparation: ScientificPreparation
     axis.xaxis.set_major_locator(MaxNLocator(nbins=6))
     axis.xaxis.set_minor_locator(AutoMinorLocator(2))
     axis.yaxis.set_minor_locator(FixedLocator([]))
-    axis.text(
-        0.01,
-        1.018,
-        "Low feature value",
-        transform=axis.transAxes,
-        ha="left",
-        va="bottom",
-        color="#3B4CC0",
-        fontsize=style.legend_pt,
+
+    colorbar_axis = figure.add_axes(
+        geometry.region("shap_feature_value_colorbar").matplotlib_bounds(),
+        facecolor="white",
+        label="shap_feature_value_colorbar",
+        zorder=3,
     )
-    axis.text(
-        0.99,
-        1.018,
-        "High feature value",
-        transform=axis.transAxes,
-        ha="right",
-        va="bottom",
-        color="#B40426",
+    scalar_mappable = mpl.cm.ScalarMappable(norm=color_norm, cmap=colormap)
+    scalar_mappable.set_array(np.asarray([0.0, 1.0], dtype=float))
+    colorbar = figure.colorbar(scalar_mappable, cax=colorbar_axis, orientation="vertical")
+    colorbar.set_ticks((0.0, 1.0))
+    colorbar.set_ticklabels(("Low", "High"))
+    colorbar.set_label(
+        "Feature value",
         fontsize=style.legend_pt,
+        fontweight="bold",
+        labelpad=max(2.0, style.major_tick_pt * 0.40),
     )
+    colorbar_axis.yaxis.set_label_position("left")
+    colorbar_axis.tick_params(
+        axis="y",
+        which="major",
+        direction="out",
+        length=style.major_tick_pt,
+        width=style.frame_line_pt,
+        labelsize=style.tick_label_pt,
+    )
+    colorbar.outline.set_linewidth(style.frame_line_pt)
+    colorbar.outline.set_edgecolor("#111111")
+
+    if plan.profile == "beeswarm_mean_abs_grouped":
+        contribution_axis = figure.add_axes(
+            geometry.region("shap_group_contribution").matplotlib_bounds(),
+            facecolor="white",
+            label="shap_group_contribution",
+            zorder=5,
+        )
+        contributions = tuple((group, float(value)) for group, value in plan.group_contributions)
+        group_colors = interpolate_hex_colors(
+            SHAP_GROUP_COLORS[0],
+            SHAP_GROUP_COLORS[-1],
+            len(contributions),
+        )
+        contribution_axis.pie(
+            [value for _group, value in contributions],
+            colors=group_colors,
+            startangle=90.0,
+            counterclock=False,
+            normalize=True,
+            radius=0.54,
+            center=(-0.56, 0.0),
+            wedgeprops={
+                "edgecolor": "white",
+                "linewidth": max(0.45, style.frame_line_pt * 0.62),
+            },
+        )
+        legend_font_size = max(7.0, style.legend_pt * 0.78)
+        legend_y = np.linspace(0.69, 0.23, len(contributions))
+        for index, ((group, value), y_position) in enumerate(
+            zip(contributions, legend_y, strict=True)
+        ):
+            contribution_axis.add_patch(
+                Rectangle(
+                    (0.51, float(y_position) - 0.022),
+                    0.055,
+                    0.044,
+                    transform=contribution_axis.transAxes,
+                    facecolor=group_colors[index],
+                    edgecolor="white",
+                    linewidth=max(0.35, style.frame_line_pt * 0.45),
+                    clip_on=False,
+                )
+            )
+            contribution_axis.text(
+                0.585,
+                float(y_position),
+                f"{group}  {value:.1f}%",
+                transform=contribution_axis.transAxes,
+                ha="left",
+                va="center",
+                color="#263746",
+                fontsize=legend_font_size,
+                fontweight="bold",
+            )
+        contribution_axis.set_aspect(1.0, adjustable="box")
+        contribution_axis.set_xlim(-1.15, 1.15)
+        contribution_axis.set_ylim(-1.08, 1.08)
+        contribution_axis.set_title(
+            "Relative contribution",
+            fontsize=max(7.0, style.legend_pt * 0.82),
+            fontweight="bold",
+            pad=max(1.0, style.major_tick_pt * 0.28),
+        )
+        contribution_axis.set_xticks([])
+        contribution_axis.set_yticks([])
+        contribution_axis.patch.set_alpha(0.94)
+        for spine in contribution_axis.spines.values():
+            spine.set_visible(False)
 
 
 def _draw_histogram(axis: Any, frame: Any, preparation: ScientificPreparation) -> None:
@@ -2067,6 +2239,11 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         _draw_density_ridgeline3d(figure, frame, preparation)
         _apply_font_contract(figure)
         return figure
+    if spec.plot_kind == "shap_summary":
+        figure = _new_empty_figure(preparation)
+        _draw_shap_composite(figure, frame, preparation)
+        _apply_font_contract(figure)
+        return figure
     if spec.plot_kind in {"pie", "sankey", "circular_network", "radar", "heatmap"}:
         figure = _new_empty_figure(preparation)
         if spec.plot_kind == "pie":
@@ -2100,9 +2277,6 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         right_axis = None
     elif spec.plot_kind == "grouped_box":
         _draw_grouped_box(axis, frame, preparation)
-        right_axis = None
-    elif spec.plot_kind == "shap_summary":
-        _draw_shap_summary(axis, frame, preparation)
         right_axis = None
     elif spec.plot_kind == "histogram":
         _draw_histogram(axis, frame, preparation)
@@ -2139,7 +2313,6 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         "histogram",
         "forest",
         "bubble",
-        "shap_summary",
     }:
         _set_axis_contract(axis, preparation, right_axis)
         if spec.plot_kind == "uv_vis":

@@ -159,8 +159,10 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
   Neither a user style request nor a reference image may change source values or column roles, the
   high-to-low binding-energy axis contract, component identity, residual disposition, or the
   verified single-region `set_fill_area(..., type=9)` / `-pfm 3` fill implementation.
-- For SHAP, accept only externally precomputed per-sample contributions. Never train a model,
-  invoke SHAP, infer feature importance, or silently reorder features inside the drawing workflow.
+- For SHAP, accept only externally precomputed per-sample contributions. Never train a model or
+  invoke SHAP. Mean |SHAP| and optional group percentages may only summarize those supplied rows
+  with the allow-listed formulas recorded in the semantic proposal and explicitly approved; never
+  invent contributions or silently reorder features.
 - Confirm unknown units, error semantics, percentage denominators, meaningful order, dual axes,
   and any other choice that can change the claim.
 - Recommend from the scientific question and data structure, not aesthetics alone. Refuse a

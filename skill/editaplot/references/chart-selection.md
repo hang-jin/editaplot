@@ -45,7 +45,7 @@ so the number of rows is not the route count.
 | Paired/longitudinal stability | `paired_trajectory` | numeric Visit + one stable subject per column | Preserve subject identity; do not pair by row number or interpolate |
 | Grouped raw distributions | `grouped_box` | raw columns named `Category | Group` | Preserve category/group text verbatim; show every point and exact n; never invent p-values, brackets, or stars |
 | Distribution with raw evidence and compact summary | `raincloud` | one or more raw numeric group columns, at least 5 observations/group | Half violin + all raw points + mean ± 1 SD; do not remove outliers |
-| Model feature contribution | `shap_summary` | Feature + precomputed SHAP value + numeric Feature value | Never run SHAP or reorder features; normalize feature value for color only |
+| Model feature contribution | `shap_summary` | Feature + precomputed SHAP value + numeric Feature value; optional order, Mean\|SHAP\|, group, group % | Never run SHAP; preserve SHAP X; confirm every display/helper summary derivation |
 | Steady-state or time-resolved photoluminescence | `pl` | Wavelength or Time + one or more PL series; optional explicitly paired Fit columns | Preserve multi-condition order; TRPL uses log Y; never calculate lifetime or fit curves |
 | UV–Vis spectrum with optional Tauc evidence | `uv_vis` | Wavelength + one or more comparable Absorbance or Transmittance series; optional Photon energy + Tauc value/fit/Eg | Do not mix signal definitions without an explicit axis contract; never calculate photon energy, exponent, fit, or band gap |
 | Multi-condition 3D Nyquist trajectory | `trajectory3d` | Long table: explicit Zreal + real third variable with meaning/unit + explicit -Zimag + Series; 1–6 groups | Never create decorative depth, fit circuits, or infer the third variable |
@@ -96,7 +96,9 @@ readback, SHA-bound human visual QA, and the sanitized public-gallery audit.
 - A numeric group-wide table plus explicit Raincloud intent favors `raincloud`; it retains every
   observation while Origin's verified half-violin object supplies the density and mean ± 1 SD.
 - Feature + SHAP value + Feature value semantics strongly favor `shap_summary`; the original SHAP
-  X values and first-appearance feature order are immutable.
+  X values are immutable. First-appearance order remains the default, while an explicit Feature
+  Order may select another verified order. Feature Group enables the optional grouped contribution
+  profile after the summary lineage is confirmed.
 - `Category | Group` raw-observation headers strongly favor `grouped_box` over generic distribution
   routes.
 - Time plus explicit PL semantics favors TRPL; paired Fit columns remain user-supplied evidence.

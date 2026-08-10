@@ -69,6 +69,9 @@ _SECONDARY_ROLES = frozenset(
         "treat_all",
         "treat_none",
         "feature_value",
+        "mean_abs_shap",
+        "feature_group",
+        "group_contribution",
         "fit",
         "tauc_fit",
         "bandgap",
@@ -79,7 +82,7 @@ _SECONDARY_ROLES = frozenset(
         "focal_x",
     }
 )
-_SUPPORT_ROLES = frozenset({"frequency", "count"})
+_SUPPORT_ROLES = frozenset({"frequency", "count", "sample_id", "feature_order"})
 _XRD_RIETVELD_DISPOSITIONS = {
     "observed": DataDisposition.RENDER_PRIMARY,
     "calculated": DataDisposition.RENDER_PRIMARY,
@@ -223,17 +226,33 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
     item_ids = {
         column: _source_item_id(index) for index, column in enumerate(prepared.source_columns)
     }
+
+    def source_disposition(column: str) -> DataDisposition:
+        role = assignments.get(column, "unassigned")
+        disposition = _scientific_disposition_for_role(
+            role,
+            requires_confirmation=requires_confirmation,
+            template_id=template_id,
+            plot_kind=plot_kind,
+        )
+        if requires_confirmation or plot_kind != "shap_summary":
+            return disposition
+        plan = getattr(spec, "shap_plan", None)
+        profile = str(getattr(plan, "profile", "beeswarm_only"))
+        if role == "mean_abs_shap" and profile == "beeswarm_only":
+            return DataDisposition.RETAIN_NOT_RENDER
+        if role in {"feature_group", "group_contribution"} and profile != (
+            "beeswarm_mean_abs_grouped"
+        ):
+            return DataDisposition.RETAIN_NOT_RENDER
+        return disposition
+
     data_items = tuple(
         SemanticDataItem(
             item_id=item_ids[column],
             source_column=column,
             semantic_role=assignments.get(column, "unassigned"),
-            disposition=_scientific_disposition_for_role(
-                assignments.get(column, "unassigned"),
-                requires_confirmation=requires_confirmation,
-                template_id=template_id,
-                plot_kind=plot_kind,
-            ),
+            disposition=source_disposition(column),
             confidence=float(prepared.confidence),
             evidence_codes=(
                 "user_confirmed_column_mapping"
@@ -354,9 +373,169 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
                 )
             )
 
+    if plot_kind == "shap_summary":
+        plan = getattr(spec, "shap_plan", None)
+
+        def assigned_column(role: str) -> str | None:
+            return next(
+                (column for column, assigned in assignments.items() if assigned == role),
+                None,
+            )
+
+        feature_column = assigned_column("feature")
+        shap_column = assigned_column("shap")
+        feature_value_column = assigned_column("feature_value")
+        color_binding = "derived_shap_feature_value_relative_color"
+        offset_binding = "derived_shap_beeswarm_y_offset"
+        derived_items.extend(
+            (
+                DerivedDataItem(
+                    item_id=color_binding,
+                    semantic_role="relative_feature_value_color",
+                    disposition=DataDisposition.RENDER_SECONDARY,
+                    operation_id="normalize_within_category_minmax",
+                    input_item_ids=_unique_existing(
+                        (feature_column, feature_value_column),
+                        item_ids,
+                    ),
+                    confidence=1.0,
+                    parameters=(
+                        ("category_item_id", item_ids.get(feature_column, "")),
+                        ("value_item_id", item_ids.get(feature_value_column, "")),
+                        ("minimum", 0.0),
+                        ("maximum", 1.0),
+                        ("constant_value", 0.5),
+                    ),
+                    evidence_codes=("shap_within_feature_color_contract",),
+                ),
+                DerivedDataItem(
+                    item_id=offset_binding,
+                    semantic_role="shap_beeswarm_vertical_offset",
+                    disposition=DataDisposition.RENDER_SECONDARY,
+                    operation_id="deterministic_binned_symmetric_offset",
+                    input_item_ids=_unique_existing(
+                        (feature_column, shap_column),
+                        item_ids,
+                    ),
+                    confidence=1.0,
+                    parameters=(("rule", "deterministic_binned_symmetric_v1"),),
+                    evidence_codes=("shap_beeswarm_display_helper_contract",),
+                ),
+            )
+        )
+        beeswarm_bindings = _unique_existing(
+            (feature_column, shap_column),
+            item_ids,
+        )
+        elements.append(
+            FigureElement(
+                element_id="shap_beeswarm",
+                element_kind="symbol",
+                data_item_ids=(*beeswarm_bindings, offset_binding, color_binding),
+                required=True,
+                axis="shap_value",
+                legend_label="SHAP value beeswarm / SHAP 蜂群图",
+            )
+        )
+        if feature_value_column in item_ids:
+            elements.append(
+                FigureElement(
+                    element_id="shap_feature_value_colorbar",
+                    element_kind="colorbar",
+                    data_item_ids=(color_binding,),
+                    required=True,
+                    axis="feature_value_color",
+                    legend_label="Relative feature value / 相对特征值",
+                )
+            )
+
+        profile = str(getattr(plan, "profile", "beeswarm_only"))
+        mean_abs_binding: str | None = None
+        if profile in {"beeswarm_mean_abs", "beeswarm_mean_abs_grouped"}:
+            mean_abs_column = getattr(plan, "mean_abs_column", None)
+            if getattr(plan, "mean_abs_source", "not_used") == "provided":
+                if mean_abs_column in item_ids:
+                    mean_abs_binding = item_ids[mean_abs_column]
+            else:
+                mean_abs_binding = "derived_mean_absolute_shap_by_feature"
+                derived_items.append(
+                    DerivedDataItem(
+                        item_id=mean_abs_binding,
+                        semantic_role="mean_absolute_shap_by_feature",
+                        disposition=DataDisposition.RENDER_SECONDARY,
+                        operation_id="mean_absolute_by_category",
+                        input_item_ids=_unique_existing(
+                            (feature_column, shap_column),
+                            item_ids,
+                        ),
+                        confidence=1.0,
+                        parameters=(
+                            ("category_item_id", item_ids.get(feature_column, "")),
+                            ("value_item_id", item_ids.get(shap_column, "")),
+                        ),
+                        evidence_codes=("shap_composite_mean_abs_contract",),
+                    )
+                )
+            if mean_abs_binding is not None:
+                elements.append(
+                    FigureElement(
+                        element_id="shap_mean_abs_bar",
+                        element_kind="horizontal_bar",
+                        data_item_ids=(
+                            *_unique_existing((feature_column,), item_ids),
+                            mean_abs_binding,
+                        ),
+                        required=True,
+                        axis="mean_absolute_shap_top",
+                        legend_label="Mean |SHAP value|",
+                    )
+                )
+
+        if profile == "beeswarm_mean_abs_grouped":
+            group_column = getattr(plan, "feature_group_column", None)
+            contribution_column = getattr(plan, "group_contribution_column", None)
+            contribution_binding: str | None = None
+            if getattr(plan, "group_contribution_source", "not_used") == "provided":
+                if contribution_column in item_ids:
+                    contribution_binding = item_ids[contribution_column]
+            elif mean_abs_binding is not None:
+                contribution_binding = "derived_shap_group_contribution_fraction"
+                derived_items.append(
+                    DerivedDataItem(
+                        item_id=contribution_binding,
+                        semantic_role="shap_group_contribution_percent",
+                        disposition=DataDisposition.RENDER_SECONDARY,
+                        operation_id="fraction_of_group_total",
+                        input_item_ids=(
+                            *_unique_existing((group_column,), item_ids),
+                            mean_abs_binding,
+                        ),
+                        confidence=1.0,
+                        parameters=(
+                            ("group_item_id", item_ids.get(group_column, "")),
+                            ("value_item_id", mean_abs_binding),
+                        ),
+                        evidence_codes=("shap_composite_group_fraction_contract",),
+                    )
+                )
+            if contribution_binding is not None:
+                elements.append(
+                    FigureElement(
+                        element_id="shap_group_contribution_pie",
+                        element_kind="sector",
+                        data_item_ids=(
+                            *_unique_existing((group_column,), item_ids),
+                            contribution_binding,
+                        ),
+                        required=True,
+                        axis="group_contribution_inset",
+                        legend_label="Relative contribution / 相对贡献",
+                    )
+                )
+
     scientific_series = (
         ()
-        if plot_kind in {"circular_network", "density_ridgeline3d"}
+        if plot_kind in {"circular_network", "density_ridgeline3d", "shap_summary"}
         else spec.series
     )
     for index, series in enumerate(scientific_series):

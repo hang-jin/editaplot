@@ -100,9 +100,16 @@ XPS 想精确改样式时，我建议你直接这样说：“Raw 用 `#173F5F`�
 | 材料与光谱 | XPS 扫描/拟合、XPS 多谱线对比、普通 XRD、GSAS/GSAS-II XRD Rietveld、XAS、FTIR/IR、NMR、DSC、PL/TRPL、UV–Vis/Tauc、EIS、CV、LSV、三维多条件 Nyquist |
 | 通用统计 | 柱状/条形、误差棒、堆叠/百分比堆叠、饼图、桑基、多阶段环形有向加权网络、折线、趋势、散点、气泡、雷达、热力图（支持高密度矩阵自适应布局） |
 | 分布与效应 | 原始点汇总、箱线、小提琴、Raincloud、直方图、森林效应图、三维双密度曲线与用户提供的基线焦点 |
-| 医学与深度学习 | ROC、PR、校准、DCA、混淆矩阵、Bland–Altman、配对纵向轨迹、分组箱线、预计算 SHAP、医学多面板规划 |
+| 医学与深度学习 | ROC、PR、校准、DCA、混淆矩阵、Bland–Altman、配对纵向轨迹、分组箱线、复合预计算 SHAP（蜂群 + Mean \|SHAP\| + 真实色标 + 可选分组贡献）、医学多面板规划 |
 
 我不会擅自平滑数据、删除异常值、补峰、计算误差、拟合曲线、识别物相或训练模型。寿命、带隙、SHAP 等分析结果也只有在你明确提供后才会画进图里。
+
+SHAP 路线只读取你在上游已经计算好的逐样本长表，最少需要 `Feature + SHAP value + Feature value`；
+还可提供 `Sample ID`、`Feature Order`、`Mean absolute SHAP`、`Feature Group` 和
+`Group contribution (%)`。我会按实际列自动选择“仅蜂群”“蜂群 + Mean |SHAP|”或
+“蜂群 + Mean |SHAP| + 分组贡献”三种 profile。缺少的汇总量若需要从已提供 SHAP 值派生，
+会单独列出公式、来源与用途并等你确认；源 CSV 不会被重写。可先查看
+[`medical_shap_summary.csv`](examples/gallery/medical_shap_summary.csv)。
 
 ### 新增材料与关系数据怎样准备
 
@@ -129,13 +136,13 @@ XPS 想精确改样式时，我建议你直接这样说：“Raw 用 `#173F5F`�
   <img src="assets/gallery/medical-grouped-box.png" alt="医学分组箱线图" width="31%">
   <img src="assets/gallery/uv-vis-tauc.png" alt="UV–Vis 与 Tauc 插图" width="31%">
   <img src="assets/gallery/percent-composition.png" alt="百分比堆叠组成图" width="31%">
-  <img src="assets/gallery/medical-roc.png" alt="医学模型 ROC" width="31%">
+  <img src="assets/gallery/medical-shap.png" alt="复合 SHAP 特征贡献图" width="31%">
   <img src="assets/gallery/circular-network.png" alt="多阶段环形有向加权网络" width="31%">
 </div>
 
 ➡️ [浏览 45 个对外展示案例与简要用途](docs/gallery.md)
 
-当前公开能力包含 40 条 Origin 绘图路线。仓库保留 47 张通过实机产物、对象反读、人工视觉检查和公开图片审计的验证 PNG，其中 45 张进入页面展示；两个未展示案例只是热力图的历史回归证据。DSC、NMR、FTIR/IR、XPS 多谱线对比、PL 多条件、UV–Vis 多样品、30×30 高密度热力图、多阶段环形有向加权网络图与三维双密度基线焦点图都已完成 Origin 2024b 实机门禁。
+当前公开能力包含 40 条 Origin 绘图路线。仓库保留 47 张通过实机产物、对象反读、人工视觉检查和公开图片审计的验证 PNG，其中 45 张进入页面展示；两个未展示案例只是热力图的历史回归证据。DSC、NMR、FTIR/IR、XPS 多谱线对比、PL 多条件、UV–Vis 多样品、30×30 高密度热力图、576 点复合 SHAP、多阶段环形有向加权网络图与三维双密度基线焦点图都已完成 Origin 2024b 实机门禁。
 
 ### 一次正常运行要多久
 

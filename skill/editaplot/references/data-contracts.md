@@ -93,12 +93,21 @@ editing the source table. It does not calculate p-values or add significance bra
 
 ### Precomputed SHAP long table
 
-Use `Feature`, `SHAP value`, and numeric `Feature value`; `Sample ID` is optional and ignored by
-the drawing route. Provide at least two features and three complete observations per feature.
-Figure order is the first appearance order in the source, not a silently calculated importance
-ranking. Every SHAP X value is preserved. Origin-only helper columns add deterministic vertical
-collision reduction and within-feature min-max color values; a constant feature maps to 0.5.
-EditaPlot does not train a model, invoke SHAP, infer contributions, or send data to a network.
+Use `Feature`, `SHAP value`, and numeric `Feature value`. Optional columns are `Sample ID`,
+`Feature Order`, `Mean absolute SHAP`, `Feature Group`, and `Group contribution (%)`; bilingual
+aliases are accepted. Provide at least two features and three complete observations per feature.
+Without `Feature Order`, figure order is the first appearance order in the source, not a silently
+calculated ranking. Every SHAP X value is preserved. Origin-only helper columns add deterministic
+vertical collision reduction and within-feature min-max color values; a constant feature maps to
+0.5. Both display helpers have explicit lineage and require approval.
+
+The default profile adds Mean |SHAP|. If the summary column is absent, EditaPlot may calculate only
+`mean(abs(SHAP))` from the supplied rows and records that exact derivation for confirmation. A
+grouped profile requires one Feature Group per feature (2–5 groups); an absent group percentage may
+be derived as `100 × sum(group feature Mean|SHAP|) / sum(all feature Mean|SHAP|)`, again only after
+confirmation. Summary cells may be sparse—one value per feature or group is enough—but repeated
+non-empty values must agree. Provided summaries are checked against the row-level values.
+EditaPlot does not train a model, invoke SHAP, invent contributions, or send data to a network.
 
 ### Explicit interval table
 

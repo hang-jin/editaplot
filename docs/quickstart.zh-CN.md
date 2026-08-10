@@ -62,6 +62,18 @@ Codex 账号、组织和数据保留策略约束。医学数据或参考图必�
 你不需要看到一串 `inspect → recommend → understand → plan` 的工程术语。我让 Codex 把它们
 放在后台，对你只说清楚：“识别到了什么、哪些要画、哪些不画、建议怎么画、还有哪一点需要你决定”。
 
+## 预计算 SHAP 数据
+
+如果你已经在 Python、R 或模型训练流程中算好了逐样本 SHAP，最省事的长表至少包含三列：
+`Feature`、`SHAP value`、`Feature value`。还可以提供 `Sample ID`、`Feature Order`、
+`Mean absolute SHAP`、`Feature Group` 和 `Group contribution (%)`。中文等价列名也会参与识别。
+
+我会根据实际列自动选择：仅蜂群、蜂群加顶部 Mean |SHAP|，或再加入分组贡献的复合图。
+如果表中没有 Mean |SHAP| 或分组占比，但你希望显示它们，我会先列出从已提供 SHAP 值计算的
+公式和数据来源，等你明确批准派生项后才继续。Feature value 的组内颜色归一化和确定性蜂群偏移
+也会在理解清单中说明。源文件始终只读，可先照着
+[`medical_shap_summary.csv`](../examples/gallery/medical_shap_summary.csv) 准备数据。
+
 ## GSAS / GSAS-II XRD 精修数据
 
 对 Powder CSV 或 Publication CSV，我会让 Skill 区分：

@@ -46,7 +46,7 @@ GitHub 源码仓库只保留脱敏 PNG；可编辑项目和其他格式不直接
 <img src="../assets/gallery/medical-pr.png" alt="医学模型 PR 曲线" width="31%" />
 <img src="../assets/gallery/medical-raincloud.png" alt="医学 Raincloud 原始分布图" width="31%" />
 <img src="../assets/gallery/medical-roc.png" alt="医学模型 ROC 曲线" width="31%" />
-<img src="../assets/gallery/medical-shap.png" alt="预计算 SHAP 特征贡献图" width="31%" />
+<img src="../assets/gallery/medical-shap.png" alt="复合 SHAP 特征贡献图" width="31%" />
 <img src="../assets/gallery/nmr-comparison.png" alt="19F NMR 光谱对比" width="31%" />
 <img src="../assets/gallery/percent-composition.png" alt="百分比堆叠组成图" width="31%" />
 <img src="../assets/gallery/pie-five-parts.png" alt="少类别饼图" width="31%" />
