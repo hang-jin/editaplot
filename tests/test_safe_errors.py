@@ -32,6 +32,7 @@ PRIVATE_EXTENDED = (
     + "\\"
     + "\\".join((f"{chr(67)}:", "very-long-private-path", "result.csv"))
 )
+PRIVATE_STAGE_PATH = "\\".join((f"{chr(67)}:", "Users", "Private", "cleanup"))
 
 
 @pytest.mark.parametrize(
@@ -107,7 +108,7 @@ def test_structured_diagnostics_allow_only_public_identifiers_and_booleans() -> 
             "primary_activation_code": "origin_com_server_execution_failed",
             "primary_activation_stage": "create_instance",
             "cleanup_error_code": "0x80070005",
-            "cleanup_error_stage": r"C:\Users\Private\cleanup",
+            "cleanup_error_stage": PRIVATE_STAGE_PATH,
             "requires_user_approval": True,
             "account_name": "PrivateUser",
             "raw_exception": "secret",
@@ -125,6 +126,20 @@ def test_execution_context_diagnostic_rejects_account_like_identifier() -> None:
     error = OriginEnvironmentError(
         "public message",
         diagnostics={"execution_context": "privateuser"},
+    )
+
+    assert structured_error_diagnostics(error) == {}
+
+
+def test_activation_diagnostic_fields_reject_unregistered_values_and_booleans() -> None:
+    error = OriginEnvironmentError(
+        "public message",
+        diagnostics={
+            "primary_activation_code": "privateuser",
+            "primary_activation_stage": True,
+            "cleanup_error_code": "local_machine_name",
+            "cleanup_error_stage": False,
+        },
     )
 
     assert structured_error_diagnostics(error) == {}

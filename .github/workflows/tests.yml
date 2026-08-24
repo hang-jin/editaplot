@@ -46,6 +46,8 @@ jobs:
           runtime/src/origin_sciplot/project_paths.py
           runtime/src/origin_sciplot/origin_backend/capabilities.py
           runtime/src/origin_sciplot/origin_backend/density_ridgeline3d_renderer.py
+          runtime/src/origin_sciplot/origin_backend/execution_context.py
+          runtime/src/origin_sciplot/origin_backend/job_queue.py
           runtime/src/origin_sciplot/origin_backend/network_renderer.py
           runtime/src/origin_sciplot/origin_backend/safe_errors.py
           runtime/src/origin_sciplot/origin_backend/session.py

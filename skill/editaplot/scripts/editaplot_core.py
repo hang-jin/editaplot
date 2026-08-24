@@ -3910,6 +3910,15 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
             "请允许 Codex 为 origin-smoke 或 render 发起的本地 Origin 权限申请；"
             "通过后 Codex 会重新执行同一条 Origin 命令并继续任务。"
         )
+    elif ready_render and execution_context["status"] == "unknown":
+        summary_zh = (
+            "环境已具备绘图前提，但当前 Doctor 无法确认用于 Origin 的 Windows 执行身份；"
+            "正式绘图会在调用 Automation 前停止。"
+        )
+        next_step_zh = (
+            "请从正常登录的 Windows 用户上下文重新运行 Doctor；若仍显示 unknown，"
+            "请停止自动绘图并报告 origin_execution_context_unknown。"
+        )
     elif ready_render:
         summary_zh = "环境已具备绘图前提；真正的 Origin 连接会在绘图或独立 smoke test 时完成。"
         next_step_zh = "直接提交数据即可，EditaPlot 会自动启动一个专用 Origin 实例。"
@@ -3930,9 +3939,7 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
         "next_step_zh": next_step_zh,
         "ready_for_analysis": ready_analysis,
         "ready_for_render": ready_render,
-        "current_process_has_interactive_origin_context": bool(
-            ready_render and has_interactive_origin_context
-        ),
+        "current_process_has_interactive_origin_context": has_interactive_origin_context,
         "requires_current_user_approval": requires_current_user_approval,
         "origin_execution_context": execution_context,
         "origin_application": origin_application,

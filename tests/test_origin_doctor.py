@@ -514,6 +514,10 @@ def test_doctor_distinguishes_static_render_readiness_from_token_context(
     assert report["requires_current_user_approval"] is False
     assert checks["origin_execution_context"]["ok"] is expected_context_ready
     assert status not in report["manual_blockers"]
+    if status == "unknown":
+        assert "无法确认" in report["summary_zh"]
+        assert "origin_execution_context_unknown" in report["next_step_zh"]
+        assert "直接提交数据" not in report["next_step_zh"]
 
 
 def test_runtime_repair_dependency_list_explicitly_includes_origin_binary_pair() -> None:

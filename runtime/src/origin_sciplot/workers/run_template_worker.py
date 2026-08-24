@@ -647,10 +647,6 @@ def main(argv: list[str] | None = None) -> int:
     reference_style_report: dict[str, Any] | None = None
     xps_visual_style_report: dict[str, Any] | None = None
     try:
-        # A sandboxed Codex worker must request the host's formal current-user
-        # approval before creating a delivery folder. Keep the second check at
-        # the Origin seam as defense in depth.
-        require_interactive_origin_context()
         render_plan_source = None
         if args.render_plan_file:
             render_plan_source = Path(args.render_plan_file).resolve()
@@ -839,6 +835,11 @@ def main(argv: list[str] | None = None) -> int:
                 return WorkerExitCode.VALIDATION_FAILED
         schema = load_schema(manifest.schema_path)
 
+        # Keep all read-only plan and data checks in the sandbox. Request the
+        # host's formal current-user approval only after those checks pass and
+        # before creating a delivery folder; the Origin seam checks again as
+        # defense in depth.
+        require_interactive_origin_context()
         proto.progress("create_output_dir", "running", "正在创建输出文件夹")
         try:
             output = create_run_output(args.input_csv, manifest, args.output_dir)

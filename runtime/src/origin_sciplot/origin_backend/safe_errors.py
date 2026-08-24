@@ -104,7 +104,14 @@ _PUBLIC_DIAGNOSTIC_FIELDS = frozenset(
     }
 )
 _PUBLIC_DIAGNOSTIC_IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]{0,79}$")
+_PUBLIC_ACTIVATION_CODES = frozenset(_ACTIVATION_HRESULT_CODES.values()) | {
+    "origin_instance_start_failed"
+}
 _PUBLIC_DIAGNOSTIC_ENUMS = {
+    "primary_activation_code": _PUBLIC_ACTIVATION_CODES,
+    "primary_activation_stage": frozenset({"create_instance"}),
+    "cleanup_error_code": _PUBLIC_ACTIVATION_CODES,
+    "cleanup_error_stage": frozenset({"cleanup_partial_instance"}),
     "execution_context": frozenset(
         {"interactive_user", "codex_sandbox", "non_windows", "unknown"}
     ),
@@ -130,10 +137,10 @@ def _normalize_public_diagnostics(
     for key, value in diagnostics.items():
         if key not in _PUBLIC_DIAGNOSTIC_FIELDS:
             continue
-        if isinstance(value, bool):
+        allowed_values = _PUBLIC_DIAGNOSTIC_ENUMS.get(key)
+        if isinstance(value, bool) and allowed_values is None:
             normalized[key] = value
         elif isinstance(value, str) and _PUBLIC_DIAGNOSTIC_IDENTIFIER.fullmatch(value):
-            allowed_values = _PUBLIC_DIAGNOSTIC_ENUMS.get(key)
             if allowed_values is not None and value not in allowed_values:
                 continue
             normalized[key] = value

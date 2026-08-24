@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -25,6 +26,8 @@ from origin_sciplot.workers import (  # noqa: E402
     origin_smoke_worker,
     run_template_worker,
 )
+
+SYNTHETIC_PROFILE = "\\".join((f"{chr(67)}:", "Users", "Example", "Profile"))
 
 
 @pytest.mark.parametrize(
@@ -82,7 +85,7 @@ def test_detection_prefers_winapi_token_identity_over_environment_and_login(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("USERNAME", "JGH")
-    monkeypatch.setenv("USERPROFILE", r"C:\Users\JGH")
+    monkeypatch.setenv("USERPROFILE", SYNTHETIC_PROFILE)
     monkeypatch.setattr(
         execution_context,
         "_windows_token_name_from_winapi",
@@ -125,7 +128,7 @@ def test_windows_identity_unavailable_is_reported_without_profile_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("USERNAME", "JGH")
-    monkeypatch.setenv("USERPROFILE", r"C:\Users\JGH")
+    monkeypatch.setenv("USERPROFILE", SYNTHETIC_PROFILE)
     monkeypatch.setattr(
         execution_context,
         "_windows_token_name_from_winapi",
@@ -266,6 +269,11 @@ def test_render_main_stops_before_output_directory_in_codex_sandbox(
         run_template_worker,
         "require_interactive_origin_context",
         _raise_sandbox_preflight,
+    )
+    monkeypatch.setattr(
+        run_template_worker,
+        "prepare_scientific",
+        lambda *_args, **_kwargs: SimpleNamespace(requires_confirmation=False),
     )
     monkeypatch.setattr(run_template_worker, "create_run_output", forbidden_output)
 
