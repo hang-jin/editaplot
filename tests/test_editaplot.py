@@ -1931,6 +1931,7 @@ def test_setup_next_step_explains_codex_current_user_approval() -> None:
     assert "Codex" in next_step
     assert "approval" in next_step
     assert "same Origin command" in next_step
+    assert "approval is not guaranteed" in next_step
     assert "PowerShell" not in next_step
     assert "administrator" not in next_step
 

@@ -469,6 +469,7 @@ def test_doctor_reports_codex_sandbox_as_an_approval_step_not_manual_setup(
     }
     assert "管理员" not in report["next_step_zh"]
     assert "Codex" in report["next_step_zh"]
+    assert "审批不保证通过" in report["next_step_zh"]
     assert "codex_sandbox" not in report["manual_blockers"]
 
 

@@ -1083,8 +1083,8 @@ def _setup_next_step(doctor_payload: dict[str, object]) -> str:
         "requires_current_user_approval"
     ):
         return (
-            "Let Codex request approval for the exact local Origin command; after approval, "
-            "Codex will rerun the same Origin command and continue."
+            "Let Codex request approval for the exact local Origin command. Only if that "
+            "request is approved may Codex rerun the same Origin command; approval is not guaranteed."
         )
     if doctor_payload.get("ready_for_render"):
         return "Submit a data file; Origin callability will be tested when rendering starts."

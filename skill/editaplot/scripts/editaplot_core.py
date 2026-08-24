@@ -3908,7 +3908,7 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
         )
         next_step_zh = (
             "请允许 Codex 为 origin-smoke 或 render 发起的本地 Origin 权限申请；"
-            "通过后 Codex 会重新执行同一条 Origin 命令并继续任务。"
+            "只有申请获批后 Codex 才会重新执行同一条 Origin 命令；审批不保证通过。"
         )
     elif ready_render and execution_context["status"] == "unknown":
         summary_zh = (
