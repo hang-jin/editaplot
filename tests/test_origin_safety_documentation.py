@@ -156,3 +156,37 @@ def test_privacy_guidance_separates_local_runtime_from_codex_host_policy() -> No
     assert "organization, and retention policies" in skill
     assert "不会主动把你的数据上传到网络" in readme
     assert "不承诺自动发现 PHI" in readme
+
+
+def test_origin_docs_freeze_codex_handoff_queue_and_redacted_diagnostics() -> None:
+    skill = (PRODUCT_ROOT / "skill" / "editaplot" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    runtime = (PRODUCT_ROOT / "skill" / "editaplot" / "references" / "runtime.md").read_text(
+        encoding="utf-8"
+    )
+    safety = _content()
+
+    for content in (skill, runtime, safety):
+        compact = " ".join(content.split())
+        assert "origin_codex_sandbox_context" in compact
+        assert "Approval is not guaranteed" in compact
+        assert "origin_job_queue" in compact
+        assert "30-minute" in compact
+        assert "strict FIFO" in compact
+
+    for field in (
+        "primary_activation_code",
+        "primary_activation_stage",
+        "cleanup_error_code",
+        "cleanup_error_stage",
+    ):
+        assert field in skill
+        assert field in safety
+
+    installation = (PRODUCT_ROOT / "docs" / "installation.md").read_text(
+        encoding="utf-8"
+    )
+    assert "current_process_has_interactive_origin_context" in installation
+    assert "requires_current_user_approval" in installation
+    assert "origin_execution_context.status=unknown" in installation

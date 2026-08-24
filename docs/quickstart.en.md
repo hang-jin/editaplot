@@ -38,11 +38,12 @@ registry, firewall, or Origin-installation changes.
 
 If Codex detects that the current command is actually running under an isolated account, it stops
 before Origin and submits a formal, narrowly scoped local-execution request for that exact
-`origin-smoke` or `render` command. If you allow it, Codex reruns the same command and continues. You
-do not need to copy it into your own PowerShell, use administrator rights, or change DCOM or the
-registry. This is not a sandbox bypass, and a machine or organization policy may still reject the
-request; in that case the task stops explicitly. Auto-review, when enabled, evaluates this one
-request rather than pre-granting Origin access.
+`origin-smoke` or `render` command. Codex may rerun the command only if that exact request is
+approved. You may evaluate it when prompted, or the configured Codex auto-reviewer may evaluate it,
+but approval is not guaranteed and auto-review does not pre-grant Origin access. You do not need to
+copy it into your own PowerShell, use administrator rights, or change DCOM or the registry. This is
+not a sandbox bypass; if a machine or organization policy rejects the request, the task stops
+explicitly.
 
 The local EditaPlot runtime and Origin automation do not initiate a network upload of selected data.
 Files explicitly provided through Codex remain subject to the user's Codex account, organization,
@@ -159,9 +160,10 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 
 Inside Codex, you do not have to copy and run those PowerShell commands yourself. When the task is
 sandboxed, Codex should submit one narrowly scoped request for the exact Origin command. If you
-allow it, Codex reruns that same command and continues; if policy rejects it, Codex stops and
-explains instead of switching to administrator mode, editing DCOM/the registry, or routing through
-an external PowerShell session.
+are prompted you may evaluate it, or the configured auto-reviewer may do so, but approval is not
+guaranteed. Codex reruns that same command only after the exact request is approved; if policy
+rejects it, Codex stops and explains instead of switching to administrator mode, editing DCOM/the
+registry, or routing through an external PowerShell session.
 
 I put `origin-smoke` before render so an EditaPlot-owned isolated Origin instance completes the
 minimal graph-and-export loop first; Doctor's read-only discovery is never treated as a successful
@@ -195,6 +197,10 @@ dedicated Origin instance, and continue according to the detected version and te
 Keep the editable Origin window open after success, export OPJU/PNG/PDF/TIF, and complete axis,
 font, layer, data mapping readback, and human visual QA. If anything fails, summarize the technical
 stage and next step. Do not report success from a PNG alone.
+If the command stops only because it is in the Codex sandbox, submit a formal, narrowly scoped
+local-execution request for that exact Origin command and rerun it only if the request is approved;
+approval is not guaranteed. Do not ask me to copy PowerShell, use administrator rights, or change
+DCOM or the registry.
 ```
 
 The source file stays read-only. Missing measurements are never invented; helper columns may exist

@@ -50,9 +50,10 @@ Origin 2020b 及更早版本不在当前外部 `originpro` 路线的支持范围
 Codex 桌面版的普通命令可能由隔离账户执行，即使 `USERNAME` / `USERPROFILE` 看起来仍是你的
 资料。EditaPlot 会读取进程真实的 Windows 安全令牌；若识别为 Codex 沙箱，它会在调用 Origin
 COM 前停止，并请 Codex 只为当前这条 `origin-smoke` 或 `render` 命令发起正式、受限的本地执行
-审批。你允许后，Codex 会重新执行同一条命令并继续当前任务。无需复制到自己的 PowerShell，也
-无需管理员、DCOM、注册表或所谓“绕过沙箱”。本机或组织策略仍可能拒绝申请；此时任务会明确
-停止。启用自动审查只表示 Codex 会评估本次申请，不代表所有 Origin 命令预先获得权限。
+申请。只有这条精确申请获批后，Codex 才会重新执行同一条命令并继续当前任务；申请可以由你在
+提示时确认，也可以由已经配置的 Codex 自动审查评估，但审批不保证通过，自动审查也不代表所有
+Origin 命令预先获得权限。无需复制到自己的 PowerShell，也无需管理员、DCOM、注册表或所谓
+“绕过沙箱”。本机或组织策略拒绝申请时，任务会明确停止。
 
 EditaPlot 的本地 runtime 与 Origin 自动化不会主动上传数据，但交给 Codex 的文件仍受你当前
 Codex 账号、组织和数据保留策略约束。医学数据或参考图在交给 Codex 前必须先按所在机构要求
@@ -184,6 +185,8 @@ OPJU，也不承诺任意图 1:1 复刻。你可以直接这样说：
 `ready_for_render=true` 可以和 `requires_current_user_approval=true` 同时出现：前者表示 Python、
 runtime 和默认启动入口等静态前提已找到，后者只说明当前 Doctor 进程仍在沙箱。这不是 Origin
 安装故障，也不进入 `manual_blockers`；下一步是让 Codex 为真实 smoke 命令发起受限审批。
+若 `origin_execution_context.status=unknown`，则 Windows 执行身份无法验证；它不是待审批状态，
+即使静态前提已找到也必须在 COM 前停止，不能根据 `USERNAME` 或 `USERPROFILE` 猜测身份。
 
 你不需要阅读 CLSID、注册表视图或多版本候选列表。我会让 Codex 只用一到三句说明
 “能否分析、是否发现默认启动入口、下一步是什么”；完整字段保留在 JSON 诊断中。
@@ -217,9 +220,10 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 才可为 render 指定 `--output-dir`。
 
 如果 smoke 或 render 返回 `origin_codex_sandbox_context`，说明它尚未调用 COM，也不能据此判断
-Origin、版本或数据有问题。Codex 应为原来的精确命令发起一次受限本地执行审批；你允许后，它会
-重跑同一条命令。审批可能被本机或组织策略拒绝；拒绝时应停止，不能让你复制 PowerShell、切换
-管理员、修改 DCOM/注册表或改走未验证的接口。
+Origin、版本或数据有问题。Codex 应为原来的精确命令发起一次受限本地执行审批；只有这条精确
+申请获批后才可重跑。申请可以由你在提示时确认，也可以由已经配置的 Codex 自动审查评估，但
+审批不保证通过。被本机或组织策略拒绝时应
+停止，不能让你复制 PowerShell、切换管理员、修改 DCOM/注册表或改走未验证的接口。
 
 多个 Codex 任务可以并行完成读取数据、理解列和制定 RenderPlan。真正进入新版 EditaPlot 的
 `origin-smoke` 或 `render` 时，同一 Windows 登录会话只允许一个任务占用 Origin 自动化阶段；
@@ -347,10 +351,12 @@ dedicated instance. Attaching to an existing window is an explicit advanced mode
 A normal Codex desktop command may run under an isolated account even when inherited profile
 variables look familiar. EditaPlot checks the process's real Windows token and stops before COM
 when it detects the Codex sandbox. Codex then submits a formal, narrowly scoped local-execution
-request for the same `origin-smoke` or `render` command and reruns it if allowed. Users do not copy
-the command into their own PowerShell, use administrator rights, change DCOM/the registry, or bypass
-the sandbox. A machine or organization policy may reject the request; auto-review evaluates the
-individual request and does not pre-grant unrestricted access.
+request for the same `origin-smoke` or `render` command. Codex may rerun it only if that exact
+request is approved. A user prompt or the configured Codex auto-reviewer may evaluate the request,
+but approval is not guaranteed and auto-review does not pre-grant unrestricted access. Users do not
+copy the command into their own PowerShell, use administrator rights, change DCOM/the registry, or
+bypass the sandbox. A machine or organization policy may reject the request. An `unknown` Windows
+execution context is not an approval request and stops fail-closed before COM.
 
 Current EditaPlot workers also serialize their active smoke/render sections within one signed-in
 Windows session while data analysis and planning remain concurrent. Waiting jobs report progress

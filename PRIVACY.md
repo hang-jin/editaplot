@@ -13,6 +13,11 @@
   with the same access controls as the original data.
 - Public release assets must exclude local absolute paths, logs, unreviewed TIF metadata, tokens,
   credentials, PHI, and undeidentified medical images.
+- When Origin activation and cleanup both fail, the structured diagnostic channel retains only the
+  four allow-listed primary/cleanup code-and-stage fields. It does not retain a Windows account
+  name, local path, raw HRESULT, or raw COM exception text. The public execution-context report also
+  exposes only a product-defined status such as `interactive_user`, `codex_sandbox`, or `unknown`,
+  never the detected account name.
 - Before sharing medical data or reference images with Codex, users must follow their institution's
   rules, deidentify the material, and check burned-in text. Medical panel planning relies on that
   explicit attestation and does not perform automatic PHI detection.
