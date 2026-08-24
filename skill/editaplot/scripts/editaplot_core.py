@@ -3732,6 +3732,28 @@ def discover_origin_application() -> dict[str, Any]:
     }
 
 
+def _public_origin_execution_context() -> dict[str, object]:
+    """Return the redacted worker identity classification when available."""
+
+    try:
+        from origin_sciplot.origin_backend.execution_context import (
+            public_origin_execution_context,
+        )
+    except (ImportError, ModuleNotFoundError):
+        return {
+            "status": "unknown",
+            "requires_current_user_approval": False,
+        }
+    payload = public_origin_execution_context()
+    status = str(payload.get("status", "unknown"))
+    if status not in {"interactive_user", "codex_sandbox", "non_windows", "unknown"}:
+        status = "unknown"
+    return {
+        "status": status,
+        "requires_current_user_approval": status == "codex_sandbox",
+    }
+
+
 def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
     host = windows_host_compatibility()
@@ -3801,6 +3823,22 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
         engine_ok = False
         checks.append({"name": "engine", "ok": False, "value": str(exc)})
 
+    execution_context = _public_origin_execution_context()
+    has_interactive_origin_context = (
+        execution_context["status"] == "interactive_user"
+    )
+    requires_current_user_approval = bool(
+        execution_context["requires_current_user_approval"]
+    )
+    checks.append(
+        {
+            "name": "origin_execution_context",
+            "ok": has_interactive_origin_context,
+            "value": execution_context["status"],
+            "requires_current_user_approval": requires_current_user_approval,
+        }
+    )
+
     dependencies = tuple(module for module, _spec in RUNTIME_DEPENDENCIES)
     expected_versions = {module: spec.partition("==")[2] for module, spec in RUNTIME_DEPENDENCIES}
     dependency_state: dict[str, bool] = {}
@@ -3863,7 +3901,16 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
         manual_blockers.append("python_originpro_package_missing")
     if not dependency_state.get("OriginExt", False):
         manual_blockers.append("python_originext_package_missing")
-    if ready_render:
+    if ready_render and requires_current_user_approval:
+        summary_zh = (
+            "环境已具备绘图前提；当前 Doctor 在 Codex 沙箱中运行，"
+            "真正启动 Origin 时需要一次当前用户权限审批。"
+        )
+        next_step_zh = (
+            "请允许 Codex 为 origin-smoke 或 render 发起的本地 Origin 权限申请；"
+            "通过后 Codex 会重新执行同一条 Origin 命令并继续任务。"
+        )
+    elif ready_render:
         summary_zh = "环境已具备绘图前提；真正的 Origin 连接会在绘图或独立 smoke test 时完成。"
         next_step_zh = "直接提交数据即可，EditaPlot 会自动启动一个专用 Origin 实例。"
     elif ready_analysis:
@@ -3883,6 +3930,11 @@ def doctor(*, engine_home: str | Path | None = None) -> dict[str, Any]:
         "next_step_zh": next_step_zh,
         "ready_for_analysis": ready_analysis,
         "ready_for_render": ready_render,
+        "current_process_has_interactive_origin_context": bool(
+            ready_render and has_interactive_origin_context
+        ),
+        "requires_current_user_approval": requires_current_user_approval,
+        "origin_execution_context": execution_context,
         "origin_application": origin_application,
         "origin_callability_check": "performed_during_render",
         "missing_python_dependencies": missing_dependencies,

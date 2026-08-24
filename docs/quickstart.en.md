@@ -36,6 +36,14 @@ Windows user session; and use the network only for initial download/update and l
 Normal use requires no administrator rights, mouse control, whole-drive write access, or DCOM,
 registry, firewall, or Origin-installation changes.
 
+If Codex detects that the current command is actually running under an isolated account, it stops
+before Origin and submits a formal, narrowly scoped local-execution request for that exact
+`origin-smoke` or `render` command. If you allow it, Codex reruns the same command and continues. You
+do not need to copy it into your own PowerShell, use administrator rights, or change DCOM or the
+registry. This is not a sandbox bypass, and a machine or organization policy may still reject the
+request; in that case the task stops explicitly. Auto-review, when enabled, evaluates this one
+request rather than pre-granting Origin access.
+
 The local EditaPlot runtime and Origin automation do not initiate a network upload of selected data.
 Files explicitly provided through Codex remain subject to the user's Codex account, organization,
 and retention policies. Deidentify medical data and reference images and check burned-in text
@@ -149,6 +157,12 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 .\editaplot.cmd verify "<formal-output-directory>"
 ```
 
+Inside Codex, you do not have to copy and run those PowerShell commands yourself. When the task is
+sandboxed, Codex should submit one narrowly scoped request for the exact Origin command. If you
+allow it, Codex reruns that same command and continues; if policy rejects it, Codex stops and
+explains instead of switching to administrator mode, editing DCOM/the registry, or routing through
+an external PowerShell session.
+
 I put `origin-smoke` before render so an EditaPlot-owned isolated Origin instance completes the
 minimal graph-and-export loop first; Doctor's read-only discovery is never treated as a successful
 live connection.
@@ -163,6 +177,17 @@ Cleanup failure or a failed second activation stops the run; any approved retry 
 sibling output directory so the first report is preserved. Do not force-kill a Python worker merely
 because it has run for a long time: it may be managing a hidden Origin instance. Preserve the
 diagnostics and identify the last stage first.
+When both activation and cleanup fail, the report keeps separate redacted code/stage pairs for the
+primary activation and the cleanup. It contains no account name, local path, or raw COM text and
+does not trigger another automatic retry.
+
+Multiple Codex tasks may analyze data and prepare plans concurrently, but current EditaPlot workers
+serialize their active `origin-smoke` / `render` sections within one signed-in Windows session.
+Waiting tasks emit `origin_job_queue` progress about every 30 seconds; strict FIFO order is not
+guaranteed. At 30 minutes only the waiter stops—the active holder is not killed. Windows releases
+the lock when that process ends, and a completed Origin window kept open does not retain it. The
+queue cannot coordinate manual scripts, older EditaPlot releases, or unrelated programs, so do not
+submit a duplicate render when a queue message is visible.
 
 ```text
 Use the confirmed plan. I do not need to open Origin first: run the real smoke test, start a

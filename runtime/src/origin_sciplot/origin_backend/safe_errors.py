@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
+from typing import Any
 
 from ..project_paths import redact_windows_paths
 
@@ -29,10 +30,12 @@ class _StructuredOriginError(RuntimeError):
         *,
         code: str | None = None,
         stage: str | None = None,
+        diagnostics: Mapping[str, object] | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code or self.default_code
         self.stage = stage or self.default_stage
+        self.diagnostics = _normalize_public_diagnostics(diagnostics)
 
 
 class OriginEnvironmentError(_StructuredOriginError):
@@ -85,8 +88,70 @@ _RETRYABLE_ACTIVATION_CODES = frozenset(
     }
 )
 
+_PUBLIC_DIAGNOSTIC_FIELDS = frozenset(
+    {
+        "primary_activation_code",
+        "primary_activation_stage",
+        "cleanup_error_code",
+        "cleanup_error_stage",
+        # Reserved for the execution-context preflight. They describe only a
+        # product-defined context class and approval requirement, never an OS
+        # account name or profile path.
+        "detected_context",
+        "execution_context",
+        "requires_codex_user_approval",
+        "requires_user_approval",
+    }
+)
+_PUBLIC_DIAGNOSTIC_IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]{0,79}$")
+_PUBLIC_DIAGNOSTIC_ENUMS = {
+    "execution_context": frozenset(
+        {"interactive_user", "codex_sandbox", "non_windows", "unknown"}
+    ),
+    "detected_context": frozenset(
+        {"interactive_user", "codex_sandbox", "non_windows", "unknown"}
+    ),
+}
 
-def classify_origin_activation_error(error: BaseException) -> str:
+
+def _normalize_public_diagnostics(
+    diagnostics: Mapping[str, object] | None,
+) -> dict[str, object]:
+    """Keep only explicitly public, stable diagnostic identifiers.
+
+    The structured channel must not become an accidental route for raw COM
+    text, HRESULTs, account names, or filesystem paths. Unsupported fields or
+    values are dropped rather than replacing the original Origin failure.
+    """
+
+    if diagnostics is None:
+        return {}
+    normalized: dict[str, object] = {}
+    for key, value in diagnostics.items():
+        if key not in _PUBLIC_DIAGNOSTIC_FIELDS:
+            continue
+        if isinstance(value, bool):
+            normalized[key] = value
+        elif isinstance(value, str) and _PUBLIC_DIAGNOSTIC_IDENTIFIER.fullmatch(value):
+            allowed_values = _PUBLIC_DIAGNOSTIC_ENUMS.get(key)
+            if allowed_values is not None and value not in allowed_values:
+                continue
+            normalized[key] = value
+    return normalized
+
+
+def structured_error_diagnostics(error: BaseException) -> dict[str, Any]:
+    """Return a fresh JSON-safe copy of approved structured diagnostics."""
+
+    value = getattr(error, "diagnostics", None)
+    return _normalize_public_diagnostics(value if isinstance(value, Mapping) else None)
+
+
+def classify_origin_activation_error(
+    error: BaseException,
+    *,
+    include_exception_chain: bool = True,
+) -> str:
     """Return a stable activation code without exposing local COM details.
 
     ``pywintypes.com_error`` and ``comtypes`` do not use one consistent
@@ -96,7 +161,10 @@ def classify_origin_activation_error(error: BaseException) -> str:
     never surface the inspected exception payload.
     """
 
-    for value in _iter_error_values(error):
+    for value in _iter_error_values(
+        error,
+        include_exception_chain=include_exception_chain,
+    ):
         if isinstance(value, bool):
             continue
         if isinstance(value, int):
@@ -120,6 +188,27 @@ def is_retryable_origin_activation_error(code: str) -> bool:
 def origin_activation_recovery(code: str) -> dict[str, object] | None:
     """Return a bounded, non-mutating recovery policy for activation errors."""
 
+    if code == "origin_codex_sandbox_context":
+        return {
+            "action": "rerun_origin_command_with_codex_user_approval",
+            "maximum_attempts": 1,
+            "requires_user_approval": True,
+            "manual_powershell_required": False,
+            "administrator_required": False,
+            "automatic_fallback_to_attach_existing": False,
+            "system_configuration_changes_allowed": False,
+        }
+    if code == "origin_job_queue_timeout":
+        return {
+            "action": "retry_after_active_origin_job_finishes",
+            "maximum_attempts": 0,
+            "requires_user_approval": True,
+            "manual_powershell_required": False,
+            "administrator_required": False,
+            "active_job_preserved": True,
+            "origin_instance_modified": False,
+            "system_configuration_changes_allowed": False,
+        }
     if is_retryable_origin_activation_error(code):
         return {
             "action": "retry_in_active_user_context_with_fresh_output_directory",
@@ -142,7 +231,11 @@ def origin_activation_recovery(code: str) -> dict[str, object] | None:
     return None
 
 
-def _iter_error_values(error: BaseException) -> Iterator[object]:
+def _iter_error_values(
+    error: BaseException,
+    *,
+    include_exception_chain: bool = True,
+) -> Iterator[object]:
     """Yield bounded nested exception values for HRESULT classification."""
 
     pending: list[object] = [error]
@@ -161,10 +254,11 @@ def _iter_error_values(error: BaseException) -> Iterator[object]:
                     continue
                 pending.append(attribute_value)
             pending.extend(value.args)
-            if value.__cause__ is not None:
-                pending.append(value.__cause__)
-            if value.__context__ is not None:
-                pending.append(value.__context__)
+            if include_exception_chain:
+                if value.__cause__ is not None:
+                    pending.append(value.__cause__)
+                if value.__context__ is not None:
+                    pending.append(value.__context__)
             continue
         if isinstance(value, (tuple, list)):
             pending.extend(value[:32])

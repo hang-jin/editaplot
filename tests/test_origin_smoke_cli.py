@@ -22,6 +22,15 @@ from origin_sciplot.origin_backend.safe_errors import (  # noqa: E402
 from origin_sciplot.workers import origin_smoke_worker  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _normal_origin_execution_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        origin_smoke_worker,
+        "require_interactive_origin_context",
+        lambda: None,
+    )
+
+
 def test_smoke_command_uses_runtime_module_and_isolated_close_default(
     tmp_path: Path,
 ) -> None:
@@ -150,3 +159,24 @@ def test_smoke_worker_emits_bounded_activation_recovery_policy(
         "automatic_fallback_to_attach_existing": False,
         "system_configuration_changes_allowed": False,
     }
+
+
+def test_smoke_queue_wait_progress_is_concise(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[tuple[str, str, str]] = []
+    monkeypatch.setattr(
+        origin_smoke_worker.proto,
+        "progress",
+        lambda step, status, text: events.append((step, status, text)),
+    )
+
+    origin_smoke_worker._report_queue_wait(61.2)
+
+    assert events == [
+        (
+            "origin_job_queue",
+            "waiting",
+            "正在等待另一项 Origin 任务结束；已等待 61 秒。",
+        )
+    ]

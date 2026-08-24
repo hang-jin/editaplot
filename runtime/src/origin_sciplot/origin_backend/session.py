@@ -155,11 +155,25 @@ class OriginSession:
                 try:
                     op.exit()
                 except Exception as cleanup_exc:  # noqa: BLE001 - redact local details
+                    # ``cleanup_exc.__context__`` is the activation exception
+                    # because cleanup runs inside that handler. Classify the
+                    # cleanup exception itself so its stable code cannot be
+                    # replaced by the already-recorded primary HRESULT.
+                    cleanup_code = classify_origin_activation_error(
+                        cleanup_exc,
+                        include_exception_chain=False,
+                    )
                     self._clear_failed_entry()
                     raise OriginEnvironmentError(
                         "Origin startup cleanup failed",
                         code="origin_activation_cleanup_failed",
                         stage="cleanup_partial_instance",
+                        diagnostics={
+                            "primary_activation_code": code,
+                            "primary_activation_stage": "create_instance",
+                            "cleanup_error_code": cleanup_code,
+                            "cleanup_error_stage": "cleanup_partial_instance",
+                        },
                     ) from cleanup_exc
                 if attempt == 0 and is_retryable_origin_activation_error(code):
                     continue

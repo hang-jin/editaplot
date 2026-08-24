@@ -19,6 +19,7 @@ from .safe_errors import (
     OriginDrawError,
     OriginEnvironmentError,
     OriginExportError,
+    structured_error_diagnostics,
 )
 from .session import OriginSession
 from .template_capabilities import (
@@ -236,6 +237,7 @@ def _stable_stage_error(stage: str, cause: Exception) -> Exception:
                 f"origin_smoke_{stage}_failed",
             ),
             stage=_safe_identifier(getattr(cause, "stage", None), stage),
+            diagnostics=structured_error_diagnostics(cause),
         )
 
     if stage in {"activate", "read_version", "read_program_path", "ready"}:
@@ -287,13 +289,17 @@ def _stable_stage_error(stage: str, cause: Exception) -> Exception:
     )
 
 
-def _safe_error_payload(error: BaseException) -> dict[str, str]:
-    return {
+def _safe_error_payload(error: BaseException) -> dict[str, Any]:
+    payload: dict[str, Any] = {
         "type": type(error).__name__,
         "code": str(getattr(error, "code", "origin_smoke_failed")),
         "stage": str(getattr(error, "stage", "origin_smoke")),
         "message": str(error).replace("\r", " ").replace("\n", " ")[:240],
     }
+    diagnostics = structured_error_diagnostics(error)
+    if diagnostics:
+        payload["diagnostics"] = diagnostics
+    return payload
 
 
 def _artifact_evidence(

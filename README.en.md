@@ -166,6 +166,20 @@ A transient activation failure receives one automatic fresh-instance attempt onl
 cleanup succeeds. Cleanup failure or a failed second activation stops the run; any approved retry uses
 a new empty sibling output directory so the first diagnostic evidence is preserved. EditaPlot never
 silently takes over a user project.
+If both the original activation and its cleanup fail, EditaPlot preserves two redacted diagnostic
+pairs: the primary activation code/stage and the cleanup code/stage. They distinguish the first
+failure from the cleanup failure without exposing a Windows account name, local path, or raw COM
+message, and they never trigger another automatic retry.
+
+Several Codex tasks may inspect data, recommend charts, and prepare plans at the same time. Only the
+active EditaPlot `origin-smoke` or `render` section is serialized within one signed-in Windows
+session. Other tasks wait and emit an `origin_job_queue` update about every 30 seconds; ordering is
+not guaranteed to be strict FIFO. After 30 minutes, only that waiting task stops—the active holder
+is neither killed nor interrupted. Windows releases the queue lock when the holder finishes or its
+process exits unexpectedly, and an Origin window intentionally kept open after a completed render
+does not continue holding the slot. This coordination covers current EditaPlot workers only; it
+cannot manage manual scripts, older releases, or unrelated programs, so do not start duplicate jobs
+when a queue message is visible.
 
 ## Scientific palettes
 
@@ -205,6 +219,17 @@ I recommend approving only the task-scoped permissions below:
 | Access GitHub and the Python package source during setup/update; request separate consent for winget if Python is absent | Download the public source and locked dependencies |
 
 Normal use does **not** require administrator rights, mouse control, whole-drive write access, or changes to DCOM, the registry, the firewall, or the Origin installation. If Windows Controlled Folder Access, an organization policy, OneDrive/cloud sync, or a read-only directory blocks output, allow only the repository and current data folder or explicitly select another writable destination.
+
+A normal Codex desktop command may run under an isolated account. Even when that process inherits
+your `USERNAME` or `USERPROFILE`, it may not have the signed-in user's right to start Origin, so
+EditaPlot reads the process's real Windows security token instead of trusting environment variables.
+When it detects the Codex sandbox, it stops before calling Origin COM and asks Codex to submit a
+formal, narrowly scoped local-execution request for that exact `origin-smoke` or `render` command.
+If you allow it, Codex reruns the same Origin command and continues the current task. You do not need
+to copy a command into your own PowerShell, run as administrator, edit DCOM or the registry, or
+“bypass” the sandbox. If a machine or organization policy rejects the request, the task stops
+plainly and does not present the failed run as completed Origin work. When Codex auto-review is
+enabled, it evaluates that individual request; it does not pre-grant unrestricted Origin access.
 
 The bundled EditaPlot Python runtime and Origin automation do not initiate a network upload of your data. A file you explicitly provide through Codex is still governed by your Codex account, organization, and retention policies. Before providing medical data or reference images, follow your institution's rules, deidentify the material, and check burned-in text; EditaPlot does not promise automatic PHI detection. See [Privacy](PRIVACY.md).
 

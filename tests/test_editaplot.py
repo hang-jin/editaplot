@@ -7,7 +7,9 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import types
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -27,6 +29,7 @@ requires_local_showcase = pytest.mark.skipif(
 )
 
 sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(RUNTIME / "src"))
 
 import bootstrap_editaplot as bootstrap  # noqa: E402
 import editaplot as editaplot_cli  # noqa: E402
@@ -1917,6 +1920,21 @@ def test_setup_updates_recognized_skill_then_repairs_and_rechecks(
     assert (target / ".editaplot-local.json").is_file()
 
 
+def test_setup_next_step_explains_codex_current_user_approval() -> None:
+    next_step = bootstrap._setup_next_step(
+        {
+            "ready_for_render": True,
+            "requires_current_user_approval": True,
+        }
+    )
+
+    assert "Codex" in next_step
+    assert "approval" in next_step
+    assert "same Origin command" in next_step
+    assert "PowerShell" not in next_step
+    assert "administrator" not in next_step
+
+
 def test_setup_repair_failure_preserves_recognized_target_bytes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2218,6 +2236,35 @@ def test_output_directory_permission_failure_is_short_and_actionable(
     assert raised.value.code == "output_directory_write_permission_denied"
     assert "source file's parent folder" in str(raised.value)
     assert str(tmp_path) not in str(raised.value)
+
+
+def test_output_directory_claim_is_atomic_for_same_source_concurrency(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from origin_sciplot import output_manager
+
+    target = tmp_path / "input_EditaPlot_same_second"
+    original_mkdir = Path.mkdir
+    barrier = threading.Barrier(2)
+
+    def synchronize_base(path: Path, *args: object, **kwargs: object) -> None:
+        if path == target:
+            barrier.wait(timeout=5)
+        original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", synchronize_base)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        claimed = list(
+            pool.map(
+                output_manager._claim_unique_output_dir,
+                (target, target),
+            )
+        )
+
+    assert set(claimed) == {target, target.with_name(f"{target.name}_02")}
+    assert all(path.is_dir() for path in claimed)
 
 
 def test_runtime_manifest_is_an_exact_hash_inventory() -> None:

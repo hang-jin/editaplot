@@ -30,6 +30,12 @@ EditaPlot 永不自动安装 Origin。
 管理员、鼠标、全盘写入或 DCOM/注册表/防火墙修改。目录被 Windows 安全策略或网盘锁定时，只放行
 当前仓库和当前数据目录，或明确选择另一个可写输出目录。
 
+如果 Codex 检测到当前命令实际运行在隔离账户中，它会在调用 Origin 前为这一条
+`origin-smoke` 或 `render` 命令申请正式、受限的本地执行权限。你允许后，Codex 会重跑同一条
+命令并继续；无需把命令复制到自己的 PowerShell，也无需管理员、DCOM 或注册表修改。这不是绕过
+沙箱，审批仍可能被本机或组织策略拒绝；被拒时任务会明确停止。自动审查即使启用，也只是评估这
+一次申请，不代表 Origin 命令已经提前获得权限。
+
 EditaPlot 本地 runtime 与 Origin 自动化不会主动上传数据；你主动交给 Codex 的文件仍受当前
 Codex 账号、组织和数据保留策略约束。医学数据或参考图必须先按机构要求去标识化并检查烧录文字，
 不要依赖 EditaPlot 自动发现 PHI。
@@ -129,6 +135,10 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 .\editaplot.cmd verify "<正式输出目录>"
 ```
 
+在 Codex 中不需要你自己复制执行这些 PowerShell 命令。若当前任务处于沙箱，Codex 应为精确的
+Origin 命令发起一次受限审批；你只需允许这次申请，审批通过后它会重新执行同一条命令并继续。
+审批被策略拒绝时应停止并解释，不能改用管理员权限、DCOM/注册表修改或外部 PowerShell 旁路。
+
 我把 `origin-smoke` 放在 render 前面，是为了先用 EditaPlot 自有的隔离 Origin 实例完成
 最小建图和导出闭环，而不是把 Doctor 的只读发现当成已经连接成功。
 
@@ -138,6 +148,14 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 新版会在可安全恢复的瞬时启动故障后尝试清理自有实例，并且只在清理成功时自动再试一次。清理失败
 或第二次启动仍失败都会停止；再次运行要使用新的空白同级输出目录，以保留首次报告。不要仅因耗时
 较长就强杀可能正在管理隐藏 Origin 的 Python worker；先保留诊断并确认最后停留的阶段。
+若启动和清理都失败，报告会分别保存脱敏的最初启动代码/阶段和清理代码/阶段，不包含账户名、路径
+或原始 COM 文本，也不会继续自动重试。
+
+多个 Codex 任务可以同时分析数据和准备方案，但同一 Windows 登录会话中的新版 EditaPlot 会把
+真正的 `origin-smoke` / `render` 阶段自动串行。等待时会看到 `origin_job_queue`，约每 30 秒更新
+一次；顺序不保证严格先来先服务。等待达到 30 分钟时只停止等待者，不会杀掉占用者；进程结束后
+Windows 会释放锁，成功后保留的 Origin 窗口也不继续占锁。该队列不能协调手动脚本、旧版
+EditaPlot 或第三方程序，因此看到等待提示时不要重复提交同一绘图任务。
 
 ```text
 请使用已确认的方案绘图。我不需要提前打开 Origin；请先运行真实 smoke，自动启动专用 Origin

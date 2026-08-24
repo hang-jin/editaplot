@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -231,6 +233,7 @@ def test_runner_and_verification_emit_only_observable_combined_stages(
         "progress",
         lambda step, status, _text: events.append((step, status)),
     )
+    monkeypatch.setattr(worker, "require_interactive_origin_context", lambda: None)
 
     result, compatibility = _run_origin_draw_export_verify(
         lambda: events.append("runner") or {"png": "result.png"},
@@ -249,6 +252,32 @@ def test_runner_and_verification_emit_only_observable_combined_stages(
     ]
 
 
+def test_origin_queue_wraps_runner_and_verification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[str] = []
+
+    @contextmanager
+    def fake_slot(**kwargs: object) -> Iterator[SimpleNamespace]:
+        assert kwargs["job_kind"] == "render"
+        events.append("queue-enter")
+        try:
+            yield SimpleNamespace(waited=False)
+        finally:
+            events.append("queue-exit")
+
+    monkeypatch.setattr(worker, "origin_job_slot", fake_slot)
+    monkeypatch.setattr(worker, "require_interactive_origin_context", lambda: None)
+    monkeypatch.setattr(worker.proto, "progress", lambda *_args: None)
+
+    _run_origin_draw_export_verify(
+        lambda: events.append("runner") or {"png": "result.png"},
+        lambda _payload: events.append("verify") or {"status": "verified"},
+    )
+
+    assert events == ["queue-enter", "runner", "verify", "queue-exit"]
+
+
 def test_verification_failure_does_not_emit_false_verify_success(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -258,6 +287,7 @@ def test_verification_failure_does_not_emit_false_verify_success(
         "progress",
         lambda step, status, _text: events.append((step, status)),
     )
+    monkeypatch.setattr(worker, "require_interactive_origin_context", lambda: None)
 
     with pytest.raises(RuntimeError, match="readback invalid"):
         _run_origin_draw_export_verify(
@@ -269,4 +299,25 @@ def test_verification_failure_does_not_emit_false_verify_success(
         ("launch_origin_draw_export_verify", "running"),
         ("launch_origin_draw_export_verify", "success"),
         ("verify_outputs", "running"),
+    ]
+
+
+def test_origin_queue_wait_progress_is_concise(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[tuple[str, str, str]] = []
+    monkeypatch.setattr(
+        worker.proto,
+        "progress",
+        lambda step, status, text: events.append((step, status, text)),
+    )
+
+    worker._report_origin_queue_wait(31.8)
+
+    assert events == [
+        (
+            "origin_job_queue",
+            "waiting",
+            "正在等待另一项 Origin 任务结束；已等待 31 秒。",
+        )
     ]

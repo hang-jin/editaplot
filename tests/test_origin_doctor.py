@@ -428,6 +428,94 @@ def test_doctor_reports_originpro_and_originext_without_live_success_claim(
     assert "success" not in serialized_statuses
 
 
+def test_doctor_reports_codex_sandbox_as_an_approval_step_not_manual_setup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executable = _origin_executable(tmp_path, "Origin2024b")
+    registry = FakeWinreg()
+    registry.add_com(
+        progid="Origin.Application",
+        clsid="{LAUNCH}",
+        executable=executable,
+    )
+    _install_fake_registry(monkeypatch, registry)
+    _prepare_doctor_dependencies(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        core,
+        "_public_origin_execution_context",
+        lambda: {
+            "status": "codex_sandbox",
+            "requires_current_user_approval": True,
+        },
+        raising=False,
+    )
+
+    report = core.doctor(engine_home=tmp_path)
+    checks = {item["name"]: item for item in report["checks"]}
+
+    assert report["ready_for_render"] is True
+    assert report["current_process_has_interactive_origin_context"] is False
+    assert report["requires_current_user_approval"] is True
+    assert report["origin_execution_context"] == {
+        "status": "codex_sandbox",
+        "requires_current_user_approval": True,
+    }
+    assert checks["origin_execution_context"] == {
+        "name": "origin_execution_context",
+        "ok": False,
+        "value": "codex_sandbox",
+        "requires_current_user_approval": True,
+    }
+    assert "管理员" not in report["next_step_zh"]
+    assert "Codex" in report["next_step_zh"]
+    assert "codex_sandbox" not in report["manual_blockers"]
+
+
+@pytest.mark.parametrize(
+    ("status", "expected_context_ready"),
+    [
+        ("interactive_user", True),
+        ("unknown", False),
+    ],
+)
+def test_doctor_distinguishes_static_render_readiness_from_token_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    status: str,
+    expected_context_ready: bool,
+) -> None:
+    executable = _origin_executable(tmp_path, "Origin2024b")
+    registry = FakeWinreg()
+    registry.add_com(
+        progid="Origin.Application",
+        clsid="{LAUNCH}",
+        executable=executable,
+    )
+    _install_fake_registry(monkeypatch, registry)
+    _prepare_doctor_dependencies(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        core,
+        "_public_origin_execution_context",
+        lambda: {
+            "status": status,
+            "requires_current_user_approval": False,
+        },
+    )
+
+    report = core.doctor(engine_home=tmp_path)
+    checks = {item["name"]: item for item in report["checks"]}
+
+    assert report["ready_for_render"] is True
+    assert (
+        report["current_process_has_interactive_origin_context"]
+        is expected_context_ready
+    )
+    assert report["requires_current_user_approval"] is False
+    assert checks["origin_execution_context"]["ok"] is expected_context_ready
+    assert status not in report["manual_blockers"]
+
+
 def test_runtime_repair_dependency_list_explicitly_includes_origin_binary_pair() -> None:
     requirements = dict(core.RUNTIME_DEPENDENCIES)
 
