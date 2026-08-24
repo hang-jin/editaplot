@@ -56,14 +56,21 @@ class RunOutput:
     readme_output: Path
 
 
-def _unique_dir(path: Path) -> Path:
-    if not path.exists():
-        return path
-    for index in range(2, 1000):
-        candidate = path.with_name(f"{path.name}_{index:02d}")
-        if not candidate.exists():
-            return candidate
-    raise RuntimeError("Could not allocate a unique output directory")
+def _claim_unique_output_dir(path: Path) -> Path:
+    """Atomically create one output directory without overwriting a peer job."""
+
+    candidates = (path, *(path.with_name(f"{path.name}_{index:02d}") for index in range(2, 1000)))
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=False)
+        except FileExistsError:
+            continue
+        return candidate
+    raise OutputDirectoryError(
+        "output_directory_name_exhausted",
+        "EditaPlot could not allocate a unique delivery-folder name. "
+        "Choose another output location or retry with a later timestamp.",
+    )
 
 
 def default_output_dir(input_csv: str | Path, template_id: str, now: datetime | None = None) -> Path:
@@ -81,13 +88,13 @@ def create_run_output(
     now: datetime | None = None,
 ) -> RunOutput:
     source = Path(input_csv).resolve()
-    target_dir = _unique_dir(
+    requested_dir = (
         Path(output_dir).resolve()
         if output_dir
         else default_output_dir(source, manifest.id, now)
     )
     try:
-        target_dir.mkdir(parents=True, exist_ok=False)
+        target_dir = _claim_unique_output_dir(requested_dir)
 
         input_copy = target_dir / f"input_copy{source.suffix.lower()}"
         shutil.copy2(source, input_copy)

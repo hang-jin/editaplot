@@ -1072,14 +1072,23 @@ def install_skill(argv: list[str], *, _lock_held: bool = False) -> int:
         "ready_for_analysis": bool(doctor_payload.get("ready_for_analysis")),
         "ready_for_render": bool(doctor_payload.get("ready_for_render")),
         "origin_installation_modified": False,
-        "next_step": (
-            "Submit a data file; Origin callability will be tested when rendering starts."
-            if doctor_payload.get("ready_for_render")
-            else "Follow post_repair_doctor.manual_blockers, then run editaplot.cmd doctor."
-        ),
+        "next_step": _setup_next_step(doctor_payload),
     }
     _emit(payload, stream=sys.stdout if environment_ready else sys.stderr)
     return 0 if environment_ready else 3
+
+
+def _setup_next_step(doctor_payload: dict[str, object]) -> str:
+    if doctor_payload.get("ready_for_render") and doctor_payload.get(
+        "requires_current_user_approval"
+    ):
+        return (
+            "Let Codex request approval for the exact local Origin command. Only if that "
+            "request is approved may Codex rerun the same Origin command; approval is not guaranteed."
+        )
+    if doctor_payload.get("ready_for_render"):
+        return "Submit a data file; Origin callability will be tested when rendering starts."
+    return "Follow post_repair_doctor.manual_blockers, then run editaplot.cmd doctor."
 
 
 def _setup_filesystem_failure(

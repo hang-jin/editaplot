@@ -42,6 +42,16 @@ DCOM, registry, firewall, user-group, or Origin-installation changes. When a pro
 organization policy, cloud-sync client, or security tool blocks writing, request access only to the
 specific repository/data folder or ask the user for an explicit writable destination.
 
+A normal Codex desktop command may initially run under an isolated account even when inherited
+profile variables look like the signed-in user. The Origin worker checks its real Windows token and
+stops before COM with `origin_codex_sandbox_context` when the current process is the Codex sandbox.
+Codex must then submit a formal, narrowly scoped local-execution request for the same exact
+`origin-smoke` or `render` command. Rerun it only if that exact request is approved, either by the
+user when prompted or by the configured Codex auto-reviewer. Approval is not guaranteed; auto-review
+evaluates one request and does not pre-grant unrestricted Origin access. This is not a sandbox
+bypass. Do not send a beginner to a separate PowerShell window, request administrator rights, or
+change DCOM, the registry, or other system configuration.
+
 The bundled runtime and Origin process do not initiate a network upload of selected files. A file
 explicitly supplied through Codex remains subject to the user's Codex account, organization, and
 retention policies. Require deidentification and burned-in-text confirmation before inspecting
@@ -101,6 +111,14 @@ found; it is not a live-connection result. If it is true, continue to the real s
 the user to open or reconfirm Origin. Summarize the result in one to three sentences and retain
 registry, candidate, and stage details in JSON.
 
+Doctor also reports a redacted `origin_execution_context` status and
+`requires_current_user_approval`. `ready_for_render=true` may appear together with
+`origin_execution_context.status=codex_sandbox`: static prerequisites are present, but the real
+Origin command still needs the exact-command approval handoff above. The approval may be rejected.
+`origin_execution_context.status=unknown` is fail-closed and is not an approval request; stop before
+COM and report that the Windows execution identity could not be verified. Never infer an account
+name from `USERNAME`, `USERPROFILE`, or other inherited environment variables.
+
 Use `.\editaplot.cmd doctor --repair` only when Doctor explicitly reports a missing or damaged
 project-managed Python dependency. It is not part of the ordinary per-workflow command sequence and
 does not repair, install, register, or modify Origin.
@@ -111,15 +129,35 @@ Use this internal sequence:
 
 1. Doctor discovers `Origin.Application`, `Origin.ApplicationSI`, installed candidates,
    `originpro`, and `OriginExt` without starting Origin.
-2. The pre-render smoke uses `launch_isolated` to start an EditaPlot-owned dedicated instance,
+2. Immediately before an Origin worker calls COM, it verifies the real Windows execution context.
+   A detected Codex sandbox stops before COM and exposes the one-request approval recovery above;
+   an unknown Windows context stops fail-closed.
+3. Current EditaPlot workers acquire one session-local Origin job slot for their active smoke/render
+   section. Data inspection, recommendation, and planning remain outside this slot.
+4. The pre-render smoke uses `launch_isolated` to start an EditaPlot-owned dedicated instance,
    reads the actual version, waits for initialization, and verifies the minimum editable artifacts.
-3. The capability layer reports the selected template as `verified`, `compatible_unverified`, or
+5. The capability layer reports the selected template as `verified`, `compatible_unverified`, or
    `blocked` for that host; a successful connection alone does not prove every template works.
-4. Render proceeds only when the template route and host capability decision allow it.
+6. Render proceeds only when the template route and host capability decision allow it.
 
 `attach_existing` is an explicit advanced mode only. Never reset, overwrite, or close a user-owned
 project; detach from that session instead. Only an EditaPlot-owned instance may create a fresh
 project automatically or be closed by the runtime.
+
+The Origin job slot is shared by current EditaPlot workers within one signed-in Windows session.
+Waiting workers emit `origin_job_queue` immediately and then about every 30 seconds; acquisition is
+not guaranteed to be strict FIFO. After 30 minutes, only the waiting worker stops with
+`origin_job_queue_timeout`. The active holder is neither killed nor interrupted, and a completed
+Origin window intentionally kept open does not retain the slot. Windows releases the slot when its
+holder exits, including an unexpected exit. Manual scripts, older EditaPlot releases, and unrelated
+programs are outside this boundary, so do not submit a duplicate smoke or render while a queue
+message is visible.
+
+If primary activation and cleanup both fail, the worker exposes only four stable diagnostic fields:
+`primary_activation_code`, `primary_activation_stage`, `cleanup_error_code`, and
+`cleanup_error_stage`. The structured payload must not contain a Windows account name, local path,
+raw HRESULT, or raw COM text. Both pairs are evidence for diagnosis, not permission for another
+automatic retry.
 
 ## Beginner entry point
 
@@ -234,6 +272,9 @@ service-level promise:
 - First-time repository download, `setup`, dependency installation, `doctor --repair`, time spent
   waiting for a user confirmation, and Codex conversation latency are separate. Do not charge them
   to Origin rendering.
+- Time reported by `origin_job_queue` is also separate from the active holder's Origin execution.
+  Its 30-minute bound is only the maximum wait for the queued worker; it is not a render timeout and
+  never authorizes terminating the active holder.
 - **30–60 minutes** without a pending user question and without a new local progress event is
   abnormal. Stop and identify the last completed stage instead of silently retrying the whole
   workflow.
@@ -243,13 +284,14 @@ network; ordinary `--diagnose`, `doctor`, `start`, `understand`, `origin-smoke`,
 `verify` are local engine operations. Codex service or network latency can delay when a command is
 started or when its result reaches the conversation, but that is outside the EditaPlot runtime.
 
-Keep these five timing groups separate:
+Keep these six timing groups separate:
 
 | Timing group | Commands/events | What it measures |
 | --- | --- | --- |
 | Download and dependencies | repository update, `setup`, `doctor --repair` | Network transfer, package source, local environment creation |
 | Environment diagnosis | `--diagnose`, `doctor` | Python discovery, runtime/dependency checks, read-only Origin registration discovery |
 | Data understanding | `start`, `understand`, `plan`; render event `analyze_data` | Local file reading, role inference, recommendation, semantic-contract creation; exclude time waiting for the user's answer |
+| Origin job queue | `origin_job_queue` | Time this worker waits for another current EditaPlot smoke/render section; 30 minutes limits only this waiter |
 | Origin startup and connection | `origin-smoke`, `origin_smoke` progress event | Dedicated process activation, version handshake, initialization, minimum export loop |
 | Drawing, export, and verification | render events `load_template`, `create_output_dir`, `validate_csv`, `launch_origin_draw_export_verify`, and `verify_outputs` | Local validation, dedicated Origin startup, workbook/graph construction, OPJU/PNG/PDF/TIF export, readback and artifact checks |
 
@@ -276,6 +318,9 @@ Interpret the last event before a long pause:
   or Origin startup;
 - `analyze_data`: the delay is in local table loading, semantic preparation, layout, or plot-plan
   construction;
+- `origin_job_queue`: another current EditaPlot worker owns the Origin slot. Keep waiting while
+  progress arrives, do not submit a duplicate, and do not treat the 30-minute queue maximum as a
+  render timeout or permission to kill the active holder;
 - `launch_origin_draw_export_verify`: the runner is inside the Origin-owned combined operation.
   This honest coarse stage covers activation, workbook/graph construction, export, and Origin
   object readback because the worker cannot safely claim finer checkpoints it cannot observe;

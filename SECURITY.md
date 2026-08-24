@@ -14,3 +14,21 @@ Grant Codex only repository-, current-user Codex Skill (`$HOME\.codex\skills\edi
 selected-data-folder access. Normal use does not require administrator rights, mouse control,
 whole-drive access, or DCOM, registry, firewall, or Origin-installation changes. A request for those
 privileges is not part of the supported recovery workflow and should be stopped and reviewed.
+
+If an Origin worker identifies the Codex sandbox, it must stop before COM. The supported handoff is
+a formal, narrowly scoped local-execution request for the same exact `origin-smoke` or `render`
+command. The command may be rerun only after that exact request is approved; either a user prompt or
+the configured Codex auto-reviewer may evaluate it, but approval is not guaranteed and does not
+pre-grant broader Origin access. This is not a sandbox bypass. Do not replace it with a copied manual
+PowerShell command, administrator execution, or DCOM/registry changes. An unverified Windows
+execution identity is fail-closed.
+
+The cross-process Origin job slot coordinates only current EditaPlot workers in one signed-in
+Windows session. It does not authorize terminating the active process, and its 30-minute limit
+applies only to a waiting worker. Manual scripts, older releases, and unrelated programs remain
+outside that boundary.
+
+Structured dual-stage startup diagnostics are allow-listed to
+`primary_activation_code`, `primary_activation_stage`, `cleanup_error_code`, and
+`cleanup_error_stage`. Do not add Windows account names, local paths, raw HRESULTs, raw COM text, or
+arbitrary exception fields to this public channel.

@@ -47,6 +47,14 @@ Origin 2020b 及更早版本不在当前外部 `originpro` 路线的支持范围
 创建文件夹，请只放行当前仓库和当前数据目录，或由你明确指定另一个可写输出目录。不要为了省事
 把 Codex、PowerShell 或 Origin 全部改成管理员运行。
 
+Codex 桌面版的普通命令可能由隔离账户执行，即使 `USERNAME` / `USERPROFILE` 看起来仍是你的
+资料。EditaPlot 会读取进程真实的 Windows 安全令牌；若识别为 Codex 沙箱，它会在调用 Origin
+COM 前停止，并请 Codex 只为当前这条 `origin-smoke` 或 `render` 命令发起正式、受限的本地执行
+申请。只有这条精确申请获批后，Codex 才会重新执行同一条命令并继续当前任务；申请可以由你在
+提示时确认，也可以由已经配置的 Codex 自动审查评估，但审批不保证通过，自动审查也不代表所有
+Origin 命令预先获得权限。无需复制到自己的 PowerShell，也无需管理员、DCOM、注册表或所谓
+“绕过沙箱”。本机或组织策略拒绝申请时，任务会明确停止。
+
 EditaPlot 的本地 runtime 与 Origin 自动化不会主动上传数据，但交给 Codex 的文件仍受你当前
 Codex 账号、组织和数据保留策略约束。医学数据或参考图在交给 Codex 前必须先按所在机构要求
 去标识化并检查烧录文字；EditaPlot 不会自动识别 PHI。
@@ -167,7 +175,18 @@ OPJU，也不承诺任意图 1:1 复刻。你可以直接这样说：
 - `attach_registration_detected`：发现显式连接已有窗口的 `Origin.ApplicationSI`；
 - `live_connection_tested`：Doctor 中固定为 `false`，真实连接只由后续 smoke 验证；
 - `ready_for_render`：已具备尝试默认独立启动的技术前提，不代表连接或模板能力已通过；
+- `origin_execution_context`：只公开 `interactive_user`、`codex_sandbox`、`non_windows` 或
+  `unknown`，不会显示 Windows 用户名；
+- `requires_current_user_approval`：当前 Origin 命令是否需要先走 Codex 的受限本地执行审批；
+- `current_process_has_interactive_origin_context`：当前进程是否已经处于可尝试启动 Origin 的
+  交互用户上下文；
 - `manual_blockers`：只能由用户处理的事项，不会被伪造为成功。
+
+`ready_for_render=true` 可以和 `requires_current_user_approval=true` 同时出现：前者表示 Python、
+runtime 和默认启动入口等静态前提已找到，后者只说明当前 Doctor 进程仍在沙箱。这不是 Origin
+安装故障，也不进入 `manual_blockers`；下一步是让 Codex 为真实 smoke 命令发起受限审批。
+若 `origin_execution_context.status=unknown`，则 Windows 执行身份无法验证；它不是待审批状态，
+即使静态前提已找到也必须在 COM 前停止，不能根据 `USERNAME` 或 `USERPROFILE` 猜测身份。
 
 你不需要阅读 CLSID、注册表视图或多版本候选列表。我会让 Codex 只用一到三句说明
 “能否分析、是否发现默认启动入口、下一步是什么”；完整字段保留在 JSON 诊断中。
@@ -199,6 +218,19 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 `<source_stem>_EditaPlot_<timestamp>` 同级文件夹，将 RenderPlan、OPJU、PNG、PDF、TIF、
 对象反读、验证与 provenance 集中保存。源文件不会被覆盖。只有你明确要求其他目的地时，
 才可为 render 指定 `--output-dir`。
+
+如果 smoke 或 render 返回 `origin_codex_sandbox_context`，说明它尚未调用 COM，也不能据此判断
+Origin、版本或数据有问题。Codex 应为原来的精确命令发起一次受限本地执行审批；只有这条精确
+申请获批后才可重跑。申请可以由你在提示时确认，也可以由已经配置的 Codex 自动审查评估，但
+审批不保证通过。被本机或组织策略拒绝时应
+停止，不能让你复制 PowerShell、切换管理员、修改 DCOM/注册表或改走未验证的接口。
+
+多个 Codex 任务可以并行完成读取数据、理解列和制定 RenderPlan。真正进入新版 EditaPlot 的
+`origin-smoke` 或 `render` 时，同一 Windows 登录会话只允许一个任务占用 Origin 自动化阶段；
+其余任务报告 `origin_job_queue`，约每 30 秒更新一次，且不保证严格 FIFO。等待满 30 分钟时只
+停止等待者，不会杀掉或打断持有者。持有进程结束或异常退出后由 Windows 释放锁；成功后保留的
+Origin 窗口不会继续占锁。该保护不覆盖手动 Origin 脚本、旧版 EditaPlot 或其他程序，看到排队
+状态时不要重复启动相同任务。
 
 如果旧版本曾在 `style_graph` 阶段提示左边距应为 `17`、却读回约 `70.06`，请先更新仓库的
 `main`，再重新运行 `setup` 和同一条 smoke。这个问题来自旧版几何反读兼容层，不需要改 Origin、
@@ -273,6 +305,10 @@ smoke 和 render 的 JSONL 进度事件会包含从各自 worker 启动起计算
 瞬时实例启动失败会先尝试清理半启动实例，并且只在清理成功时自动再试一次；清理失败或第二次仍
 失败都会停止。若用户批准再试，必须改用新的空白同级输出目录并保留第一次的报告，不能复用已经
 含有诊断产物的目录。
+如果第一次启动和清理步骤都失败，报告会同时保留脱敏的
+`primary_activation_code` / `primary_activation_stage` 与
+`cleanup_error_code` / `cleanup_error_stage`。它不会保存账户名、本地路径或原始 COM 文本，
+也不会因拥有两组信息而继续自动重试。
 需要保留现场时，可以运行：
 
 ```powershell
@@ -311,6 +347,23 @@ is the only current fully verified live baseline. Other target versions are repo
 handshake, real smoke test, and template capability check. Doctor performs read-only discovery and never proves a live
 connection. Users do not need to open Origin first: the smoke test starts an EditaPlot-owned,
 dedicated instance. Attaching to an existing window is an explicit advanced mode only.
+
+A normal Codex desktop command may run under an isolated account even when inherited profile
+variables look familiar. EditaPlot checks the process's real Windows token and stops before COM
+when it detects the Codex sandbox. Codex then submits a formal, narrowly scoped local-execution
+request for the same `origin-smoke` or `render` command. Codex may rerun it only if that exact
+request is approved. A user prompt or the configured Codex auto-reviewer may evaluate the request,
+but approval is not guaranteed and auto-review does not pre-grant unrestricted access. Users do not
+copy the command into their own PowerShell, use administrator rights, change DCOM/the registry, or
+bypass the sandbox. A machine or organization policy may reject the request. An `unknown` Windows
+execution context is not an approval request and stops fail-closed before COM.
+
+Current EditaPlot workers also serialize their active smoke/render sections within one signed-in
+Windows session while data analysis and planning remain concurrent. Waiting jobs report progress
+about every 30 seconds; strict FIFO is not guaranteed. A 30-minute limit stops only the waiter, not
+the active holder. Windows releases the lock when the holder exits, including an unexpected exit;
+an Origin window kept open after completion does not retain the lock. Manual scripts, older
+EditaPlot releases, and unrelated programs are outside this queue.
 
 The Skill reuses a compatible Python first. If none exists, it must explain the system-level change
 and obtain explicit consent before running official winget to install `Python.Python.3.12` in user

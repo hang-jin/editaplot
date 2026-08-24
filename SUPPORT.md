@@ -25,12 +25,30 @@ access is needed only for download/update and locked dependencies. Administrator
 control, whole-drive write access, and DCOM/registry/firewall changes are outside the normal support
 path.
 
+A normal Codex command may first run under an isolated account. When EditaPlot reports
+`origin_codex_sandbox_context`, the supported continuation is a formal, narrowly scoped Codex
+local-execution request for the same exact `origin-smoke` or `render` command. That command is rerun
+only if the exact request is approved, either by the user when prompted or by the configured Codex
+auto-reviewer. Approval is not guaranteed, and auto-review does not pre-grant unrestricted Origin
+access. Users should not be sent to a separate PowerShell window or asked for administrator rights,
+DCOM/registry changes, or any sandbox bypass. An unknown Windows execution identity stops before COM
+instead of being guessed.
+
+Current EditaPlot workers serialize their active Origin smoke/render sections within one signed-in
+Windows session; inspection and planning remain concurrent. Queue progress appears about every 30
+seconds, strict FIFO is not guaranteed, and the 30-minute limit stops only the waiting worker. It
+does not terminate the active holder. This coordination does not cover manual scripts, older
+EditaPlot releases, or unrelated software.
+
 For an ordinary render, omit `--output-dir`. The formal result is written to a unique
 `<source_stem>_EditaPlot_<timestamp>` folder in the same directory as the source CSV, TXT, XLS, or
 XLSX file. An alternate destination is supported only when the user explicitly requests it.
 
 Support does not include installing, replacing, or modifying the Origin application. The user
 remains responsible for scientific meaning, statistics, units, privacy, and final publication review.
+When activation and cleanup both fail, support evidence should contain only the four redacted
+primary/cleanup code-and-stage fields; do not request account names, local paths, raw HRESULTs, or
+raw COM exception text in a public issue.
 
 Community issues and contributions are welcome under the repository's open-source terms. Optional
 paid consulting, customization, installation guidance, and support may be offered separately; they

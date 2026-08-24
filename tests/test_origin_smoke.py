@@ -371,6 +371,44 @@ def test_each_smoke_stage_failure_is_structured_and_redacted(
     }
 
 
+def test_compatibility_report_preserves_redacted_activation_cleanup_diagnostics(
+    tmp_path: Path,
+) -> None:
+    diagnostics = {
+        "primary_activation_code": "origin_com_server_execution_failed",
+        "primary_activation_stage": "create_instance",
+        "cleanup_error_code": "origin_com_activation_access_denied",
+        "cleanup_error_stage": "cleanup_partial_instance",
+    }
+
+    class CleanupFailureContext:
+        def __enter__(self) -> None:
+            raise OriginEnvironmentError(
+                "Origin startup cleanup failed",
+                code="origin_activation_cleanup_failed",
+                stage="cleanup_partial_instance",
+                diagnostics=diagnostics,
+            )
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+    def factory(**_kwargs: object) -> CleanupFailureContext:
+        return CleanupFailureContext()
+
+    output_dir = tmp_path / "cleanup-diagnostics"
+    with pytest.raises(OriginEnvironmentError) as raised:
+        run_origin_smoke(output_dir, session_factory=factory)
+
+    assert raised.value.diagnostics == diagnostics
+    report_text = (output_dir / "compatibility-report.json").read_text("utf-8")
+    report = json.loads(report_text)
+    assert report["error"]["diagnostics"] == diagnostics
+    assert "0x80080005" not in report_text
+    assert "0x80070005" not in report_text
+    assert "Private" not in report_text
+
+
 def test_smoke_outputs_stay_inside_requested_directory(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

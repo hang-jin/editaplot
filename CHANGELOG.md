@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-08-13 — Codex current-user handoff and Origin job coordination
+
+- Added a fail-closed Windows execution-context preflight that reads the worker's real security
+  token instead of inherited profile variables. A Codex sandbox now stops before COM with
+  `origin_codex_sandbox_context` and exposes one narrowly scoped recovery: rerun the same exact
+  `origin-smoke` or `render` command only after the corresponding Codex local-execution request is
+  approved. Approval is not guaranteed, and the supported route does not use a separate manual
+  PowerShell window, administrator rights, DCOM/registry edits, or a sandbox bypass.
+- Serialized the active Origin section of current EditaPlot smoke/render workers within one
+  signed-in Windows session while keeping data inspection and planning concurrent. Waiting workers
+  emit `origin_job_queue` progress, do not promise strict FIFO ordering, and stop only themselves
+  after the 30-minute queue limit without interrupting the active holder.
+- Preserved activation and cleanup failures as two separate redacted code/stage pairs. The public
+  structured payload excludes account names, local paths, raw HRESULTs, and raw COM text, and a
+  cleanup failure still blocks further automatic retry.
+- Made formal render output reservation atomic so concurrent source-adjacent runs receive distinct
+  delivery directories instead of colliding before the Origin job slot is acquired.
+
 ## 2026-08-10 — Editable composite SHAP workflow
 
 - Expanded the existing precomputed SHAP route into three column-driven profiles: editable

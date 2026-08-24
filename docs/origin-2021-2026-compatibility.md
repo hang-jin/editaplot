@@ -130,7 +130,23 @@ git pull --ff-only origin main
 如果连 Automation 握手或版本读取调用本身都失败，则按技术连接失败报告稳定阶段和错误代码，
 而不是猜测原因。
 
-## 遇到 0x80080005 等启动错误时会怎样
+## 先区分 Codex 沙箱预检与真实 COM 启动错误
+
+如果新版首先返回 `origin_codex_sandbox_context`，说明当前 Codex 命令运行在隔离账户中，
+EditaPlot 已在调用 Origin COM 前停止；这不能证明 Origin、版本、Python 包或数据有问题。我让
+Codex 只针对原来的精确 `origin-smoke` 或 `render` 命令发起正式、受限的本地执行申请。只有这次
+精确申请获批后，Codex 才可重跑同一条命令；申请可以由你在提示时确认，也可以由已经配置的 Codex
+自动审查评估，但审批不保证通过，自动审查也不等于预先授予所有 Origin 命令权限。
+
+这条路线不是绕过沙箱。无需把命令复制到自己的 PowerShell，也不要使用管理员权限、修改 DCOM/
+注册表或改走未验证的 Automation 接口。审批被本机或组织策略拒绝时应停止。若报告
+`origin_execution_context_unknown`，说明 Windows 执行身份无法验证；它不是一个待审批状态，
+同样必须在 COM 前停止，不能根据 `USERNAME` 或 `USERPROFILE` 猜测身份。
+
+只有精确申请获批、命令已经处于可验证的当前用户上下文后，仍然发生的 COM 错误才进入下面的启动
+恢复流程。沙箱预检发生在 COM 之前，不消耗后续“瞬时启动错误自动重试”或“用户批准再试”的次数。
+
+## 获批后仍遇到 0x80080005 等启动错误时会怎样
 
 `0x80080005` 表示 COM Server 没有在规定时间内完成启动注册；它本身不能证明是 Origin 版本、
 Python 包或数据文件的问题。EditaPlot 会把常见启动错误收敛成短代码：
@@ -147,6 +163,11 @@ Python 包或数据文件的问题。EditaPlot 会把常见启动错误收敛成
 `origin_activation_cleanup_failed` 并停止。成功激活后，它执行 `sec -poc 30` 并用
 `run.isOCready()` 确认 Origin C 已就绪，未就绪时不会读取版本或新建项目。类别入口不存在和访问
 被拒绝不会自动循环。
+
+如果最初启动与清理同时失败，我只让报告保留四个脱敏字段：
+`primary_activation_code`、`primary_activation_stage`、`cleanup_error_code` 和
+`cleanup_error_stage`。这些字段不包含 Windows 账户名、本地路径、原始 HRESULT 或原始 COM
+异常文本，也不会因为同时存在两组诊断而继续自动重试。
 
 如果两次自动尝试都失败，EditaPlot 会停止并保留脱敏兼容报告。只有用户同意后，才允许在同一
 活动 Windows 用户上下文再执行一次；新的 smoke 必须使用新的空白同级输出目录，不能覆盖第一次

@@ -35,6 +35,15 @@
   outside the Skill's diagnostics.
 - Doctor performs read-only discovery and does not launch Origin. The real pre-render smoke starts
   the dedicated instance and validates the live route.
+- Before any Origin COM call, classify the process from its real Windows token rather than inherited
+  `USERNAME` or `USERPROFILE` values. `codex_sandbox` stops before COM with
+  `origin_codex_sandbox_context`; `unknown` Windows identity also stops fail-closed with
+  `origin_execution_context_unknown`.
+- For `origin_codex_sandbox_context`, Codex may submit a formal, narrowly scoped local-execution
+  request for the same exact `origin-smoke` or `render` command. Rerun only if that exact request is
+  approved, either by the user when prompted or by the configured Codex auto-reviewer. Approval is
+  not guaranteed, auto-review does not pre-grant Origin access, and this handoff is not a sandbox
+  bypass. Do not ask the user to copy the command into another PowerShell session.
 - Never install, replace, patch, or modify the Origin application. Runtime dependency setup is
   limited to the project-local Python environment.
 - Never modify DCOM permissions, COM registration, registry keys, local groups, or Origin launch
@@ -63,6 +72,15 @@
 - After the automatic attempt is exhausted, allow at most one user-approved retry in the active
   interactive Windows-user context. Use a new empty sibling smoke directory and preserve the first
   report. Do not fall back to `ApplicationSI`.
+- Keep that post-activation retry distinct from the Codex execution-context handoff: sandbox
+  detection happens before COM and cannot be diagnosed as an Origin activation failure.
+- Serialize only the active Origin section of current EditaPlot `origin-smoke` and `render` workers
+  within one signed-in Windows session. Data inspection, recommendation, and planning may remain
+  concurrent. Waiting workers report `origin_job_queue` immediately and then about every 30 seconds;
+  strict FIFO ordering is not guaranteed. The 30-minute maximum applies only to the waiter. On
+  `origin_job_queue_timeout`, stop the waiting worker without killing or interrupting the holder.
+  Do not submit a duplicate while waiting. Manual scripts, older EditaPlot releases, and unrelated
+  programs are not coordinated by this slot.
 - Do not force-terminate a smoke or render Python worker solely because of elapsed time. It may own
   a hidden Origin instance, and Windows process termination skips Origin's normal cleanup path.
   Preserve diagnostics, report the last progress stage, and require a proven cooperative cleanup
@@ -108,6 +126,10 @@
 - Never overwrite the source or add fabricated source columns.
 - Store helper columns only in memory or the Origin workbook copy and report their purpose.
 - Redact private absolute paths and local Origin environment details from public logs and examples.
+- If activation and cleanup both fail, publish only `primary_activation_code`,
+  `primary_activation_stage`, `cleanup_error_code`, and `cleanup_error_stage` in the structured
+  diagnostic payload. Do not include an account name, local path, raw HRESULT, or raw COM text, and
+  do not authorize another automatic retry merely because both diagnostic pairs are present.
 - Keep beginner-facing environment output to one to three plain-language sentences. Store detailed
   stages, detected Automation entries, candidates, risks, probes, and failures in local structured
   diagnostics.

@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Any
 
 from origin_sciplot.logging_utils import RunLogger
+from origin_sciplot.origin_backend.execution_context import (
+    require_interactive_origin_context,
+)
+from origin_sciplot.origin_backend.job_queue import origin_job_slot
 from origin_sciplot.origin_backend.safe_errors import (
     OriginDrawError,
     OriginEnvironmentError,
@@ -20,6 +24,7 @@ from origin_sciplot.origin_backend.safe_errors import (
     WorkerExitCode,
     origin_activation_recovery,
     safe_error_message,
+    structured_error_diagnostics,
 )
 from origin_sciplot.origin_backend.template_capabilities import (
     OriginCapability,
@@ -98,34 +103,54 @@ def _run_data_analysis(
     return result
 
 
+def _report_origin_queue_wait(elapsed_seconds: float) -> None:
+    proto.progress(
+        "origin_job_queue",
+        "waiting",
+        f"正在等待另一项 Origin 任务结束；已等待 {int(elapsed_seconds)} 秒。",
+    )
+
+
 def _run_origin_draw_export_verify(
     runner_call: Callable[[], Any],
     verifier: Callable[[Any], Mapping[str, Any]],
 ) -> tuple[Any, Mapping[str, Any]]:
     """Report the renderer as one observable call, then verify its evidence."""
 
+    require_interactive_origin_context()
     proto.progress(
         "launch_origin_draw_export_verify",
         "running",
         "正在启动 Origin、绘图、导出并执行 Origin 反读",
     )
-    result = runner_call()
-    proto.progress(
-        "launch_origin_draw_export_verify",
-        "success",
-        "Origin 绘图、导出与反读调用已返回",
-    )
-    proto.progress(
-        "verify_outputs",
-        "running",
-        "正在核对导出文件与 Origin 反读报告",
-    )
-    compatibility = verifier(result)
-    proto.progress(
-        "verify_outputs",
-        "success",
-        "导出文件与 Origin 反读报告校验通过",
-    )
+    with origin_job_slot(
+        job_kind="render",
+        wait_report_interval=30.0,
+        on_wait=_report_origin_queue_wait,
+    ) as lease:
+        if lease.waited:
+            proto.progress(
+                "origin_job_queue",
+                "success",
+                "已获得 Origin 使用权，开始当前任务。",
+            )
+        result = runner_call()
+        proto.progress(
+            "launch_origin_draw_export_verify",
+            "success",
+            "Origin 绘图、导出与反读调用已返回",
+        )
+        proto.progress(
+            "verify_outputs",
+            "running",
+            "正在核对导出文件与 Origin 反读报告",
+        )
+        compatibility = verifier(result)
+        proto.progress(
+            "verify_outputs",
+            "success",
+            "导出文件与 Origin 反读报告校验通过",
+        )
     return result, compatibility
 
 
@@ -810,6 +835,11 @@ def main(argv: list[str] | None = None) -> int:
                 return WorkerExitCode.VALIDATION_FAILED
         schema = load_schema(manifest.schema_path)
 
+        # Keep all read-only plan and data checks in the sandbox. Request the
+        # host's formal current-user approval only after those checks pass and
+        # before creating a delivery folder; the Origin seam checks again as
+        # defense in depth.
+        require_interactive_origin_context()
         proto.progress("create_output_dir", "running", "正在创建输出文件夹")
         try:
             output = create_run_output(args.input_csv, manifest, args.output_dir)
@@ -1013,10 +1043,12 @@ def main(argv: list[str] | None = None) -> int:
                 f"[{exc.code}/{exc.stage}]: {safe_error_message(exc)}"
             )
         recovery = origin_activation_recovery(exc.code)
+        diagnostics = structured_error_diagnostics(exc)
         proto.error(
             exc.code,
             safe_error_message(exc),
             stage=exc.stage,
+            **({"diagnostics": diagnostics} if diagnostics else {}),
             **({"recovery": recovery} if recovery is not None else {}),
         )
         return WorkerExitCode.ORIGIN_ENVIRONMENT

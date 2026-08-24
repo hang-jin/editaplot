@@ -267,12 +267,18 @@ def test_retryable_activation_failure_stops_when_partial_cleanup_fails(
     def set_show(_show: bool) -> None:
         nonlocal attempts
         attempts += 1
-        raise RuntimeError("redacted transient startup failure")
+        raise RuntimeError(
+            "private activation detail 0x80080005 "
+            + "\\".join((f"{chr(67)}:", "Users", "Private", "origin.ini"))
+        )
 
     def fail_exit() -> None:
         nonlocal exits
         exits += 1
-        raise RuntimeError("redacted partial cleanup failure")
+        raise RuntimeError(
+            "private cleanup detail 0x80070005 "
+            + "\\".join((f"{chr(67)}:", "Users", "Private", "cleanup.log"))
+        )
 
     fake_originpro = SimpleNamespace(
         oext=True,
@@ -286,6 +292,15 @@ def test_retryable_activation_failure_stops_when_partial_cleanup_fails(
 
     assert raised.value.code == "origin_activation_cleanup_failed"
     assert raised.value.stage == "cleanup_partial_instance"
+    assert raised.value.diagnostics == {
+        "primary_activation_code": "origin_com_server_execution_failed",
+        "primary_activation_stage": "create_instance",
+        "cleanup_error_code": "origin_com_activation_access_denied",
+        "cleanup_error_stage": "cleanup_partial_instance",
+    }
+    assert "Private" not in str(raised.value.diagnostics)
+    assert "0x80080005" not in str(raised.value.diagnostics)
+    assert "0x80070005" not in str(raised.value.diagnostics)
     assert origin_activation_recovery(raised.value.code) is None
     assert attempts == 1
     assert exits == 1
@@ -296,6 +311,17 @@ def test_smoke_and_render_workers_emit_the_same_activation_recovery(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    monkeypatch.setattr(
+        origin_smoke_worker,
+        "require_interactive_origin_context",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        run_template_worker,
+        "require_interactive_origin_context",
+        lambda: None,
+    )
+
     def fail(*_args: object, **_kwargs: object) -> dict[str, object]:
         raise OriginEnvironmentError(
             "Origin Automation connection failed",
@@ -325,3 +351,58 @@ def test_smoke_and_render_workers_emit_the_same_activation_recovery(
     assert smoke_lines[-1]["code"] == render_lines[-1]["code"]
     assert smoke_lines[-1]["stage"] == render_lines[-1]["stage"]
     assert smoke_lines[-1]["recovery"] == render_lines[-1]["recovery"]
+
+
+def test_smoke_and_render_workers_preserve_stable_cleanup_diagnostics(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        origin_smoke_worker,
+        "require_interactive_origin_context",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        run_template_worker,
+        "require_interactive_origin_context",
+        lambda: None,
+    )
+    diagnostics = {
+        "primary_activation_code": "origin_com_server_execution_failed",
+        "primary_activation_stage": "create_instance",
+        "cleanup_error_code": "origin_com_activation_access_denied",
+        "cleanup_error_stage": "cleanup_partial_instance",
+    }
+
+    def fail(*_args: object, **_kwargs: object) -> dict[str, object]:
+        raise OriginEnvironmentError(
+            "Origin startup cleanup failed",
+            code="origin_activation_cleanup_failed",
+            stage="cleanup_partial_instance",
+            diagnostics=diagnostics,
+        )
+
+    monkeypatch.setattr(origin_smoke_worker, "run_origin_smoke", fail)
+    smoke_code = origin_smoke_worker.main(
+        ["--output-dir", str(tmp_path / "smoke")]
+    )
+    smoke_lines = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+
+    monkeypatch.setattr(run_template_worker, "_load_template_manifest", fail)
+    render_code = run_template_worker.main(
+        [
+            "--template-id",
+            "test-template",
+            "--input-file",
+            str(tmp_path / "unused.csv"),
+        ]
+    )
+    render_lines = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+
+    assert smoke_code == WorkerExitCode.ORIGIN_ENVIRONMENT
+    assert render_code == WorkerExitCode.ORIGIN_ENVIRONMENT
+    assert smoke_lines[-1]["diagnostics"] == diagnostics
+    assert render_lines[-1]["diagnostics"] == diagnostics
+    assert "recovery" not in smoke_lines[-1]
+    assert "recovery" not in render_lines[-1]

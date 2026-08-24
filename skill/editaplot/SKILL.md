@@ -16,6 +16,12 @@ rendering, exporting, and readback.
   source file's parent folder for source-adjacent deliverables.
 - Run the local launcher, PowerShell/Python subprocesses, and an EditaPlot-owned Origin instance in
   the same active interactive Windows user session.
+- A normal Codex command may first run under an isolated account. If the Origin worker returns
+  `origin_codex_sandbox_context`, submit a formal, narrowly scoped local-execution request for that
+  exact `origin-smoke` or `render` command. Rerun it only if that exact request is approved, either
+  by the user when prompted or by the configured Codex auto-reviewer. Approval is not guaranteed,
+  and this handoff is not a sandbox bypass. Never ask the user to copy the command into a separate
+  PowerShell window or broaden the request to administrator or system-configuration access.
 - Use network access only for repository download/update and locked dependency retrieval. Treat a
   user-scope winget Python installation as a separate system change that still requires explicit
   consent.
@@ -103,6 +109,12 @@ rendering, exporting, and readback.
     succeeded. If the default launch registration is present, proceed to the real pre-render smoke
     without asking the user to open Origin or confirm it again. Keep beginner output to one to three
     plain-language sentences; leave CLSIDs, registry views, candidates, and stages in JSON.
+    Read the redacted `origin_execution_context` separately from `ready_for_render`. A
+    `codex_sandbox` status requires the exact-command approval handoff above before COM is called;
+    only an approved request may be rerun. Auto-review evaluates that individual request and does
+    not pre-grant Origin access. An `unknown` Windows execution context is fail-closed and is not an
+    approval request: stop before COM and report that the current Windows identity could not be
+    verified.
 14. Run `editaplot.cmd origin-smoke --output-dir <unique-smoke-directory>` with
     `launch_isolated`: start and own a dedicated Origin instance, perform the live smoke and version
     handshake, then apply the template capability decision. This command is mandatory after planning
@@ -122,6 +134,19 @@ rendering, exporting, and readback.
     Python worker merely because it has run for a long time: it may own a hidden Origin instance.
     Preserve diagnostics and report the last progress stage before proposing any user-controlled
     cancellation.
+    Keep the sandbox approval handoff distinct from an activation retry: the former happens before
+    COM, while the latter is available only after the bounded activation/cleanup policy has run.
+    When primary activation and cleanup both fail, expose only
+    `primary_activation_code`, `primary_activation_stage`, `cleanup_error_code`, and
+    `cleanup_error_stage`. Never include a Windows account name, local path, raw HRESULT, or raw COM
+    text in that structured diagnostic payload, and never retry because both pairs are present.
+    Current EditaPlot workers serialize only their active `origin-smoke` / `render` Origin section
+    within one signed-in Windows session; data inspection, recommendation, and planning may remain
+    concurrent. Respect `origin_job_queue` progress, which is emitted immediately when waiting and
+    then about every 30 seconds. Ordering is not guaranteed to be strict FIFO. The 30-minute limit
+    applies only to the waiting job: it stops that waiter without killing or interrupting the active
+    holder. Do not submit a duplicate while a queue message is visible. Manual scripts, older
+    EditaPlot releases, and unrelated programs are outside this coordination boundary.
 15. Only after that smoke passes, render an allowed template route with
     `editaplot.cmd render <plan>`. Keep an EditaPlot-owned Origin instance open after success unless
     the user requests otherwise. By default, let the runtime create a direct sibling of the source
