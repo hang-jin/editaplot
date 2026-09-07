@@ -1,0 +1,35 @@
+id: shap_dashboard
+name: SHAP 分栏重要性与双层环图
+category: model-interpretability
+version: 0.1.0
+description: 左侧重要性条与占比、右侧蜂群、两级特征贡献环图，支持三种连续配色
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 146
+family: medical_ai_evidence
+examples:
+  - id: grouped-features
+    name_zh: 通用特征贡献分栏图
+    file: example_standard.csv
+    description_zh: 合成教学数据；同时展示特征重要性、贡献方向与所属分组。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 上传外部预计算 SHAP 长表；Feature Group 是双层环图必需字段。
+  required_columns: [Feature, SHAP value, Feature value, Feature Group]
+  optional_columns: [Sample ID, Feature Order, Mean absolute SHAP, Group contribution (%)]
+  accepted_layouts: [长表，每行一个样本-特征观测]
+  aliases: [特征, SHAP值, 特征值, 特征组, 样本编号, 特征顺序, 平均绝对SHAP, 组贡献百分比]
+  notes_zh:
+    - 支持 2–20 个特征、2–5 个特征组，每个特征至少 3 个观测。
+    - 原 SHAP 横坐标保持不变；Feature value 仅组内归一化映射连续颜色。
+    - 条形标注与双环使用总 Mean |SHAP| 的相同比例分母，派生项先明确确认。
+    - 外环是特征组、内环是组内特征；环图按组排列，条与蜂群保留输入或明确 Feature Order。
+    - 可选 dashboard_blue_red（蓝白酒红）、dashboard_viridis（紫绿金）、dashboard_red_blue（红黄蓝）。
+    - 不训练模型、不计算 SHAP、不复制参考图数值、不自动推断分组。

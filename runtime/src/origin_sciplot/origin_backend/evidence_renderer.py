@@ -3529,7 +3529,12 @@ def _build_origin_graph(
     elif kind == "forest":
         graph, state = _build_forest_graph(op, frame, preparation)
     elif kind == "shap_summary":
-        graph, state = _build_shap_summary_graph(op, frame, preparation)
+        if preparation.plot_spec.shap_dashboard is not None:
+            from .shap_dashboard_renderer import build_shap_dashboard_graph
+
+            graph, state = build_shap_dashboard_graph(op, frame, preparation)
+        else:
+            graph, state = _build_shap_summary_graph(op, frame, preparation)
     else:  # pragma: no cover - protected by preparation validation
         raise OriginDrawError(f"Unsupported evidence plot kind: {kind}")
 

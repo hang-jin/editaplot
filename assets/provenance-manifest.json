@@ -7,14 +7,14 @@
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
-    "sha256": "9608eea3510498335ed63650ef22fb364bb942ba8b79329289e0deb7b23f177e"
+    "sha256": "ab1104fb57f49d925026632f58c80faedf83f0eeff9d9c30dc78368369172f7c"
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
     "reviewed_on": "2026-07-30",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, payment-identifier intent, and redistribution boundary"
   },
-  "asset_count": 229,
+  "asset_count": 235,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
@@ -757,6 +757,66 @@
       }
     },
     {
+      "path": "assets/gallery/shap-dashboard-blue-red.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 152810,
+      "sha256": "ac66f48e6b6ccd7ae1da20c3f29504b544a4dff58bb2e4f7194c5df7c73414d1",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/shap-dashboard-red-blue.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 153129,
+      "sha256": "6cd1c9cc01fe33c9d8472269702f43e04db8841eaaae8bfe014c3d2987e430dc",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/shap-dashboard-viridis.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 152322,
+      "sha256": "a152b9febf8c2b69dafb6f833b9ce48f287d2cc247a9d78ed75ff4ef50c35f31",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
       "path": "assets/gallery/stacked-composition.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 37375,
@@ -1400,6 +1460,14 @@
       "kind": "synthetic_public_example",
       "size_bytes": 6892,
       "sha256": "30cf25a829a49d12ff2c71975096c64b7af87b2c9bac63d8ab273a0b9ee51fa1",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/shap_dashboard.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 76886,
+      "sha256": "58622e3b2d6854323555165cf3e37065c0293d3cc563fb1dfe3e4a02b8d0416d",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -2049,6 +2117,22 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 105,
       "sha256": "fa45a9f66762bc7ad28400e1f8ab2237dc4c07938ca95418c45365825a2865eb",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/shap_dashboard/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 71,
+      "sha256": "8bf0c0f550889001a724100ab8c062690e9a07b6026a3e1fc7c79ad5b70d632b",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/shap_dashboard/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 76886,
+      "sha256": "58622e3b2d6854323555165cf3e37065c0293d3cc563fb1dfe3e4a02b8d0416d",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

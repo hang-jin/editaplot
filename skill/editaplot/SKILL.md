@@ -188,6 +188,11 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
   invoke SHAP. Mean |SHAP| and optional group percentages may only summarize those supplied rows
   with the allow-listed formulas recorded in the semantic proposal and explicitly approved; never
   invent contributions or silently reorder features.
+- When the user requests separate importance bars, a beeswarm and a two-level contribution ring,
+  select `shap_dashboard`. Require explicit Feature Group, confirm feature/group percentages using
+  one total Mean |SHAP| denominator, and offer blue–white–wine, purple–green–yellow, or red–yellow–blue.
+  Freeze the selection as mapping plot_mode `dashboard_blue_red`, `dashboard_viridis`, or
+  `dashboard_red_blue`; do not substitute a general categorical palette for this continuous scale.
 - Confirm unknown units, error semantics, percentage denominators, meaningful order, dual axes,
   and any other choice that can change the claim.
 - Recommend from the scientific question and data structure, not aesthetics alone. Refuse a

@@ -838,6 +838,9 @@ def generate_circular_network() -> None:
 
 
 def main() -> None:
+    from generate_shap_dashboard_data import main as generate_shap_dashboard
+
+    generate_shap_dashboard()
     generate_xps()
     generate_xrd()
     generate_eis()

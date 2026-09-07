@@ -86,6 +86,7 @@ VERIFIED_TEMPLATE_IDS = frozenset(
         "decision_curve",
         "raincloud",
         "shap_summary",
+        "shap_dashboard",
         "grouped_box",
         "pl",
         "dsc",
@@ -916,6 +917,7 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "calibration_curve": ("calibrationcurve", "reliability", "校准曲线", "可靠性"),
     "decision_curve": ("decisioncurve", "netbenefit", "dca", "决策曲线", "净获益"),
     "raincloud": ("raincloud", "raincloudplot", "halfviolin", "雨云图", "半小提琴"),
+    "shap_dashboard": ("shap dashboard", "nested donut", "双层环图", "分栏 SHAP", "shap 分栏"),
     "shap_summary": (
         "shapsummary",
         "shapbeeswarm",
@@ -1316,6 +1318,7 @@ def _score_candidate(
         "bland_altman": ("bland_altman_limits", "agreement_limit_match"),
         "paired_trajectory": ("paired_wide", "paired_identity_match"),
         "shap_summary": ("shap_long", "precomputed_shap_long_match"),
+        "shap_dashboard": ("shap_long", "precomputed_shap_dashboard_match"),
     }
     if template_id in medical_layouts:
         layout, code = medical_layouts[template_id]
@@ -1447,6 +1450,7 @@ _PRECOMPUTED_EVIDENCE: dict[str, str] = {
     "calibration_curve": "分箱后的预测概率、观察比例和分箱样本数",
     "decision_curve": "各阈值下的模型、全部干预和不干预净获益",
     "shap_summary": "已经由模型计算好的 SHAP 值",
+    "shap_dashboard": "预计算 SHAP 与明确特征组，用分栏和双环展示",
 }
 
 

@@ -237,6 +237,8 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
         )
         if requires_confirmation or plot_kind != "shap_summary":
             return disposition
+        if spec.shap_dashboard is not None and role == "group_contribution":
+            return DataDisposition.SUPPORT_ONLY
         plan = getattr(spec, "shap_plan", None)
         profile = str(getattr(plan, "profile", "beeswarm_only"))
         if role == "mean_abs_shap" and profile == "beeswarm_only":
@@ -486,12 +488,37 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
                             mean_abs_binding,
                         ),
                         required=True,
-                        axis="mean_absolute_shap_top",
+                        axis="mean_absolute_shap_left" if spec.shap_dashboard else "mean_absolute_shap_top",
                         legend_label="Mean |SHAP value|",
                     )
                 )
 
-        if profile == "beeswarm_mean_abs_grouped":
+        if spec.shap_dashboard is not None and mean_abs_binding is not None:
+            group_column = getattr(plan, "feature_group_column", None)
+            fraction_id = "derived_shap_dashboard_feature_fractions"
+            derived_items.append(DerivedDataItem(
+                item_id=fraction_id,
+                semantic_role="feature_and_group_share_of_total_mean_absolute_shap",
+                disposition=DataDisposition.RENDER_SECONDARY,
+                operation_id="fraction_of_group_total",
+                input_item_ids=(
+                    *_unique_existing((feature_column, group_column), item_ids), mean_abs_binding,
+                ),
+                confidence=1.0,
+                parameters=(("denominator", "sum_of_all_feature_mean_absolute_shap"),
+                            ("percentage_scale", 100.0), ("ring_order", "group_then_feature_display_order")),
+                evidence_codes=("shap_dashboard_nested_ring_contract",),
+            ))
+            elements.extend((
+                FigureElement(element_id="shap_feature_percentage_labels", element_kind="text",
+                              data_item_ids=(fraction_id, mean_abs_binding), required=True,
+                              axis="importance_labels", legend_label="Feature share / 特征占比"),
+                FigureElement(element_id="shap_nested_contribution_rings", element_kind="sector",
+                              data_item_ids=(fraction_id,), required=True,
+                              axis="nested_rings", legend_label="Outer groups / inner features"),
+            ))
+
+        if profile == "beeswarm_mean_abs_grouped" and spec.shap_dashboard is None:
             group_column = getattr(plan, "feature_group_column", None)
             contribution_column = getattr(plan, "group_contribution_column", None)
             contribution_binding: str | None = None

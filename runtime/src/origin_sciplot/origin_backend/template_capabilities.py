@@ -39,6 +39,7 @@ class OriginCapability(str, Enum):
     DATASET_COLOR_SCALE = "dataset_color_scale"
     HORIZONTAL_BAR_LAYER = "horizontal_bar_layer"
     PIE_IN_MULTI_LAYER_PAGE = "pie_in_multi_layer_page"
+    NESTED_DOUGHNUT = "nested_doughnut"
 
 
 @dataclass(frozen=True)
@@ -213,6 +214,13 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
             OriginCapability.PIE,
             OriginCapability.PIE_IN_MULTI_LAYER_PAGE,
         ),
+    ),
+    "shap_dashboard": _profile(
+        "shap_dashboard",
+        OriginCapability.CATEGORICAL_AXIS, OriginCapability.DATASET_COLOR_SCALE,
+        OriginCapability.HORIZONTAL_BAR_LAYER, OriginCapability.MULTI_LAYER_PAGE,
+        OriginCapability.PIE, OriginCapability.PIE_IN_MULTI_LAYER_PAGE,
+        OriginCapability.NESTED_DOUGHNUT,
     ),
     "stacked_bar": _profile(
         "stacked_bar",

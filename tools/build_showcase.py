@@ -30,9 +30,16 @@ class ShowcaseCase:
     y_title: str | None = None
     title_zh: str | None = None
     display_in_gallery: bool = True
+    mapping_mode: str | None = None
 
 
 CASES = (
+    *(ShowcaseCase(
+        f"shap-dashboard-{palette.replace('_', '-')}", "shap_dashboard", "shap_dashboard.csv",
+        "Synthetic precomputed SHAP values show feature importance, direction and grouped contribution.",
+        "interpretability", f"SHAP importance nested doughnut and beeswarm ({palette})",
+        title_zh=f"SHAP 分栏与双层环图 · {title}", mapping_mode=f"dashboard_{palette}",
+    ) for palette, title in (("blue_red", "蓝白酒红"), ("viridis", "紫绿金"), ("red_blue", "红黄蓝"))),
     ShowcaseCase(
         "xps-fit",
         "xps",
@@ -461,6 +468,15 @@ def build_case(
     understanding_path = entry / "semantic-understanding.json"
     confirmation_path = entry / "semantic-confirmation.json"
     source = DATA / case.data_file
+    mapping_arguments = []
+    if case.mapping_mode:
+        mapping_path = entry / "column-mapping.json"
+        mapping_path.write_text(json.dumps({
+            "assignments": {"Feature":"feature", "SHAP value":"shap", "Feature value":"feature_value",
+                            "Feature Group":"feature_group", "Sample ID":"sample_id", "Feature Order":"feature_order"},
+            "plot_mode": case.mapping_mode,
+        }), encoding="utf-8", newline="\n")
+        mapping_arguments = ["--mapping-json", str(mapping_path)]
     _run(
         [
             str(python),
@@ -473,6 +489,7 @@ def build_case(
             str(engine),
             "--output",
             str(understanding_path),
+            *mapping_arguments,
         ],
         log_path=entry / "understand.log",
     )
@@ -514,6 +531,7 @@ def build_case(
         str(confirmation_path),
         "--output",
         str(plan_path),
+        *mapping_arguments,
     ]
     if case.x_title is not None:
         plan_command.extend(("--x-title", case.x_title))

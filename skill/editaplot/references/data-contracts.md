@@ -10,7 +10,7 @@
 
 Keep the original file read-only.
 
-These contracts cover the 40 registered public plotting routes. The data contract is independent
+These contracts cover the 41 registered public plotting routes. The data contract is independent
 of the installed Origin version. After semantic confirmation and plan creation, run the isolated
 `origin-smoke` before formal rendering. Rendering starts a dedicated EditaPlot-owned Origin
 instance and then checks the selected template against the detected host. Target Origin/OriginPro
@@ -108,6 +108,19 @@ be derived as `100 × sum(group feature Mean|SHAP|) / sum(all feature Mean|SHAP|
 confirmation. Summary cells may be sparse—one value per feature or group is enough—but repeated
 non-empty values must agree. Provided summaries are checked against the row-level values.
 EditaPlot does not train a model, invoke SHAP, invent contributions, or send data to a network.
+
+### SHAP dashboard with two-level rings
+
+For `shap_dashboard`, add a mandatory `Feature Group` to the precomputed SHAP long table above.
+The left bars and right beeswarm keep the same feature order. Only the inner ring groups features
+by their explicit membership. Each feature percentage and each group percentage uses the same
+sum of all feature Mean |SHAP| values as denominator; include this derived item in confirmation.
+Supplied group percentages are validated support data; the rings use the exact common denominator.
+Do not infer groups from feature names. Accept 2–20 features and 2–5 groups.
+
+Select one mapping `plot_mode`: `dashboard_blue_red`, `dashboard_viridis`, or `dashboard_red_blue`.
+These modes control the 101-level feature-value color scale. The group colors remain consistent
+across bars and both rings. Use the provided `shap_dashboard.csv` teaching example for formatting.
 
 ### Explicit interval table
 

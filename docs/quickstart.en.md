@@ -8,8 +8,8 @@ current fully verified live baseline; other target versions receive a compatibil
 local handshake, real smoke test, and template capability check. Origin 2020b and earlier, macOS,
 Linux, WSL, Wine/CrossOver, Parallels, and other VMs are unsupported.
 
-I currently publish 40 Origin plotting routes and retain 47 fully reviewed PNGs as verification
-assets. The public page displays 45 cases. The new 3D dual-density route accepts only upstream
+I currently publish 41 Origin plotting routes and retain 50 fully reviewed PNGs as verification
+assets. The public page displays 48 cases. The new 3D dual-density route accepts only upstream
 supplied density profiles and one Z=0 baseline focal locator per group; it does not run KDE or infer
 peaks or intersections. For heatmaps, the page shows only the real Origin-rendered
 30×30 dense example; the smaller matrix and 40×40 cases remain regression history rather than

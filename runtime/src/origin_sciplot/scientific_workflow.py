@@ -35,6 +35,7 @@ from .shap_composite import (
     ShapCompositePlan,
     build_shap_composite_plan,
 )
+from .shap_dashboard import DASHBOARD_MODES, ShapDashboardPlan, build_dashboard_plan
 from .xrd_semantics import (
     GSAS_II_PUBLICATION_CSV,
     XrdSemanticError,
@@ -73,6 +74,7 @@ ScientificTemplateId = Literal[
     "decision_curve",
     "raincloud",
     "shap_summary",
+    "shap_dashboard",
     "grouped_box",
     "dsc",
     "nmr",
@@ -119,6 +121,7 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "decision_curve",
         "raincloud",
         "shap_summary",
+        "shap_dashboard",
         "grouped_box",
         "dsc",
         "nmr",
@@ -270,6 +273,7 @@ class ScientificPlotSpec:
     focal_x_column: str | None = None
     condition_positions: tuple[tuple[str, float], ...] = ()
     shap_plan: ShapCompositePlan | None = None
+    shap_dashboard: ShapDashboardPlan | None = None
 
 
 @dataclass(frozen=True)
@@ -296,6 +300,13 @@ class ScientificPreparation:
         return asdict(self)
 
 
+def _plot_digest_payload(spec: ScientificPlotSpec) -> dict:
+    payload = asdict(spec)
+    if spec.shap_dashboard is None:
+        payload.pop("shap_dashboard")
+    return payload
+
+
 def _scientific_plan_digest(
     preparation: ScientificPreparation,
     plot_spec: ScientificPlotSpec,
@@ -305,7 +316,7 @@ def _scientific_plan_digest(
         "source_sha256": preparation.source_sha256,
         "source_columns": preparation.source_columns,
         "assignments": preparation.assignments,
-        "plot_spec": asdict(plot_spec),
+        "plot_spec": _plot_digest_payload(plot_spec),
         "mapping_confirmed": preparation.mapping_confirmed,
     }
     return hashlib.sha256(
@@ -1244,7 +1255,7 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
             "ignored",
         )
         unique = {"x", "photon_energy", "tauc", "tauc_fit", "bandgap"}
-    elif template_id == "shap_summary":
+    elif template_id in {"shap_summary", "shap_dashboard"}:
         keys = (
             "feature",
             "shap",
@@ -1296,6 +1307,9 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
 
 
 def mapping_context_options(template_id: str) -> tuple[tuple[str, str], ...]:
+    if template_id == "shap_dashboard":
+        return (("dashboard_blue_red", "蓝白酒红"), ("dashboard_viridis", "紫绿金"),
+                ("dashboard_red_blue", "红黄蓝"))
     if template_id == "xrd":
         return (
             ("ordinary_scan", "普通 XRD 图谱"),
@@ -3029,6 +3043,10 @@ def _validate_assignment_shape(
         mode = mapping.plot_mode or inferred_xrd_mode
     elif template_id in {"dsc", "nmr", "ftir", "xps_compare"}:
         mode = mapping.plot_mode or "overlay"
+    elif template_id == "shap_dashboard":
+        mode = mapping.plot_mode or "dashboard_blue_red"
+        if mode not in DASHBOARD_MODES:
+            raise ScientificWorkflowError("mapping_plot_mode", "Select a SHAP dashboard color mode.")
     elif template_id == "shap_summary":
         mode = mapping.plot_mode or (
             "beeswarm_mean_abs_grouped"
@@ -4454,6 +4472,29 @@ def _build_shap_summary_spec(
         ),
         tuple(dict.fromkeys(warnings)),
     )
+
+
+def _build_shap_dashboard_spec(frame, assignments, plot_mode):
+    spec, warnings = _build_shap_summary_spec(frame, assignments, "beeswarm_mean_abs_grouped")
+    try:
+        dashboard = build_dashboard_plan(spec.shap_plan, plot_mode.removeprefix("dashboard_"))
+    except ShapCompositeError as exc:
+        raise ScientificWorkflowError(exc.code, str(exc), column=exc.column, row=exc.row) from exc
+    count = len(spec.category_order)
+    label_length = max(map(len, spec.category_order))
+    style = replace(
+        spec.display_plan.figure_style,
+        profile_name="shap-dashboard", page_width_cm=max(36.0, min(48.0, 30 + label_length * 0.5)),
+        page_height_cm=max(27.0, min(40.0, 17 + count * 0.85)),
+        axis_title_size_pt=18, tick_label_size_pt=15, legend_size_pt=15,
+        inset_axis_title_size_pt=16, inset_tick_label_size_pt=14,
+    )
+    return replace(
+        spec, plot_mode=plot_mode, shap_dashboard=dashboard,
+        color_rule=f"within_feature_minmax_{dashboard.palette_id}",
+        axis_plan=replace(spec.axis_plan, y_to=count + 0.5),
+        display_plan=replace(spec.display_plan, marker_size_pt=3.2, figure_style=style),
+    ), (*warnings, "feature_percentages_and_nested_rings_require_confirmation")
 
 
 def _build_bubble_spec(
@@ -5902,6 +5943,8 @@ def _build_plot_spec(
         return _build_raw_distribution_spec(template_id, frame, assignments)
     if template_id == "shap_summary":
         return _build_shap_summary_spec(frame, assignments, plot_mode)
+    if template_id == "shap_dashboard":
+        return _build_shap_dashboard_spec(frame, assignments, plot_mode)
     if template_id == "bubble":
         return _build_bubble_spec(frame, assignments)
     if template_id == "forest":
@@ -5942,8 +5985,11 @@ def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
         return _automatic_circular_network_mapping(loaded)
     if template_id in {"raw_summary", "violin", "histogram", "raincloud"}:
         return _automatic_raw_distribution_mapping(loaded, template_id)
-    if template_id == "shap_summary":
-        return _automatic_shap_summary_mapping(loaded)
+    if template_id in {"shap_summary", "shap_dashboard"}:
+        inferred = _automatic_shap_summary_mapping(loaded)
+        if template_id == "shap_dashboard":
+            return replace(inferred, plot_mode="dashboard_blue_red")
+        return inferred
     if template_id == "bubble":
         return _automatic_bubble_mapping(loaded)
     if template_id == "forest":
@@ -6023,7 +6069,7 @@ def prepare_scientific(
         "source_sha256": loaded.source_sha256,
         "source_columns": loaded.columns,
         "assignments": [(column, assignments[column]) for column in loaded.columns],
-        "plot_spec": asdict(spec),
+        "plot_spec": _plot_digest_payload(spec),
         "mapping_confirmed": mapping_confirmed,
     }
     plan_digest = hashlib.sha256(

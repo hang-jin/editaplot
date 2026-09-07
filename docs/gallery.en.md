@@ -1,6 +1,6 @@
 # Origin 2024b figures generated and reviewed on a live installation
 
-I selected 45 public examples from 47 retained verification assets.
+I selected 48 public examples from 50 retained verification assets.
 Use the question and minimum-table guide below to choose a direction before adapting a route
 to your own data. Historical verification images do not occupy duplicate gallery slots;
 the heatmap section displays only the live Origin-rendered 30×30 dense case.
@@ -58,6 +58,9 @@ or clinical claim. The public source tree retains only sanitized PNGs.
 <img src="../assets/gallery/raw-observations.png" alt="raw observations dot summary" width="31%" />
 <img src="../assets/gallery/sankey-flow.png" alt="four-stage Sankey flow" width="31%" />
 <img src="../assets/gallery/scatter-dense.png" alt="dense scatter relationship" width="31%" />
+<img src="../assets/gallery/shap-dashboard-blue-red.png" alt="SHAP importance nested doughnut and beeswarm (blue_red)" width="31%" />
+<img src="../assets/gallery/shap-dashboard-red-blue.png" alt="SHAP importance nested doughnut and beeswarm (red_blue)" width="31%" />
+<img src="../assets/gallery/shap-dashboard-viridis.png" alt="SHAP importance nested doughnut and beeswarm (viridis)" width="31%" />
 <img src="../assets/gallery/stacked-composition.png" alt="absolute stacked composition" width="31%" />
 <img src="../assets/gallery/trajectory3d.png" alt="multi-position 3D Nyquist trajectory" width="31%" />
 <img src="../assets/gallery/trend-progression.png" alt="multi-series progression trendline" width="31%" />

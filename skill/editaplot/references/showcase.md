@@ -16,8 +16,8 @@ data, labels, conclusions, or private template assets.
 
 ## Current verified public gallery scope
 
-The retained verification inventory contains 47 reviewed, metadata-sanitized PNGs across 40 public
-plotting routes. The public page displays 45 cases. Keep inventory count, display count, and route
+The retained verification inventory contains 50 reviewed, metadata-sanitized PNGs across 41 public
+plotting routes. The public page displays 48 cases. Keep inventory count, display count, and route
 count separate: a case enters the inventory only after Origin artifacts, object readback, human
 visual QA, sanitized PNG, provenance record, and asset manifest all pass. Display visibility is a
 separate decision and does not delete retained verification evidence.

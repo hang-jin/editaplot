@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-07 — SHAP dashboard with editable nested contribution rings
+
+- Added `shap_dashboard`: aligned importance bars with mean/percentage labels, a separate SHAP
+  beeswarm with a true 101-level color scale, and nested native group/feature doughnuts.
+- Added blue–white–wine, purple–green–yellow, and red–yellow–blue modes. Group hues remain consistent
+  between bars and both rings; palette choice is frozen in the plan.
+- Reused the SHAP parser and explicit derived-data confirmation. Four source roles are required;
+  observations and original files stay unchanged. Existing SHAP plan digests are preserved.
+- Included a deterministic 1,440-observation table and three real Origin showcase variants with
+  editable OPJU, PNG/PDF/TIF, object readback and visual review.
+
 ## 2026-08-13 — Codex current-user handoff and Origin job coordination
 
 - Added a fail-closed Windows execution-context preflight that reads the worker's real security

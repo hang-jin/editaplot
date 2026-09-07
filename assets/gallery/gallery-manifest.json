@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "asset_policy": "programmatically verified and explicitly manually reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
-  "case_count": 47,
-  "display_case_count": 45,
+  "case_count": 50,
+  "display_case_count": 48,
   "cases": [
     {
       "id": "bar-error-groups",
@@ -299,6 +299,30 @@
       "display_in_gallery": true,
       "sha256": "8f2c4ffc428c4e70f5a6a717455bdcc58c6477dd9dcf95626b79ef364344e3f6",
       "size_bytes": 92294
+    },
+    {
+      "id": "shap-dashboard-blue-red",
+      "title_zh": "SHAP 分栏与双层环图 · 蓝白酒红",
+      "title_en": "SHAP importance nested doughnut and beeswarm (blue_red)",
+      "display_in_gallery": true,
+      "sha256": "ac66f48e6b6ccd7ae1da20c3f29504b544a4dff58bb2e4f7194c5df7c73414d1",
+      "size_bytes": 152810
+    },
+    {
+      "id": "shap-dashboard-red-blue",
+      "title_zh": "SHAP 分栏与双层环图 · 红黄蓝",
+      "title_en": "SHAP importance nested doughnut and beeswarm (red_blue)",
+      "display_in_gallery": true,
+      "sha256": "6cd1c9cc01fe33c9d8472269702f43e04db8841eaaae8bfe014c3d2987e430dc",
+      "size_bytes": 153129
+    },
+    {
+      "id": "shap-dashboard-viridis",
+      "title_zh": "SHAP 分栏与双层环图 · 紫绿金",
+      "title_en": "SHAP importance nested doughnut and beeswarm (viridis)",
+      "display_in_gallery": true,
+      "sha256": "a152b9febf8c2b69dafb6f833b9ce48f287d2cc247a9d78ed75ff4ef50c35f31",
+      "size_bytes": 152322
     },
     {
       "id": "stacked-composition",

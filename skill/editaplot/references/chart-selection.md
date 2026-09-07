@@ -10,7 +10,7 @@ is the current fully verified baseline.
 
 ## Verified V1 routes
 
-The registry exposes 40 public plotting routes. Some table rows group closely related candidates,
+The registry exposes 41 public plotting routes. Some table rows group closely related candidates,
 so the number of rows is not the route count.
 我已验证 `density_ridgeline3d` 的完整 Origin 路线；它仍只接受冻结的六角色表，并遵守下面的
 数据与焦点边界。
@@ -46,6 +46,7 @@ so the number of rows is not the route count.
 | Grouped raw distributions | `grouped_box` | raw columns named `Category | Group` | Preserve category/group text verbatim; show every point and exact n; never invent p-values, brackets, or stars |
 | Distribution with raw evidence and compact summary | `raincloud` | one or more raw numeric group columns, at least 5 observations/group | Half violin + all raw points + mean ± 1 SD; do not remove outliers |
 | Model feature contribution | `shap_summary` | Feature + precomputed SHAP value + numeric Feature value; optional order, Mean\|SHAP\|, group, group % | Never run SHAP; preserve SHAP X; confirm every display/helper summary derivation |
+| Side-by-side model importance and hierarchical contribution | `shap_dashboard` | Precomputed SHAP long table plus explicit Feature Group; 2–20 features, 2–5 groups | Left importance/percentages, right beeswarm, outer group and inner feature rings. Choose dashboard_blue_red, dashboard_viridis or dashboard_red_blue in the mapping mode; confirm the common percentage denominator |
 | Steady-state or time-resolved photoluminescence | `pl` | Wavelength or Time + one or more PL series; optional explicitly paired Fit columns | Preserve multi-condition order; TRPL uses log Y; never calculate lifetime or fit curves |
 | UV–Vis spectrum with optional Tauc evidence | `uv_vis` | Wavelength + one or more comparable Absorbance or Transmittance series; optional Photon energy + Tauc value/fit/Eg | Do not mix signal definitions without an explicit axis contract; never calculate photon energy, exponent, fit, or band gap |
 | Multi-condition 3D Nyquist trajectory | `trajectory3d` | Long table: explicit Zreal + real third variable with meaning/unit + explicit -Zimag + Series; 1–6 groups | Never create decorative depth, fit circuits, or infer the third variable |

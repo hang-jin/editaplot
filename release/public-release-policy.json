@@ -46,6 +46,7 @@
     "tools/build_showcase.py",
     "tools/build_star_trend.py",
     "tools/generate_showcase_data.py",
+    "tools/generate_shap_dashboard_data.py",
     "tools/sync_public_gallery.py",
     "tools/verify_public_release.py"
   ],
@@ -100,6 +101,7 @@
     "tools/build_showcase.py",
     "tools/build_star_trend.py",
     "tools/generate_showcase_data.py",
+    "tools/generate_shap_dashboard_data.py",
     "tools/sync_public_gallery.py",
     "tools/verify_public_release.py"
   ],
@@ -217,7 +219,7 @@
     "thumbs.db"
   ],
   "max_file_bytes": 1048576,
-  "max_total_bytes": 10485760,
+  "max_total_bytes": 11534336,
   "binary_extensions": [
     ".png"
   ],
@@ -366,9 +368,9 @@
   "gallery": {
     "directory": "assets/gallery",
     "manifest": "assets/gallery/gallery-manifest.json",
-    "expected_case_count": 47,
-    "expected_display_case_count": 45,
-    "expected_public_route_count": 40,
+    "expected_case_count": 50,
+    "expected_display_case_count": 48,
+    "expected_public_route_count": 41,
     "reject_nonempty_png_text": true
   },
   "palettes": {
@@ -389,7 +391,7 @@
     "inventory_generator": "tools/build_asset_provenance.py",
     "gallery_fixture_generator": "tools/generate_showcase_data.py",
     "required_review_decision": "approved_for_public_source_release",
-    "expected_asset_count": 229,
+    "expected_asset_count": 235,
     "require_synthetic_or_generated": true,
     "require_contains_phi_false": true
   }

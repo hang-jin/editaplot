@@ -2241,7 +2241,12 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         return figure
     if spec.plot_kind == "shap_summary":
         figure = _new_empty_figure(preparation)
-        _draw_shap_composite(figure, frame, preparation)
+        if spec.shap_dashboard is not None:
+            from .shap_dashboard import draw_dashboard_preview
+
+            draw_dashboard_preview(figure, frame, preparation)
+        else:
+            _draw_shap_composite(figure, frame, preparation)
         _apply_font_contract(figure)
         return figure
     if spec.plot_kind in {"pie", "sankey", "circular_network", "radar", "heatmap"}:

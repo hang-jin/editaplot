@@ -164,6 +164,7 @@ TEMPLATE_PRIMITIVE_COMPATIBILITY: dict[str, frozenset[str]] = {
         }
     ),
     "shap_summary": _COMMON_CONTEXT_PRIMITIVES | frozenset({"symbol", "reference_line", "colorbar"}),
+    "shap_dashboard": _COMMON_CONTEXT_PRIMITIVES,
     "grouped_box": _COMMON_CONTEXT_PRIMITIVES | frozenset({"box", "symbol", "error_bar", "reference_line"}),
     "pl": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "dsc": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,

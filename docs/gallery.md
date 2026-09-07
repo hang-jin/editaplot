@@ -1,6 +1,6 @@
 # Origin 2024b 实机生成并复核的图形示例
 
-我从 47 个保留验证资产中精选了 45 个案例放在本页，
+我从 50 个保留验证资产中精选了 48 个案例放在本页，
 让第一次接触 EditaPlot 的读者可以先按科研问题和图形类型判断方向，再用自己的数据定制。
 同一路线的历史验证图不会重复占版面；热力图目前只展示真实 30×30 高密度版本。
 
@@ -57,6 +57,9 @@ GitHub 源码仓库只保留脱敏 PNG；可编辑项目和其他格式不直接
 <img src="../assets/gallery/raw-observations.png" alt="原始观测点与中位数" width="31%" />
 <img src="../assets/gallery/sankey-flow.png" alt="多阶段桑基流向图" width="31%" />
 <img src="../assets/gallery/scatter-dense.png" alt="多组密集散点图" width="31%" />
+<img src="../assets/gallery/shap-dashboard-blue-red.png" alt="SHAP 分栏与双层环图 · 蓝白酒红" width="31%" />
+<img src="../assets/gallery/shap-dashboard-red-blue.png" alt="SHAP 分栏与双层环图 · 红黄蓝" width="31%" />
+<img src="../assets/gallery/shap-dashboard-viridis.png" alt="SHAP 分栏与双层环图 · 紫绿金" width="31%" />
 <img src="../assets/gallery/stacked-composition.png" alt="绝对值堆叠组成图" width="31%" />
 <img src="../assets/gallery/trajectory3d.png" alt="三维多条件 Nyquist 轨迹" width="31%" />
 <img src="../assets/gallery/trend-progression.png" alt="多系列进展折线图" width="31%" />

@@ -429,6 +429,10 @@ class ScientificTemplateService:
                     ("Mean |SHAP| 来源", shap_plan.mean_abs_source),
                     ("分组贡献来源", shap_plan.group_contribution_source),
                 )
+            if spec.shap_dashboard is not None:
+                facts = (*facts, ("分栏模板配色", spec.shap_dashboard.palette_id),
+                         ("分栏布局合同", spec.shap_dashboard.layout_version),
+                         ("双层环图", "外环特征组 / 内环组内特征；共同总贡献分母"))
         else:
             roles = (
                 ("X", x_value),

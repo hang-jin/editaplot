@@ -1,0 +1,8 @@
+{
+  "template_id": "shap_dashboard",
+  "workflow": "scientific_table",
+  "layout": "precomputed_long",
+  "required_roles": ["feature", "shap", "feature_value", "feature_group"],
+  "optional_roles": ["sample_id", "feature_order", "mean_abs_shap", "group_contribution"],
+  "source_data_modified": false
+}
