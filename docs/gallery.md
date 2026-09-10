@@ -1,6 +1,6 @@
 # Origin 2024b 实机生成并复核的图形示例
 
-我从 50 个保留验证资产中精选了 48 个案例放在本页，
+我从 50 个保留验证资产中精选了 41 个案例放在本页，
 让第一次接触 EditaPlot 的读者可以先按科研问题和图形类型判断方向，再用自己的数据定制。
 同一路线的历史验证图不会重复占版面；热力图目前只展示真实 30×30 高密度版本。
 
@@ -27,7 +27,6 @@ GitHub 源码仓库只保留脱敏 PNG；可编辑项目和其他格式不直接
 <img src="../assets/gallery/circular-network.png" alt="多阶段环形有向加权网络图" width="31%" />
 <img src="../assets/gallery/cv-cycles.png" alt="CV 循环伏安曲线" width="31%" />
 <img src="../assets/gallery/density-ridgeline3d.png" alt="三维双密度曲线与基线焦点" width="31%" />
-<img src="../assets/gallery/diverging-effects.png" alt="正负效应发散条形图" width="31%" />
 <img src="../assets/gallery/dsc-multi.png" alt="DSC 多样品热流曲线" width="31%" />
 <img src="../assets/gallery/eis-nyquist.png" alt="EIS Nyquist 阻抗图" width="31%" />
 <img src="../assets/gallery/forest-intervals.png" alt="效应量森林图" width="31%" />
@@ -43,27 +42,21 @@ GitHub 源码仓库只保留脱敏 PNG；可编辑项目和其他格式不直接
 <img src="../assets/gallery/medical-decision.png" alt="医学决策曲线 DCA" width="31%" />
 <img src="../assets/gallery/medical-grouped-box.png" alt="医学分组箱线图与原始点" width="31%" />
 <img src="../assets/gallery/medical-longitudinal.png" alt="配对纵向医学轨迹" width="31%" />
-<img src="../assets/gallery/medical-pr.png" alt="医学模型 PR 曲线" width="31%" />
 <img src="../assets/gallery/medical-raincloud.png" alt="医学 Raincloud 原始分布图" width="31%" />
 <img src="../assets/gallery/medical-roc.png" alt="医学模型 ROC 曲线" width="31%" />
 <img src="../assets/gallery/medical-shap.png" alt="复合 SHAP 特征贡献图" width="31%" />
 <img src="../assets/gallery/nmr-comparison.png" alt="19F NMR 光谱对比" width="31%" />
 <img src="../assets/gallery/percent-composition.png" alt="百分比堆叠组成图" width="31%" />
 <img src="../assets/gallery/pie-five-parts.png" alt="少类别饼图" width="31%" />
-<img src="../assets/gallery/pl-steady-state.png" alt="稳态 PL 发射光谱" width="31%" />
-<img src="../assets/gallery/pl-temperature-series.png" alt="PL 温度序列光谱" width="31%" />
 <img src="../assets/gallery/pl-trpl.png" alt="PL / TRPL 光致发光" width="31%" />
 <img src="../assets/gallery/radar-multimetric.png" alt="多指标雷达图" width="31%" />
 <img src="../assets/gallery/raw-observations.png" alt="原始观测点与中位数" width="31%" />
 <img src="../assets/gallery/sankey-flow.png" alt="多阶段桑基流向图" width="31%" />
 <img src="../assets/gallery/scatter-dense.png" alt="多组密集散点图" width="31%" />
 <img src="../assets/gallery/shap-dashboard-blue-red.png" alt="SHAP 分栏与双层环图 · 蓝白酒红" width="31%" />
-<img src="../assets/gallery/shap-dashboard-red-blue.png" alt="SHAP 分栏与双层环图 · 红黄蓝" width="31%" />
-<img src="../assets/gallery/shap-dashboard-viridis.png" alt="SHAP 分栏与双层环图 · 紫绿金" width="31%" />
 <img src="../assets/gallery/stacked-composition.png" alt="绝对值堆叠组成图" width="31%" />
 <img src="../assets/gallery/trajectory3d.png" alt="三维多条件 Nyquist 轨迹" width="31%" />
 <img src="../assets/gallery/trend-progression.png" alt="多系列进展折线图" width="31%" />
-<img src="../assets/gallery/uv-vis-multi.png" alt="UV-Vis 多样品吸收光谱" width="31%" />
 <img src="../assets/gallery/uv-vis-tauc.png" alt="UV–Vis 与可选 Tauc 插图" width="31%" />
 <img src="../assets/gallery/violin-distributions.png" alt="小提琴分布对比" width="31%" />
 <img src="../assets/gallery/xas-profiles.png" alt="XAS 吸收谱对比" width="31%" />

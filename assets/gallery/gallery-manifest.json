@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "asset_policy": "programmatically verified and explicitly manually reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
   "case_count": 50,
-  "display_case_count": 48,
+  "display_case_count": 41,
   "cases": [
     {
       "id": "bar-error-groups",
@@ -48,7 +48,7 @@
       "id": "diverging-effects",
       "title_zh": "正负效应发散条形图",
       "title_en": "diverging signed-effect horizontal bars",
-      "display_in_gallery": true,
+      "display_in_gallery": false,
       "sha256": "e9b0d7d948f7d5cb5a47f44e8cd2e67e8923612b40e41b5a633e3cea3868ac60",
       "size_bytes": 28641
     },
@@ -192,7 +192,7 @@
       "id": "medical-pr",
       "title_zh": "医学模型 PR 曲线",
       "title_en": "medical imaging precision recall PR curve",
-      "display_in_gallery": true,
+      "display_in_gallery": false,
       "sha256": "e5b312190236477f15f2c3e9527897e3f851e90c5621dfceab0e841698b34664",
       "size_bytes": 51957
     },
@@ -248,7 +248,7 @@
       "id": "pl-steady-state",
       "title_zh": "稳态 PL 发射光谱",
       "title_en": "steady-state PL emission spectrum",
-      "display_in_gallery": true,
+      "display_in_gallery": false,
       "sha256": "2c2d7352ee2e287a441504d67530be67e52f782a05ec8f4a2dd9e74c3da43b57",
       "size_bytes": 60539
     },
@@ -256,7 +256,7 @@
       "id": "pl-temperature-series",
       "title_zh": "PL 温度序列光谱",
       "title_en": "steady-state PL temperature series",
-      "display_in_gallery": true,
+      "display_in_gallery": false,
       "sha256": "211253908985f3e47287c33cb9f81d0559321e331b5ad4c188248cd743e09916",
       "size_bytes": 74572
     },
@@ -312,7 +312,7 @@
       "id": "shap-dashboard-red-blue",
       "title_zh": "SHAP 分栏与双层环图 · 红黄蓝",
       "title_en": "SHAP importance nested doughnut and beeswarm (red_blue)",
-      "display_in_gallery": true,
+      "display_in_gallery": false,
       "sha256": "6cd1c9cc01fe33c9d8472269702f43e04db8841eaaae8bfe014c3d2987e430dc",
       "size_bytes": 153129
     },
@@ -320,7 +320,7 @@
       "id": "shap-dashboard-viridis",
       "title_zh": "SHAP 分栏与双层环图 · 紫绿金",
       "title_en": "SHAP importance nested doughnut and beeswarm (viridis)",
-      "display_in_gallery": true,
+      "display_in_gallery": false,
       "sha256": "a152b9febf8c2b69dafb6f833b9ce48f287d2cc247a9d78ed75ff4ef50c35f31",
       "size_bytes": 152322
     },
@@ -352,7 +352,7 @@
       "id": "uv-vis-multi",
       "title_zh": "UV-Vis 多样品吸收光谱",
       "title_en": "UV-vis multi-sample absorbance comparison",
-      "display_in_gallery": true,
+      "display_in_gallery": false,
       "sha256": "b4b5d41f8ae40b00381cb0d5c7b78198478e329c59d4695a9abfbae0211c26e7",
       "size_bytes": 50955
     },

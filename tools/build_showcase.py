@@ -39,6 +39,7 @@ CASES = (
         "Synthetic precomputed SHAP values show feature importance, direction and grouped contribution.",
         "interpretability", f"SHAP importance nested doughnut and beeswarm ({palette})",
         title_zh=f"SHAP 分栏与双层环图 · {title}", mapping_mode=f"dashboard_{palette}",
+        display_in_gallery=palette == "blue_red",
     ) for palette, title in (("blue_red", "蓝白酒红"), ("viridis", "紫绿金"), ("red_blue", "红黄蓝"))),
     ShowcaseCase(
         "xps-fit",
@@ -131,6 +132,7 @@ CASES = (
         "spectral comparison",
         "steady-state PL emission spectrum",
         x_title="Wavelength (nm)",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "pl-temperature-series",
@@ -140,6 +142,7 @@ CASES = (
         "ordered spectral comparison",
         "steady-state PL temperature series",
         title_zh="PL 温度序列光谱",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "uv-vis-tauc",
@@ -157,6 +160,7 @@ CASES = (
         "optical spectral comparison",
         "UV-vis multi-sample absorbance comparison",
         title_zh="UV-Vis 多样品吸收光谱",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "dsc-multi",
@@ -208,6 +212,7 @@ CASES = (
         "Signed teaching effect scores preserve direction and magnitude with a restrained cool-neutral-warm encoding.",
         "effect comparison",
         "diverging signed-effect horizontal bars",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "stacked-composition",
@@ -365,6 +370,7 @@ CASES = (
         "Two precomputed precision-recall curves are interpreted against an explicit prevalence baseline.",
         "discrimination",
         "medical imaging precision recall PR curve",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "medical-calibration",
