@@ -1,6 +1,6 @@
 # Origin 2024b figures generated and reviewed on a live installation
 
-I selected 48 public examples from 50 retained verification assets.
+I selected 41 public examples from 50 retained verification assets.
 Use the question and minimum-table guide below to choose a direction before adapting a route
 to your own data. Historical verification images do not occupy duplicate gallery slots;
 the heatmap section displays only the live Origin-rendered 30×30 dense case.
@@ -28,7 +28,6 @@ or clinical claim. The public source tree retains only sanitized PNGs.
 <img src="../assets/gallery/circular-network.png" alt="two-period circular directed weighted network" width="31%" />
 <img src="../assets/gallery/cv-cycles.png" alt="CV cyclic voltammetry" width="31%" />
 <img src="../assets/gallery/density-ridgeline3d.png" alt="3D dual-density ridgeline with supplied baseline focal locators" width="31%" />
-<img src="../assets/gallery/diverging-effects.png" alt="diverging signed-effect horizontal bars" width="31%" />
 <img src="../assets/gallery/dsc-multi.png" alt="DSC multi-sample heat flow comparison" width="31%" />
 <img src="../assets/gallery/eis-nyquist.png" alt="EIS Nyquist impedance" width="31%" />
 <img src="../assets/gallery/forest-intervals.png" alt="forest effect confidence interval" width="31%" />
@@ -44,27 +43,21 @@ or clinical claim. The public source tree retains only sanitized PNGs.
 <img src="../assets/gallery/medical-decision.png" alt="medical decision curve DCA net benefit" width="31%" />
 <img src="../assets/gallery/medical-grouped-box.png" alt="medical grouped boxplot with raw observations" width="31%" />
 <img src="../assets/gallery/medical-longitudinal.png" alt="paired longitudinal medical trajectory" width="31%" />
-<img src="../assets/gallery/medical-pr.png" alt="medical imaging precision recall PR curve" width="31%" />
 <img src="../assets/gallery/medical-raincloud.png" alt="medical imaging Raincloud raw distribution" width="31%" />
 <img src="../assets/gallery/medical-roc.png" alt="medical imaging ROC diagnostic curve" width="31%" />
 <img src="../assets/gallery/medical-shap.png" alt="medical imaging composite SHAP beeswarm mean importance and grouped contribution" width="31%" />
 <img src="../assets/gallery/nmr-comparison.png" alt="19F NMR spectrum comparison" width="31%" />
 <img src="../assets/gallery/percent-composition.png" alt="percentage composition with confirmed row denominator" width="31%" />
 <img src="../assets/gallery/pie-five-parts.png" alt="pie part-to-whole" width="31%" />
-<img src="../assets/gallery/pl-steady-state.png" alt="steady-state PL emission spectrum" width="31%" />
-<img src="../assets/gallery/pl-temperature-series.png" alt="steady-state PL temperature series" width="31%" />
 <img src="../assets/gallery/pl-trpl.png" alt="TRPL photoluminescence decay with user supplied fits" width="31%" />
 <img src="../assets/gallery/radar-multimetric.png" alt="radar multimetric comparison" width="31%" />
 <img src="../assets/gallery/raw-observations.png" alt="raw observations dot summary" width="31%" />
 <img src="../assets/gallery/sankey-flow.png" alt="four-stage Sankey flow" width="31%" />
 <img src="../assets/gallery/scatter-dense.png" alt="dense scatter relationship" width="31%" />
 <img src="../assets/gallery/shap-dashboard-blue-red.png" alt="SHAP importance nested doughnut and beeswarm (blue_red)" width="31%" />
-<img src="../assets/gallery/shap-dashboard-red-blue.png" alt="SHAP importance nested doughnut and beeswarm (red_blue)" width="31%" />
-<img src="../assets/gallery/shap-dashboard-viridis.png" alt="SHAP importance nested doughnut and beeswarm (viridis)" width="31%" />
 <img src="../assets/gallery/stacked-composition.png" alt="absolute stacked composition" width="31%" />
 <img src="../assets/gallery/trajectory3d.png" alt="multi-position 3D Nyquist trajectory" width="31%" />
 <img src="../assets/gallery/trend-progression.png" alt="multi-series progression trendline" width="31%" />
-<img src="../assets/gallery/uv-vis-multi.png" alt="UV-vis multi-sample absorbance comparison" width="31%" />
 <img src="../assets/gallery/uv-vis-tauc.png" alt="UV-vis absorbance with supplied Tauc inset" width="31%" />
 <img src="../assets/gallery/violin-distributions.png" alt="violin distribution comparison" width="31%" />
 <img src="../assets/gallery/xas-profiles.png" alt="XAS absorption spectrum" width="31%" />

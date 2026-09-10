@@ -125,11 +125,10 @@ SHAP 路线只读取你在上游已经计算好的逐样本长表，最少需要
 直接说：“请用 `$editaplot` 的 SHAP 分栏与双层环图，配色选紫绿金，保留所有数据。”
 三种配色对应 `dashboard_blue_red`（蓝白酒红）、`dashboard_viridis`（紫绿金）和
 `dashboard_red_blue`（红黄蓝），由 Codex 写入列映射的 `plot_mode`。
+下面只展示蓝白酒红这一张代表图；三种配色都可以选择，不需要换模板。
 
 <div align="center">
-  <img src="assets/gallery/shap-dashboard-blue-red.png" width="32%" alt="SHAP 分栏双环：蓝白酒红">
-  <img src="assets/gallery/shap-dashboard-viridis.png" width="32%" alt="SHAP 分栏双环：紫绿金">
-  <img src="assets/gallery/shap-dashboard-red-blue.png" width="32%" alt="SHAP 分栏双环：红黄蓝">
+  <img src="assets/gallery/shap-dashboard-blue-red.png" width="85%" alt="SHAP 分栏双环：蓝白酒红">
 </div>
 
 ### 新增材料与关系数据怎样准备
@@ -161,9 +160,9 @@ SHAP 路线只读取你在上游已经计算好的逐样本长表，最少需要
   <img src="assets/gallery/circular-network.png" alt="多阶段环形有向加权网络" width="31%">
 </div>
 
-➡️ [浏览 48 个对外展示案例与简要用途](docs/gallery.md)
+➡️ [浏览 41 个模板的代表图与简要用途](docs/gallery.md)
 
-当前公开能力包含 41 条 Origin 绘图路线。仓库保留 50 张通过实机产物、对象反读、人工视觉检查和公开图片审计的验证 PNG，其中 48 张进入页面展示；两个未展示案例只是热力图的历史回归证据。DSC、NMR、FTIR/IR、XPS 多谱线对比、PL 多条件、UV–Vis 多样品、30×30 高密度热力图、576 点复合 SHAP、多阶段环形有向加权网络图与三维双密度基线焦点图都已完成 Origin 2024b 实机门禁。
+当前公开能力包含 41 条 Origin 绘图路线，图库按每个模板一张代表图展示，共 41 张。仓库仍保留全部 50 张通过实机产物、对象反读、人工视觉检查和公开图片审计的验证 PNG；其余 9 张配色或模式案例不再重复展示，但对应图片、样例数据和绘图功能都保留。你仍可以选择三套 SHAP 配色、稳态或温度序列 PL、多样品 UV–Vis、正负效应条形图、PR 曲线及不同大小的热力图。DSC、NMR、FTIR/IR、XPS 多谱线对比、PL 多条件、UV–Vis 多样品、30×30 高密度热力图、576 点复合 SHAP、多阶段环形有向加权网络图与三维双密度基线焦点图都已完成 Origin 2024b 实机门禁。
 
 ### 一次正常运行要多久
 
@@ -326,7 +325,7 @@ $smokeDir = Join-Path $env:TEMP ("EditaPlot-origin-smoke-" + (Get-Date -Format "
 |---|---|
 | Apache-2.0 源码、完整 Skill、清理后的 runtime | `DEVELOPMENT_LEDGER.md`、内部计划与开发日志 |
 | 中性合成示例数据、原创配色资产 | 你的原始数据、参考截图、未获再分发许可的材料 |
-| 50 个已复核且清理元数据的验证 PNG，其中 48 个用于页面展示，覆盖 41 条绘图路线 | OPJU/PDF/TIF、RenderPlan、对象反读与验证 JSON |
+| 50 个已复核且清理元数据的验证 PNG，每条绘图路线选一张代表图，共展示 41 张 | OPJU/PDF/TIF、RenderPlan、对象反读与验证 JSON |
 | 双语文档、测试、依赖锁、资产与 runtime 校验清单 | 本机绝对路径、缓存、虚拟环境、临时输出、私钥与 token |
 
 为了避免把本机资料误发到公开仓库，我给公开文件加了白名单、密钥扫描、PNG 检查和 SHA-256 清单。你可以在[发布与许可边界](docs/release-boundaries.md)查看完整规则。

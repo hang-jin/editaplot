@@ -369,7 +369,7 @@
     "directory": "assets/gallery",
     "manifest": "assets/gallery/gallery-manifest.json",
     "expected_case_count": 50,
-    "expected_display_case_count": 48,
+    "expected_display_case_count": 41,
     "expected_public_route_count": 41,
     "reject_nonempty_png_text": true
   },

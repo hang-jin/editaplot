@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,43 @@ if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
 import sync_public_gallery as gallery_sync  # noqa: E402
+from build_showcase import CASES  # noqa: E402
+
+
+def test_gallery_displays_exactly_one_representative_per_public_route() -> None:
+    displayed = [case for case in CASES if case.display_in_gallery]
+    all_routes = {case.template_id for case in CASES}
+
+    assert len(all_routes) == 41
+    assert Counter(case.template_id for case in displayed) == Counter(
+        {template_id: 1 for template_id in all_routes}
+    )
+    selected = {case.template_id: case.id for case in displayed}
+    assert {template_id: selected[template_id] for template_id in (
+        "shap_dashboard", "pl", "uv_vis", "horizontal_bar", "heatmap", "diagnostic_curve"
+    )} == {
+        "shap_dashboard": "shap-dashboard-blue-red",
+        "pl": "pl-trpl",
+        "uv_vis": "uv-vis-tauc",
+        "horizontal_bar": "horizontal-long-labels",
+        "heatmap": "heatmap-dense-30x30",
+        "diagnostic_curve": "medical-roc",
+    }
+
+
+def test_gallery_deduplication_retains_all_assets_and_shap_palette_modes() -> None:
+    assert len(CASES) == 50
+    for case in CASES:
+        assert (ROOT / "examples" / "gallery" / case.data_file).is_file()
+        assert (ROOT / "assets" / "gallery" / f"{case.id}.png").is_file()
+
+    dashboards = [case for case in CASES if case.template_id == "shap_dashboard"]
+    assert {case.mapping_mode for case in dashboards} == {
+        "dashboard_blue_red", "dashboard_viridis", "dashboard_red_blue"
+    }
+    assert [case.id for case in dashboards if case.display_in_gallery] == [
+        "shap-dashboard-blue-red"
+    ]
 
 
 def _write_json(path: Path, payload: object) -> None:
