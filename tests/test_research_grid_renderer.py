@@ -41,7 +41,8 @@ class Matrix:
     def from_np(self, values):
         self.values = values.copy()
 
-    def to_np(self):
+    def to_np2d(self, index=0):
+        assert index == 0
         result = self.values.copy()
         if self.op.corruption == "matrix":
             result[0, 1] = 99
@@ -71,11 +72,36 @@ class Axis:
         self.layer.op.state[f"layer.{self.name}.to"] = end
 
 
+class Text:
+    def __init__(self, text):
+        self.text = text
+        self.name = ""
+        self.values = {"width": max(300.0, len(text) * 75.0), "height": 120.0, "rotate": 0.0}
+
+    def set_int(self, key, value):
+        self.values[key] = value
+
+    set_float = set_int
+
+    def get_float(self, key):
+        return float(self.values[key])
+
+    def get_int(self, key):
+        return int(self.values[key])
+
+
 class Layer:
     def __init__(self, op):
         self.op = op
         self.obj = self
         self.plots = []
+        self.texts = []
+        self.theme_values = dict.fromkeys(
+            ("Units", "PosAlignment", "PosX", "PosY", "Left", "Top", "Width", "Height"), 0.0
+        )
+        self.theme_applied = False
+        self.theme_values["Width"] = 4.0
+        self.extends_values = {"HideHeadLevel": 0, "HideTailLevel": 0}
 
     def activate(self):
         self.op.active_layer = self
@@ -107,7 +133,51 @@ class Layer:
         return int(self.get_float(name))
 
     def label(self, name):
-        return object() if name.casefold() == "spectrum1" else None
+        if name.casefold() != "spectrum1":
+            return next((text for text in self.texts if text.name == name), None)
+        return SimpleNamespace(obj=self)
+
+    def add_label(self, text):
+        label = Text(text)
+        self.texts.append(label)
+        return label
+
+    def GetTheme(self):
+        class Value:
+            def __init__(self, value):
+                self.value = value
+
+            def SetDoubleValue(self, value):
+                self.value = float(value)
+
+            SetIntValue = SetDoubleValue
+
+            def GetDoubleValue(self):
+                return self.value
+
+            GetIntValue = GetDoubleValue
+
+        return SimpleNamespace(
+            Dimension=SimpleNamespace(**{key: Value(value) for key, value in self.theme_values.items()}),
+            Extends=SimpleNamespace(**{key: Value(value) for key, value in self.extends_values.items()}),
+        )
+
+    def PutTheme(self, theme):
+        if self.op.corruption == "theme":
+            return True  # A successful setter alone is not evidence.
+        self.theme_values = {
+            key: getattr(theme.Dimension, key).GetDoubleValue() for key in self.theme_values
+        }
+        self.theme_applied = True
+        self.extends_values = {
+            key: getattr(theme.Extends, key).GetIntValue() for key in self.extends_values
+        }
+        for name, dimension in (("left", "page.width"), ("top", "page.height"),
+                                ("width", "page.width"), ("height", "page.height")):
+            self.op.state[f"spectrum1.{name}"] = (
+                self.theme_values[name.title()] / 100 * self.op.state[dimension]
+            )
+        return False  # Mirrors the real specialized object's legacy return value.
 
     def LT_execute(self, command):
         self.op.commands.append(command)
@@ -118,6 +188,9 @@ class Layer:
                 continue
             key, raw = statement.split("=", 1)
             raw = raw.strip()
+            if key.endswith("$"):
+                self.op.state[key[:-1]] = raw.strip('"')
+                continue
             if raw.startswith("font("):
                 value = 42
             elif "*" in raw:
@@ -126,13 +199,25 @@ class Layer:
             else:
                 value = float(raw)
             self.op.state[key] = value
+        if "layer.cmap.SetLevels();" in command:
+            # Live PID105 retains its inherited eight-level count in no-arg mode.
+            self.op.state["layer.cmap.numColors"] = 8
+        if "layer.cmap.SetLevels(1);" in command:
+            self.op.state["layer.cmap.numColors"] = self.op.state["layer.cmap.numMajorLevels"]
+        if "spectrum1.left" in self.op.state and not self.theme_applied:
+            self.op.state["spectrum1.left"] = 1000.0  # Refresh restores the native anchor.
         return True
 
 
 class Origin:
     def __init__(self, corruption=None):
         self.corruption = corruption
-        self.state = {"page.width": 10000.0, "page.height": 7500.0}
+        self.state = {
+            "page.width": 10000.0, "page.height": 7500.0,
+            "page.resx": 600.0,
+            "layer.cmap.zmin": 0.0, "layer.cmap.zmax": 1.0,
+            "layer.cmap.type": 1,
+        }
         self.commands = []
         self.sheets = []
         self.layer = Layer(self)
@@ -146,6 +231,12 @@ class Origin:
 
     def ocolor(self, color):
         return int(color[1:], 16)
+
+    def lt_exec(self, command):
+        return self.layer.LT_execute(command)
+
+    def get_lt_str(self, key):
+        return self.state[key]
 
     def lt_float(self, key):
         if key.startswith("font("):
@@ -245,23 +336,78 @@ def test_malformed_direct_grid_cannot_bypass_source_model_validation(bad_value):
 
 def test_colorbar_uses_given_page_region_and_readbacks_font_and_all_dimensions():
     op = Origin()
-    region = SimpleNamespace(left_percent=85, top_percent=12, width_percent=7, height_percent=65)
+    region = SimpleNamespace(left_percent=85, top_percent=12, width_percent=10, height_percent=65)
     state = position_grid_colorbar(
         op, op.graph, op.layer, region=region, font_family="Arial", label_size_pt=17
     )
     assert state["geometry"] == pytest.approx(
-        {"left_percent": 85, "top_percent": 12, "width_percent": 7, "height_percent": 65}
+        {"left_percent": 85, "top_percent": 12, "width_percent": 4, "height_percent": 65}
     )
     assert state["label_font_code"] == state["font_code_expected"] == 42
     assert state["label_size_pt"] == 17
+    assert [label["text"] for label in state["numeric_labels"]] == ["1", "0.8", "0.6", "0.4", "0.2", "0"]
+    assert len(op.layer.texts) == 6
 
 
-@pytest.mark.parametrize("corruption", ["font", "geometry"])
+@pytest.mark.parametrize("corruption", ["font", "geometry", "theme"])
 def test_colorbar_does_not_accept_wrong_font_or_geometry(corruption):
     op = Origin(corruption)
-    region = SimpleNamespace(left_percent=85, top_percent=12, width_percent=7, height_percent=65)
+    region = SimpleNamespace(left_percent=85, top_percent=12, width_percent=10, height_percent=65)
     with pytest.raises(OriginDrawError):
         position_grid_colorbar(op, op.graph, op.layer, region=region, font_family="Arial", label_size_pt=17)
+
+
+def test_numeric_color_labels_cannot_spill_beyond_the_reserved_gutter():
+    op = Origin()
+    region = SimpleNamespace(left_percent=85, top_percent=12, width_percent=6, height_percent=65)
+    with pytest.raises(OriginDrawError, match="reserved column"):
+        position_grid_colorbar(op, op.graph, op.layer, region=region, font_family="Arial", label_size_pt=17)
+
+
+def test_wide_numeric_scale_labels_use_the_reserved_space_without_overlapping_the_bar():
+    op = Origin()
+    op.state.update({"layer.cmap.zmin": 100000000.0, "layer.cmap.zmax": 100000001.0})
+    region = SimpleNamespace(left_percent=78, top_percent=12, width_percent=20, height_percent=65)
+    state = position_grid_colorbar(
+        op, op.graph, op.layer, region=region, font_family="Arial", label_size_pt=17
+    )
+    assert len(state["numeric_labels"]) == 6
+    lefts = [label.get_float("left") for label in op.layer.texts]
+    assert max(lefts) - min(lefts) < 1e-9
+    assert all(left > 8200 for left in lefts)
+    assert all(label.get_float("left") + label.get_float("width") <= 9800 for label in op.layer.texts)
+
+
+def test_log_color_scale_cannot_receive_linear_numeric_labels():
+    op = Origin()
+    op.state["layer.cmap.type"] = 2
+    region = SimpleNamespace(left_percent=85, top_percent=12, width_percent=10, height_percent=65)
+    with pytest.raises(OriginDrawError, match="linear"):
+        position_grid_colorbar(op, op.graph, op.layer, region=region, font_family="Arial", label_size_pt=17)
+
+
+def test_existing_scale_text_is_not_silently_duplicated_or_replaced():
+    op = Origin()
+    old = op.layer.add_label("User-owned text")
+    old.name = "PhysicalGridScaleValue1"
+    region = SimpleNamespace(left_percent=85, top_percent=12, width_percent=10, height_percent=65)
+    with pytest.raises(OriginDrawError, match="already"):
+        position_grid_colorbar(op, op.graph, op.layer, region=region, font_family="Arial", label_size_pt=17)
+    assert op.layer.texts == [old]
+    assert old.text == "User-owned text"
+
+
+@pytest.mark.parametrize("bounds", [(1e-9, 6e-9), (100000000.0, 100000001.0)])
+def test_numeric_scale_labels_keep_small_or_narrow_range_differences(bounds):
+    from origin_sciplot.origin_backend.research_grid_renderer import _grid_scale_labels
+
+    ticks = _grid_scale_labels(*bounds)
+    assert len(ticks) == 6
+    assert len({text for _, text in ticks}) == 6
+    numbers = [float(text) for _, text in ticks]
+    assert all(a > b for a, b in zip(numbers[:-1], numbers[1:], strict=True))
+    assert numbers[0] == pytest.approx(bounds[1])
+    assert numbers[-1] == pytest.approx(bounds[0])
 
 
 def test_no_category_binding_session_export_or_palette_selection_commands():

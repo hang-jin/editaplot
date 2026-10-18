@@ -135,3 +135,31 @@ def event_raster_data() -> pd.DataFrame:
         f"Demo trial {trial:02d}" for trial in sorted(empty_trials)
     )
     return frame
+
+
+def time_frequency_data() -> pd.DataFrame:
+    """Return an authored 81-frequency x 121-time power illustration.
+
+    The 3-43 Hz / -0.4 to 1.2 second cells are supplied teaching values in dB,
+    not an FFT, STFT, wavelet result, or baseline correction of EEG recordings.
+    Two smooth authored regions plus locally seeded variation demonstrate
+    physical axes without inventing participant or instrument measurements.
+    """
+    rng = np.random.default_rng(20261019)
+    time = np.linspace(-0.4, 1.2, 121)
+    frequency = np.linspace(3.0, 43.0, 81)
+    xx, yy = np.meshgrid(time, frequency)
+    values = (
+        0.12 * rng.normal(size=xx.shape)
+        + 6.8 * np.exp(-((xx - 0.3) / 0.14) ** 2 - ((yy - 23) / 4.2) ** 2)
+        + 3.6 * np.exp(-((xx - 0.7) / 0.25) ** 2 - ((yy - 9) / 2.5) ** 2)
+        - 1.2 * np.exp(-((xx - 0.5) / 0.28) ** 2 - ((yy - 36) / 3.5) ** 2)
+    )
+    frame = _teaching_frame([pd.DataFrame({
+        "Time (s)": np.tile(time, len(frequency)),
+        "Frequency (Hz)": np.repeat(frequency, len(time)),
+        "Power (dB)": values.ravel(),
+    })], "synthetic_time_frequency")
+    frame.attrs["processing"] = "authored_grid_not_a_transform_of_recorded_signals"
+    frame.attrs["grid_shape"] = (81, 121)
+    return frame

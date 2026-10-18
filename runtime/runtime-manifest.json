@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 439,
+  "file_count": 440,
   "files": [
     {
       "path": "LICENSE",
@@ -140,8 +140,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/research_grid_renderer.py",
-      "size_bytes": 13919,
-      "sha256": "cffca851f7b40fdf3b1fac660d1ef01e86fc9e8997152f1621d021fcf904b9ee"
+      "size_bytes": 19763,
+      "sha256": "22fce9480d4488b15745af36e5b3f4b09ac3eeb8aa6a3770e21b80bca5a9ca88"
     },
     {
       "path": "src/origin_sciplot/origin_backend/safe_errors.py",
@@ -292,6 +292,11 @@
       "path": "src/origin_sciplot/template_service.py",
       "size_bytes": 25754,
       "sha256": "a3b972f6af38f255aede9ded932018cf8b9e3e80b0a99b9c2e258814aa97bfe4"
+    },
+    {
+      "path": "src/origin_sciplot/time_frequency.py",
+      "size_bytes": 5514,
+      "sha256": "e3ba4eef1056f8542a7f23875757793c2e8b330b20b49d08e1abed94bb855f2b"
     },
     {
       "path": "src/origin_sciplot/validation/__init__.py",

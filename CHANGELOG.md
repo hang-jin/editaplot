@@ -26,6 +26,8 @@
 - Preserve grouped-box merged category tables after verifying both Long Name/category and
   Comments/group source rows. Fix the false `inherited X tick-label table` rejection without
   allowing unwanted tables on numeric axes or deleting group labels (community #35).
+- Prepare internal physical-grid and time-frequency data contracts with deterministic teaching
+  data. These are not selectable verified routes until their complete live validation finishes.
 
 ## 2026-09-07 — SHAP dashboard with editable nested contribution rings
 

@@ -11,7 +11,7 @@
   },
   "research_fixture_generator": {
     "path": "tools/generate_research_data.py",
-    "sha256": "04e5a94f07663ec96d9adf3b7ab2d02298d6cf0001c881ee31185e07ca2a4097"
+    "sha256": "695a4b2bb48e919804d04552c589f96cb70184c2f2ed6a8a7ad30724e64aaf71"
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
