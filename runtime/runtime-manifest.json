@@ -110,8 +110,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
-      "size_bytes": 146987,
-      "sha256": "16286ca377986c16e35487a9cc8d18cb35ec789a1eefc21eb9e94fb4be5fb4b9"
+      "size_bytes": 149149,
+      "sha256": "cd53f67761207156398d112ba33459e02c906d8a373b6f4a2fecc8745d56ac87"
     },
     {
       "path": "src/origin_sciplot/origin_backend/execution_context.py",
@@ -1020,8 +1020,8 @@
     },
     {
       "path": "templates/grouped_box/visual_contract.md",
-      "size_bytes": 2393,
-      "sha256": "1a2658d0941f63863ea80399fc8c10041b68c5bf2a8d8a894d53312225d35e20"
+      "size_bytes": 2918,
+      "sha256": "2e18e550087d1aa501cdba14f7ba8c2fa24ce2e06e528614b47cdda20ac748f4"
     },
     {
       "path": "templates/heatmap/data_contract.md",

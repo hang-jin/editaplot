@@ -205,6 +205,11 @@ OriginLab 官方说明，Origin 2025b 调整了图页比例、边距、字体呈
 `measured_value`、`expected_value`、`tolerance_value` 发给我。这几个字段只说明图页尺寸，
 无需发送原始研究数据或整个输出文件夹。
 
+社区还反馈了分组箱线图的 `inherited X tick-label table` 报错。我已在本机复现：
+这类图的横轴本来就需要分类表，把同一条件的多个箱体合并到一个条件名称下。
+新版会核对真实条件名、组名和标签来源后保留该表，而不是把它当作数值轴残留清空。
+这一修复不是对所有图放开标签表，也不需要修改 Origin 安装或系统设置。
+
 运行前不必自己判断构建号。把数据交给 EditaPlot 后，重点看三类结果：
 
 - `verified`：当前环境与路线拥有完整证据；
@@ -236,3 +241,6 @@ Windows 10/11 x64 实体电脑；这条社区实验记录不代表原生 macOS �
   <https://docs.originlab.com/quick-help/specify-graph-size/>
 - OriginLab 柱图填充、边框与宽度命令：
   <https://docs.originlab.com/labtalk/ref/options_for_bar_and_column_plots/>
+- OriginLab 原生分组箱线与分类标签来源：
+  <https://docs.originlab.com/x-function/ref/plotgboxraw/>
+  <https://docs.originlab.com/labtalk/ref/layer-axis-label-obj/>

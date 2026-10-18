@@ -218,7 +218,13 @@ def _validate_axes(
     op: Any,
     layer: Any,
     preparation: ScientificPreparation,
+    *,
+    expected_x_label_table: int = 0,
 ) -> dict[str, float | int]:
+    if expected_x_label_table != 0 and (
+        expected_x_label_table != 1 or preparation.plot_spec.plot_kind != "grouped_box"
+    ):
+        raise OriginDrawError("Only a source-bound grouped-box category axis may use a tick-label table.")
     style = _figure_style(preparation)
     state = _axis_state(layer)
     expected_font_code = _origin_font_code(op, style.font_family)
@@ -230,7 +236,8 @@ def _validate_axes(
             raise OriginDrawError(f"Origin {axis_name.upper()} labels are hidden.")
         if int(state[f"{axis_name}.atZero"]) != 0:
             raise OriginDrawError(f"Origin kept an unwanted {axis_name.upper()} zero axis.")
-        if int(state[f"{axis_name}.label.table"]) != 0:
+        expected_table = expected_x_label_table if axis_name == "x" else 0
+        if int(state[f"{axis_name}.label.table"]) != expected_table:
             raise OriginDrawError(
                 f"Origin kept an inherited {axis_name.upper()} tick-label table."
             )
@@ -675,6 +682,44 @@ def _build_distribution_graph(
     }
 
 
+def _bind_grouped_box_labels(
+    op: Any, graph: Any, layer: Any, sheet: Any, preparation: ScientificPreparation
+) -> dict[str, Any]:
+    """Retain the native merged category row and verify both source label roles.
+
+    plotgboxraw uses Long Name for the one category grouping row; Comments
+    retain each box's explicit group. Unlike a numeric evidence axis, this is
+    a required table, not an inherited artifact to erase (community #35).
+    """
+    spec = preparation.plot_spec
+    if spec.plot_kind != "grouped_box":
+        raise OriginDrawError("This label binding is only for grouped-box data.")
+    expected = {
+        "Long Name": [series.category or series.label for series in spec.series],
+        "Comments": [series.group or "Group" for series in spec.series],
+    }
+    actual = {"Long Name": list(sheet.get_labels("L")), "Comments": list(sheet.get_labels("C"))}
+    if actual != expected:
+        raise OriginDrawError("Origin grouped-box category/group source labels changed or lost their order.")
+    graph.activate()
+    layer.activate()
+    layer.set_int("x.label.table", 1)
+    layer.set_int("x.label.type", 7)
+    layer.set_int("x.label.collabel", 1)
+    op.lt_exec("doc -uw;")
+    state = {
+        "axis_label_table": int(layer.get_int("x.label.table")),
+        "axis_label_type": int(layer.get_int("x.label.type")),
+        "axis_column_label": int(layer.get_int("x.label.collabel")),
+    }
+    if tuple(state.values()) != (1, 7, 1):
+        raise OriginDrawError("Origin grouped-box label table no longer displays the source Long Name row.")
+    return {
+        **state, "column_label_rows": actual,
+        "category_order": list(spec.category_order), "group_order": list(spec.group_order),
+    }
+
+
 def _build_grouped_box_graph(
     op: Any,
     frame: pd.DataFrame,
@@ -888,6 +933,7 @@ def _build_grouped_box_graph(
         }
     if layer.label("Legend") is not None or layer.label("legend") is not None:
         raise OriginDrawError("Origin kept the unwanted framed grouped-box legend.")
+    label_binding = _bind_grouped_box_labels(op, graph, layer, sheet, preparation)
     labels, title_state, text_state = _style_titles(op, graph, layer, preparation)
     title_font_codes: dict[str, int] = {}
     for name, label in labels.items():
@@ -898,7 +944,7 @@ def _build_grouped_box_graph(
         if title_font_codes[name] != font_code:
             raise OriginDrawError(f"Origin grouped-box {name} is not {style.font_family}.")
     op.lt_exec("doc -uw;")
-    axis_state = _validate_axes(op, layer, preparation)
+    axis_state = _validate_axes(op, layer, preparation, expected_x_label_table=1)
     axis_state["x.label.font"] = float(layer.get_float("x.label.font"))
     axis_state["y.label.font"] = float(layer.get_float("y.label.font"))
     expected_limits = {
@@ -952,10 +998,8 @@ def _build_grouped_box_graph(
         },
         "origin_helper_columns": helper_columns,
         "origin_plot_data_columns": columns,
-        "column_label_rows": {
-            "Long Name": [series.category for series in spec.series],
-            "Comments": [series.group for series in spec.series],
-        },
+        "column_label_rows": label_binding["column_label_rows"],
+        "origin_grouped_box_label_binding": label_binding,
         "title_objects": list(labels),
     }
 

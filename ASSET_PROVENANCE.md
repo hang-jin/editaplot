@@ -15,7 +15,7 @@ one representative per route. Nine additional palette/mode images remain as veri
 The smaller and 40×40 heatmap images are retained; the public heatmap representative is 30×30.
 
 - The FLIM phasor CSV uses project-generated synthetic G/S clouds, not measurements or coordinates
-  recovered from a paper image. Its semicircle is a labelled mathematical reference. All 17
+  recovered from a paper image. Its semicircle is a labelled mathematical reference. All 18
   replacement/new exports in this update completed native readback, image inspection and saved-project reopening.
 
 - Every distributed CSV is synthetic. It is not experimental, patient, clinical, or production

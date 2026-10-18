@@ -23,6 +23,9 @@
 - Validate updated examples on live Origin 2024b with editable OPJU, PNG/PDF/TIF, object
   readback, image inspection and saved-project reopening. Other Origin versions and
   community ARM/virtual-machine configurations are not claimed as locally certified.
+- Preserve grouped-box merged category tables after verifying both Long Name/category and
+  Comments/group source rows. Fix the false `inherited X tick-label table` rejection without
+  allowing unwanted tables on numeric axes or deleting group labels (community #35).
 
 ## 2026-09-07 — SHAP dashboard with editable nested contribution rings
 
