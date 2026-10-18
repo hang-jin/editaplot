@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 440,
+  "file_count": 441,
   "files": [
     {
       "path": "LICENSE",
@@ -282,6 +282,11 @@
       "path": "src/origin_sciplot/signal_stack.py",
       "size_bytes": 8320,
       "sha256": "9428cd7d48f88ba2ca3f1eb0e836ef2e9c66cf70db37296fe76e7ef7f15971e6"
+    },
+    {
+      "path": "src/origin_sciplot/spectral_density.py",
+      "size_bytes": 11114,
+      "sha256": "1c72ef26925bbedbf217875f2a56b4e7ce2d61a0b0b66a210ad3d05cc919d666"
     },
     {
       "path": "src/origin_sciplot/template_registry.py",

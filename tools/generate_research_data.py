@@ -163,3 +163,36 @@ def time_frequency_data() -> pd.DataFrame:
     frame.attrs["processing"] = "authored_grid_not_a_transform_of_recorded_signals"
     frame.attrs["grid_shape"] = (81, 121)
     return frame
+
+
+def spectral_density_data() -> pd.DataFrame:
+    """Return two authored density curves and explicit illustrative bounds.
+
+    The 321-point geometric 0.5-80 Hz grid is not an FFT/Welch estimate or a
+    fit to recorded EEG. Designed smooth peaks and local seeded variation are
+    synthetic teaching values. The bounds are authored display intervals, not
+    estimated SD/SEM/CI. Named reference bands carry no integrated band power.
+    """
+    rng = np.random.default_rng(3035)
+    frequency = np.geomspace(0.5, 80.0, 321)
+    parts = []
+    for condition, name in enumerate(("Demo A", "Demo B")):
+        density = (
+            4.5 / (frequency + 0.7) ** 1.15
+            + (2.4 - 0.8 * condition) * np.exp(-0.5 * ((frequency - 10) / 1.6) ** 2)
+            + (0.65 + 0.4 * condition) * np.exp(-0.5 * ((frequency - 23) / 3.0) ** 2)
+            + 0.025
+        ) * (1 + rng.normal(0, 0.018, len(frequency)))
+        parts.append(pd.DataFrame({
+            "Frequency (Hz)": frequency, "Condition": name,
+            "PSD (uV^2/Hz)": density,
+            "Lower": density * (0.84 - 0.02 * condition),
+            "Upper": density * (1.20 + 0.02 * condition),
+        }))
+    frame = _teaching_frame(parts, "synthetic_precomputed_psd")
+    frame.attrs.update(
+        processing="authored_density_not_estimated_from_recordings",
+        interval_label="Illustrative interval (not CI)",
+        reference_bands=(("Demo band 1", 8.0, 12.0), ("Demo band 2", 18.0, 30.0)),
+    )
+    return frame

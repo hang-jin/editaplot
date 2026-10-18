@@ -16,6 +16,7 @@ from generate_research_data import (  # noqa: E402
     event_response_data,
     flim_phasor_data,
     signal_stack_data,
+    spectral_density_data,
     time_frequency_data,
 )
 from origin_sciplot.event_raster import build_event_raster_plan  # noqa: E402
@@ -24,7 +25,8 @@ from origin_sciplot.flim_phasor import build_phasor_plan  # noqa: E402
 from origin_sciplot.signal_stack import build_signal_stack_plan  # noqa: E402
 
 GENERATORS = (
-    flim_phasor_data, signal_stack_data, event_response_data, event_raster_data, time_frequency_data,
+    flim_phasor_data, signal_stack_data, event_response_data, event_raster_data,
+    time_frequency_data, spectral_density_data,
 )
 
 
@@ -138,6 +140,7 @@ def test_import_and_pure_generation_do_not_create_files_or_import_origin(tmp_pat
     for name in (
         "flim_phasor_data", "signal_stack_data", "event_response_data", "event_raster_data",
         "time_frequency_data",
+        "spectral_density_data",
     ):
         getattr(module, name)()
     assert list(tmp_path.iterdir()) == []

@@ -44,6 +44,7 @@ jobs:
           runtime/src/origin_sciplot/flim_phasor.py
           runtime/src/origin_sciplot/research_grid.py
           runtime/src/origin_sciplot/signal_stack.py
+          runtime/src/origin_sciplot/spectral_density.py
           runtime/src/origin_sciplot/time_frequency.py
           runtime/src/origin_sciplot/circular_network_layout.py
           runtime/src/origin_sciplot/heatmap_layout.py
