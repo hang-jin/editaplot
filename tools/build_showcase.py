@@ -34,6 +34,12 @@ class ShowcaseCase:
 
 
 CASES = (
+    ShowcaseCase(
+        "flim-phasor", "flim_phasor", "flim_phasor.csv",
+        "Synthetic upstream G-S coordinates show three distributions relative to a mathematical reference semicircle.",
+        "distribution geometry", "FLIM phasor distribution",
+        title_zh="FLIM 荧光寿命相量分布",
+    ),
     *(ShowcaseCase(
         f"shap-dashboard-{palette.replace('_', '-')}", "shap_dashboard", "shap_dashboard.csv",
         "Synthetic precomputed SHAP values show feature importance, direction and grouped contribution.",

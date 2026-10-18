@@ -1,6 +1,6 @@
 # Origin 2024b 实机生成并复核的图形示例
 
-我从 50 个保留验证资产中精选了 41 个案例放在本页，
+我从 51 个保留验证资产中精选了 42 个案例放在本页，
 让第一次接触 EditaPlot 的读者可以先按科研问题和图形类型判断方向，再用自己的数据定制。
 同一路线的历史验证图不会重复占版面；热力图目前只展示真实 30×30 高密度版本。
 
@@ -29,6 +29,7 @@ GitHub 源码仓库只保留脱敏 PNG；可编辑项目和其他格式不直接
 <img src="../assets/gallery/density-ridgeline3d.png" alt="三维双密度曲线与基线焦点" width="31%" />
 <img src="../assets/gallery/dsc-multi.png" alt="DSC 多样品热流曲线" width="31%" />
 <img src="../assets/gallery/eis-nyquist.png" alt="EIS Nyquist 阻抗图" width="31%" />
+<img src="../assets/gallery/flim-phasor.png" alt="FLIM 荧光寿命相量分布" width="31%" />
 <img src="../assets/gallery/forest-intervals.png" alt="效应量森林图" width="31%" />
 <img src="../assets/gallery/ftir-temperature-series.png" alt="FTIR 温度序列光谱" width="31%" />
 <img src="../assets/gallery/heatmap-dense-30x30.png" alt="30×30 高密度热力图" width="31%" />

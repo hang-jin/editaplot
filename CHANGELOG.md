@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased — research-figure upgrade and community regression fixes
+
+- Add `flim_phasor` for upstream G/S coordinates: native hollow scatter, an explicitly
+  approved mathematical semicircle, equal physical axis units, and an external frameless
+  legend. All observations are retained; no lifetime, cluster or mixture is inferred.
+- Upgrade comparison palettes, external legend space, long/Chinese category gutters,
+  radar metric labels and shared radial limits, violin tails, dense synthetic scatter,
+  and consistently labelled SD examples. Display one representative per template;
+  retain alternative palette assets without duplicate gallery cards.
+- Discover setup's external managed Python before global Python, including Unicode paths.
+  Distinguish package-import failures from Automation activation failures. Detect Windows
+  AppContainer tokens even when they retain the desktop account name, while preserving
+  the existing approval and owned-instance workflow.
+- Read physical page dimensions using documented printer-dot/DPI units. Keep the 0.03 cm
+  tolerance and native layer cross-checks; invalid DPI still fails rather than guessing.
+  Geometry errors now expose only short, finite numeric diagnostics.
+- Set and read column fill, border color and border width independently. Preserve true
+  stacking with independent group styling and verify native source-column bindings.
+  Plan stacked ranges from totals plus supplied total uncertainty; percentage denominators
+  exclude recognized error columns and never silently fill missing components with zero.
+- Validate updated examples on live Origin 2024b with editable OPJU, PNG/PDF/TIF, object
+  readback, image inspection and saved-project reopening. Other Origin versions and
+  community ARM/virtual-machine configurations are not claimed as locally certified.
+
 ## 2026-09-07 — SHAP dashboard with editable nested contribution rings
 
 - Added `shap_dashboard`: aligned importance bars with mean/percentage labels, a separate SHAP

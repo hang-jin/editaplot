@@ -79,6 +79,7 @@ _SUPPORTED_KINDS = frozenset(
         "bubble",
         "shap_summary",
         "grouped_box",
+        "flim_phasor",
     }
 )
 
@@ -469,6 +470,87 @@ def _build_raw_summary_graph(
     }
 
 
+def _violin_viewport_report(
+    frame: pd.DataFrame,
+    preparation: ScientificPreparation,
+    *,
+    native_auto_y_limits: tuple[float, float],
+    actual_y_limits: tuple[float, float],
+) -> dict[str, Any]:
+    """Audit the frozen viewport without mistaking autoscale for KDE bounds."""
+    plan = preparation.plot_spec.axis_plan
+    expected = (plan.y_from, plan.y_to)
+    if not all(
+        math.isfinite(actual) and math.isclose(actual, target, rel_tol=1e-8, abs_tol=1e-8)
+        for actual, target in zip(actual_y_limits, expected, strict=True)
+    ):
+        raise OriginDrawError("Origin violin Y limits do not match the frozen display plan.")
+    columns = [series.source_column for series in preparation.plot_spec.series]
+    source_counts = {column: int(frame[column].notna().sum()) for column in columns}
+    values = np.concatenate([frame[column].dropna().to_numpy(dtype=float) for column in columns])
+    source_lower, source_upper = float(values.min()), float(values.max())
+    if not actual_y_limits[0] <= source_lower <= source_upper <= actual_y_limits[1]:
+        raise OriginDrawError("Origin violin Y limits exclude source observations.")
+    return {
+        "native_auto_y_limits": list(native_auto_y_limits),
+        "frozen_y_limits": list(expected),
+        "actual_y_limits": list(actual_y_limits),
+        "source_y_limits": [source_lower, source_upper],
+        "source_counts": source_counts,
+        "source_values_inside_final_axis": True,
+        "frozen_axis_contains_native_auto_range": (
+            actual_y_limits[0] <= native_auto_y_limits[0]
+            and native_auto_y_limits[1] <= actual_y_limits[1]
+        ),
+        # Origin's automatic axis range can include extra tick padding; it is
+        # useful evidence but is not an object-level density-envelope readback.
+        "native_auto_range_is_density_extent": False,
+        "density_tail_visibility_requires_visual_qa": True,
+    }
+
+
+def _bind_violin_group_labels(
+    op: Any,
+    graph: Any,
+    layer: Any,
+    preparation: ScientificPreparation,
+) -> dict[str, Any]:
+    """Bind the one-level violin labels without altering its raw-data sheet."""
+    native_before = {key: int(layer.get_int(key)) for key in ("x.label.table", "x.label.type")}
+    labels = [series.label for series in preparation.plot_spec.series]
+    helper = op.new_sheet("w", "Violin Group Labels")
+    if helper is None:
+        raise OriginDrawError("Origin could not create the violin group-label worksheet.")
+    helper.from_list(0, labels, lname="GroupLabel", axis="N")
+    if helper.to_list(0) != labels:
+        raise OriginDrawError("Origin changed the violin group labels or their order.")
+    graph.activate()
+    layer.activate()
+    # This exact single-level binding route was exercised in the P30 Origin
+    # 10.15 probe. Do not apply it to native multi-level grouped-box tables.
+    _clean_numeric_x_axis(op, graph)
+    label_range = f"{helper.lt_range(False)}!col(1)"
+    if not layer.obj.LT_execute(
+        f"range __violin_group_labels={label_range};axis -ps X T __violin_group_labels;"
+    ):
+        raise OriginDrawError("Origin could not bind the violin group labels.")
+    layer.axis("x").set_limits(0.5, len(labels) + 0.5, 1.0)
+    layer.set_int("x.minorTicks", 0)
+    _apply_axis_label_font(op, layer, ("x", "y"), _figure_style(preparation))
+    op.lt_exec("doc -uw;")
+    explicit_after = {key: int(layer.get_int(key)) for key in ("x.label.table", "x.label.type")}
+    if explicit_after != {"x.label.table": 0, "x.label.type": 2}:
+        raise OriginDrawError("Origin did not keep the explicit single-level violin group labels.")
+    return {
+        "source_columns": [series.source_column for series in preparation.plot_spec.series],
+        "labels": helper.to_list(0),
+        "helper_column": "GroupLabel",
+        "helper_range": label_range,
+        "native_before": native_before,
+        "explicit_after": explicit_after,
+    }
+
+
 def _build_distribution_graph(
     op: Any,
     frame: pd.DataFrame,
@@ -502,6 +584,11 @@ def _build_distribution_graph(
     geometry = _apply_page_layer(op, graph, layer, dual_y=False, preparation=preparation)
     graph.set_int("background", op.ocolor("#FFFFFF"))
     layer.rescale()
+    native_auto_y_limits = (
+        (float(layer.get_float("y.from")), float(layer.get_float("y.to")))
+        if spec.plot_kind == "violin"
+        else None
+    )
     _style_evidence_axes(op, layer, preparation, x_numeric=False, y_numeric=True)
     layer.axis("x").set_limits(0.5, len(series_columns) + 0.5, 1.0)
     plan = spec.axis_plan
@@ -532,10 +619,43 @@ def _build_distribution_graph(
         box_state.append(item)
     _remove_label(layer, "Legend")
     _remove_label(layer, "legend")
+    group_label_binding = (
+        _bind_violin_group_labels(op, graph, layer, preparation)
+        if spec.plot_kind == "violin"
+        else None
+    )
     labels, title_state, text_state = _style_titles(op, graph, layer, preparation)
+    if group_label_binding is not None:
+        group_label_binding["y_after_binding_and_titles"] = [
+            float(layer.get_float("y.from")), float(layer.get_float("y.to"))
+        ]
+        # Native label binding/title refresh can rescale Y after the earlier
+        # set_limits call. Restore the frozen density-tail margin last.
+        layer.axis("y").set_limits(plan.y_from, plan.y_to, plan.y_step)
+        op.lt_exec("doc -uw;")
     axis_state = _validate_axes(op, layer, preparation)
+    if group_label_binding is not None:
+        if int(axis_state["x.label.type"]) != 2:
+            raise OriginDrawError("Origin lost the explicit violin group-label binding after refresh.")
+        group_label_binding["y_after_restore"] = [
+            float(axis_state["y.from"]), float(axis_state["y.to"])
+        ]
+    violin_viewport = (
+        {
+            "origin_violin_viewport": _violin_viewport_report(
+                frame,
+                preparation,
+                native_auto_y_limits=native_auto_y_limits,
+                actual_y_limits=(float(axis_state["y.from"]), float(axis_state["y.to"])),
+            )
+        }
+        if native_auto_y_limits is not None
+        else {}
+    )
     return graph, {
         **geometry,
+        **violin_viewport,
+        **({"origin_group_label_binding": group_label_binding} if group_label_binding is not None else {}),
         "origin_command": command,
         "origin_plot_state": plot_state,
         "origin_distribution_state": box_state,
@@ -548,7 +668,7 @@ def _build_distribution_graph(
             "tick_label_size_pt": style.tick_label_size_pt,
             "adaptive_profile": style.to_dict(),
         },
-        "origin_helper_columns": [],
+        "origin_helper_columns": ["GroupLabel"] if group_label_binding is not None else [],
         "origin_plot_data_columns": series_columns,
         "specialized_theme": theme,
         "title_objects": list(labels),
@@ -3514,7 +3634,14 @@ def _build_origin_graph(
     preparation: ScientificPreparation,
 ) -> tuple[Any, dict[str, Any]]:
     kind = preparation.plot_spec.plot_kind
-    if kind == "raw_summary":
+    if kind == "flim_phasor":
+        from .flim_phasor_renderer import build_flim_phasor_graph
+
+        plan = preparation.plot_spec.phasor_plan
+        if plan is None:
+            raise OriginDrawError("The frozen phasor coordinate plan is missing.")
+        graph, state = build_flim_phasor_graph(op, frame, preparation, plan)
+    elif kind == "raw_summary":
         graph, state = _build_raw_summary_graph(op, frame, preparation)
     elif kind == "violin":
         graph, state = _build_distribution_graph(op, frame, preparation)

@@ -45,6 +45,7 @@ specific repository/data folder or ask the user for an explicit writable destina
 A normal Codex desktop command may initially run under an isolated account even when inherited
 profile variables look like the signed-in user. The Origin worker checks its real Windows token and
 stops before COM with `origin_codex_sandbox_context` when the current process is the Codex sandbox.
+This also covers AppContainer processes that retain the signed-in account name.
 Codex must then submit a formal, narrowly scoped local-execution request for the same exact
 `origin-smoke` or `render` command. Rerun it only if that exact request is approved, either by the
 user when prompted or by the configured Codex auto-reviewer. Approval is not guaranteed; auto-review
@@ -67,6 +68,11 @@ The launcher first honors an explicitly configured compatible interpreter, then 
 valid EditaPlot managed environment. If neither is available, it probes Windows `py`, PATH, standard
 installation locations, and the Python registry entries together, then selects the highest compatible
 64-bit CPython from 3.10–3.12. It does not modify the selected base interpreter.
+
+An installed Skill reads setup's external runtime pointer before searching for global Python.
+Its small local PowerShell helper preserves Unicode paths and forwards arguments directly; the
+Python bootstrap still validates the managed fingerprint and dependency lock. A missing or stale
+pointer continues normal discovery. No PATH, registry, or persistent PowerShell policy is changed.
 
 If no compatible candidate exists, explain that Python installation is a system-level change.
 Inspect the exact package first:

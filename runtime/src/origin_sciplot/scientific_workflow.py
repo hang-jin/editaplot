@@ -26,6 +26,7 @@ from .circular_network_layout import (
     resolve_circular_network_layout,
 )
 from .data_loader import DataLoadError, LoadedTable, load_table
+from .flim_phasor import PhasorPlan, build_phasor_plan
 from .heatmap_layout import heatmap_cell_labels_enabled
 from .palette_catalog import get_palette
 from .scientific_visual import AdaptiveOriginStyle, resolve_adaptive_style
@@ -75,6 +76,7 @@ ScientificTemplateId = Literal[
     "raincloud",
     "shap_summary",
     "shap_dashboard",
+    "flim_phasor",
     "grouped_box",
     "dsc",
     "nmr",
@@ -122,6 +124,7 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "raincloud",
         "shap_summary",
         "shap_dashboard",
+        "flim_phasor",
         "grouped_box",
         "dsc",
         "nmr",
@@ -274,6 +277,7 @@ class ScientificPlotSpec:
     condition_positions: tuple[tuple[str, float], ...] = ()
     shap_plan: ShapCompositePlan | None = None
     shap_dashboard: ShapDashboardPlan | None = None
+    phasor_plan: PhasorPlan | None = None
 
 
 @dataclass(frozen=True)
@@ -304,6 +308,8 @@ def _plot_digest_payload(spec: ScientificPlotSpec) -> dict:
     payload = asdict(spec)
     if spec.shap_dashboard is None:
         payload.pop("shap_dashboard")
+    if spec.phasor_plan is None:
+        payload.pop("phasor_plan")
     return payload
 
 
@@ -1238,6 +1244,9 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
             "ignored",
         )
         unique = set(keys) - {"ignored"}
+    elif template_id == "flim_phasor":
+        keys = ("x", "series", "category", "ignored")
+        unique = {"x", "series", "category"}
     elif template_id in {"raw_summary", "violin", "histogram", "raincloud", "grouped_box"}:
         keys = ("series", "ignored")
         unique = set()
@@ -1637,6 +1646,9 @@ def _automatic_error_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapp
     for column in map(str, frame.columns):
         if column == anchor:
             assignments[column] = anchor_role
+        elif template_id == "percent_stacked_bar" and _error_info(column) is not None:
+            assignments[column] = "ignored"
+            warnings.append("percent_error_columns_retained")
         elif (
             template_id in {"bar", "horizontal_bar", "stacked_bar", "line_error"}
             and _error_info(column) is not None
@@ -1647,6 +1659,9 @@ def _automatic_error_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapp
         else:
             assignments[column] = "series"
     custom_error = "error_kind_unspecified" in warnings
+    if "percent_error_columns_retained" in warnings:
+        reasons = tuple((*reasons, "percent_error_columns_retained"))
+        confidence = min(confidence, 0.72)
     if custom_error:
         reasons = tuple((*reasons, "error_kind_unspecified"))
         confidence = min(confidence, 0.72)
@@ -3108,6 +3123,18 @@ def _require_series(assignments: dict[str, str]) -> list[str]:
     return series
 
 
+def _legend_label_length(series: tuple[ScientificSeries, ...]) -> int:
+    """Conservative display-width units, including CJK and error definitions."""
+    return max(
+        (
+            sum(2 if unicodedata.east_asian_width(char) in {"W", "F"} else 1 for char in item.label)
+            + (8 if item.error_column else 0)
+            for item in series
+        ),
+        default=0,
+    )
+
+
 def _pair_errors(series_columns: list[str], error_columns: list[str]) -> dict[str, tuple[str, str]]:
     available = list(error_columns)
     pairs: dict[str, tuple[str, str]] = {}
@@ -3431,6 +3458,7 @@ def _build_line_spec(
         plot_kind=plot_kind,
         row_count=len(frame),
         series_count=len(series),
+        max_label_length=_legend_label_length(series),
     )
     axis_plan = _axis_plan(
         frame,
@@ -4092,11 +4120,15 @@ def _build_error_spec(
             warnings.append("category_labels_long")
     else:
         categories = []
+    category_label_units = max(
+        (sum(2 if unicodedata.east_asian_width(char) in {"W", "F"} else 1 for char in value)
+         for value in categories), default=0,
+    )
     category_rotation = (
         45.0
         if category
         and template_id not in {"horizontal_bar", "pie", "radar", "heatmap", "confusion_matrix"}
-        and (len(categories) > 6 or max((len(value) for value in categories), default=0) > 10)
+        and (len(categories) > 6 or category_label_units > 10)
         else 0.0
     )
     y_title = (
@@ -4127,6 +4159,16 @@ def _build_error_spec(
                     column=column,
                     row=index + 2,
                 )
+    if template_id in {"stacked_bar", "percent_stacked_bar"}:
+        missing = frame[series_columns].isna().to_numpy()
+        if bool(missing.any()):
+            row_index, column_index = np.argwhere(missing)[0]
+            column = series_columns[int(column_index)]
+            raise ScientificWorkflowError(
+                "composition_missing_value",
+                "Stacked compositions need an explicit value for every component; blanks cannot mean zero.",
+                column=column, row=int(row_index) + 2,
+            )
     if template_id == "pie" and len(series) != 1:
         raise ScientificWorkflowError(
             "pie_series_count",
@@ -4199,13 +4241,14 @@ def _build_error_spec(
     plot_kind = plot_kinds.get(template_id, "line_error")
     numeric_values = frame[series_columns].to_numpy(dtype=float)
     signed_values = bool(np.nanmin(numeric_values) < 0 < np.nanmax(numeric_values))
-    max_label_length = max((len(value) for value in categories), default=0)
+    max_label_length = category_label_units
     style = resolve_adaptive_style(
         template_id=template_id,
         plot_kind=plot_kind,
         row_count=len(frame),
         series_count=len(series),
         max_label_length=max_label_length,
+        max_legend_label_length=_legend_label_length(series),
         category_rotation_deg=category_rotation,
         signed_values=signed_values,
     )
@@ -4217,6 +4260,36 @@ def _build_error_spec(
         y_title = anchor
     else:
         x_title = anchor
+    axis_plan = _axis_plan(
+        frame, x_column=None if category else anchor, series=series,
+        category=category, include_zero_y=category,
+    )
+    if template_id == "stacked_bar":
+        totals = frame[series_columns].sum(axis=1, min_count=len(series_columns))
+        extent_frame = pd.DataFrame({"__StackTotal": totals})
+        error_key = None
+        if aggregate_error_column is not None:
+            error_key = "__TotalError"
+            extent_frame[error_key] = frame[aggregate_error_column]
+        axis_plan = _axis_plan(
+            extent_frame, x_column=None,
+            series=(ScientificSeries("__StackTotal", "Stack total", error_column=error_key),),
+            category=True, include_zero_y=True,
+        )
+    elif template_id == "percent_stacked_bar":
+        axis_plan = replace(axis_plan, y_from=0.0, y_to=100.0, y_step=20.0)
+    elif template_id == "radar":
+        maximum = float(np.nanmax(frame[series_columns].to_numpy(dtype=float)))
+        if maximum <= 1.0:
+            upper, step = 1.0, 0.2
+        else:
+            padded = maximum * 1.08
+            raw_step = padded / 5.0
+            scale = 10.0 ** math.floor(math.log10(raw_step))
+            fraction = raw_step / scale
+            step = next(value for value in (1.0, 2.0, 2.5, 5.0, 10.0) if fraction <= value) * scale
+            upper = math.ceil(padded / step) * step
+        axis_plan = replace(axis_plan, y_from=0.0, y_to=upper, y_step=step)
     spec = ScientificPlotSpec(
         plot_kind=plot_kind,
         plot_mode="default",
@@ -4236,13 +4309,7 @@ def _build_error_spec(
             category_rotation,
             style,
         ),
-        axis_plan=_axis_plan(
-            frame,
-            x_column=None if category else anchor,
-            series=series,
-            category=category,
-            include_zero_y=category,
-        ),
+        axis_plan=axis_plan,
         aggregate_error_column=aggregate_error_column,
     )
     return spec, tuple(dict.fromkeys(warnings))
@@ -4292,12 +4359,13 @@ def _build_raw_distribution_spec(
         y_title = "Count"
         bin_rule = "freedman_diaconis_nice_step_v1"
     else:
-        # The half-violin kernel may extend slightly beyond the outermost raw
-        # observation.  Freeze a larger display-only margin so the editable
-        # density tail never touches the frame in the public Raincloud route.
+        # Native full/half violins can extend beyond the raw observations.
+        # Freeze a 25% display-only margin as a starting point, not a claim
+        # about arbitrary KDE support; native tail visibility still needs
+        # rendered QA. No observations or density parameters are changed.
         y_axis = _nice_axis(
             values,
-            padding_fraction=0.25 if template_id == "raincloud" else 0.05,
+            padding_fraction=0.25 if template_id in {"raincloud", "violin"} else 0.05,
         )
         axis_plan = ScientificAxisPlan(None, None, None, *y_axis)
         x_title = "Group"
@@ -4717,6 +4785,7 @@ def _build_diagnostic_curve_spec(
         plot_kind="diagnostic_curve",
         row_count=len(frame),
         series_count=len(series),
+        max_label_length=_legend_label_length(series),
     )
     return (
         ScientificPlotSpec(
@@ -4849,6 +4918,7 @@ def _build_decision_curve_spec(
         plot_kind="decision_curve",
         row_count=len(frame),
         series_count=len(series),
+        max_label_length=_legend_label_length(series),
     )
     return (
         ScientificPlotSpec(
@@ -5914,6 +5984,71 @@ def _eis_axis_title(symbol: str, source_column: str) -> str:
     return f"{symbol} ({formatted})" if unit else symbol
 
 
+def _automatic_phasor_mapping(loaded: LoadedTable) -> _AutoMapping:
+    aliases = {
+        "x": {"g", "phasorg", "相量g", "g坐标", "相量实部"},
+        "series": {"s", "phasors", "相量s", "s坐标", "相量虚部"},
+        "category": {"group", "condition", "分组", "组别", "条件", "组"},
+    }
+    assignments = {
+        column: next((role for role, names in aliases.items() if _canonical(column) in names), "ignored")
+        for column in loaded.columns
+    }
+    reasons = []
+    if any(list(assignments.values()).count(role) != 1 for role in aliases):
+        reasons.append("phasor_explicit_g_s_group_required")
+    if "ignored" in assignments.values():
+        reasons.append("phasor_extra_columns_require_confirmation")
+    return _AutoMapping(assignments, "default", 0.75 if reasons else 0.98, tuple(reasons), ())
+
+
+def _build_phasor_spec(
+    frame: pd.DataFrame, assignments: dict[str, str]
+) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    """Keep G/S physically equal with readable text and a reserved legend column."""
+    g_column, s_column, group_column = (
+        _require_one(assignments, role) for role in ("x", "series", "category")
+    )
+    try:
+        plan = build_phasor_plan(frame, g_column=g_column, s_column=s_column, group_column=group_column)
+    except ValueError as error:
+        raise ScientificWorkflowError("phasor_data_invalid", str(error)) from error
+    series = tuple(ScientificSeries(s_column, label, group=label) for label in plan.group_order)
+    ratio = (plan.y_range[1] - plan.y_range[0]) / (plan.x_range[1] - plan.x_range[0])
+    plot_width, plot_height = 18.0, 18.0 * ratio
+    if plot_height < 8.0:
+        plot_width, plot_height = 8.0 / ratio, 8.0
+    elif plot_height > 24.0:
+        plot_width, plot_height = 24.0 / ratio, 24.0
+    if not 14.0 <= plot_width <= 28.0 or _legend_label_length(series) > 40:
+        raise ScientificWorkflowError(
+            "phasor_layout_unsupported",
+            "The physical phasor layout cannot preserve equal units and readable labels; "
+            "review the coordinate units or use shorter display group labels.",
+        )
+    legend_column_cm = max(10.5, 2.5 + _legend_label_length(series) * 0.30)
+    page_width, page_height = plot_width + 3.5 + legend_column_cm, plot_height + 5.0
+    style = AdaptiveOriginStyle(
+        profile_name="research-flim-phasor-external-legend",
+        page_width_cm=page_width, page_height_cm=page_height,
+        layer_left_percent=3.5 / page_width * 100, layer_top_percent=1.5 / page_height * 100,
+        layer_width_percent=plot_width / page_width * 100,
+        layer_height_percent=plot_height / page_height * 100,
+        plot_line_width_pt=2.0, frame_line_width_pt=1.3, palette_name="publication_signal",
+        x_title_upshift_page_percent=0.0,
+    )
+    return ScientificPlotSpec(
+        plot_kind="flim_phasor", plot_mode="default", x_column=g_column, category_column=group_column,
+        series=series, x_title="G", y_title="S", y2_title=None, x_scale="linear", y_scale="linear",
+        display_transform="identity", display_plan=ScientificDisplayPlan(4.0, 0.8, 0.7, figure_style=style),
+        axis_plan=ScientificAxisPlan(
+            *plan.x_range, _nice_number((plan.x_range[1] - plan.x_range[0]) / 5.0, round_value=True),
+            *plan.y_range, _nice_number((plan.y_range[1] - plan.y_range[0]) / 5.0, round_value=True),
+        ),
+        phasor_plan=plan,
+    ), plan.warnings
+
+
 def _build_plot_spec(
     template_id: str,
     frame: pd.DataFrame,
@@ -5922,6 +6057,8 @@ def _build_plot_spec(
     *,
     source_profile: str | None = None,
 ) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    if template_id == "flim_phasor":
+        return _build_phasor_spec(frame, assignments)
     if template_id == "xrd":
         return _build_xrd_spec(
             frame,
@@ -5971,6 +6108,8 @@ def _build_plot_spec(
 
 
 def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
+    if template_id == "flim_phasor":
+        return _automatic_phasor_mapping(loaded)
     if template_id == "xrd":
         return _automatic_xrd_mapping(loaded)
     if template_id == "trajectory3d":

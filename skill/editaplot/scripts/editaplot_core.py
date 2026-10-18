@@ -87,6 +87,7 @@ VERIFIED_TEMPLATE_IDS = frozenset(
         "raincloud",
         "shap_summary",
         "shap_dashboard",
+        "flim_phasor",
         "grouped_box",
         "pl",
         "dsc",
@@ -918,6 +919,7 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "decision_curve": ("decisioncurve", "netbenefit", "dca", "决策曲线", "净获益"),
     "raincloud": ("raincloud", "raincloudplot", "halfviolin", "雨云图", "半小提琴"),
     "shap_dashboard": ("shap dashboard", "nested donut", "双层环图", "分栏 SHAP", "shap 分栏"),
+    "flim_phasor": ("flim phasor", "phasor plot", "相量图", "荧光相量", "荧光寿命相量"),
     "shap_summary": (
         "shapsummary",
         "shapbeeswarm",
@@ -2362,11 +2364,14 @@ def build_plan(
         },
         "can_render": bool(
             template_id in VERIFIED_TEMPLATE_IDS
+            and service.manifest.status == "implemented"
             and not prepared.requires_confirmation
             and reference_renderer_ready
         ),
         "blocked_reasons": (
             (["column_mapping_confirmation_required"] if prepared.requires_confirmation else [])
+            + (["template_not_implemented"] if service.manifest.status != "implemented" else [])
+            + (["template_not_verified"] if template_id not in VERIFIED_TEMPLATE_IDS else [])
             + reference_blocked_reasons
         ),
     }

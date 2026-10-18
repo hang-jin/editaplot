@@ -102,6 +102,7 @@ def _element_kind(plot_kind: str, series_role: str) -> str:
         return "line"
     return {
         "scatter": "symbol",
+        "flim_phasor": "symbol",
         "bar_error": "bar",
         "horizontal_bar": "bar",
         "stacked_bar": "stacked_bar",
@@ -295,6 +296,23 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
         str(column)
         for column in getattr(spec, "phase_tick_columns", ())
     )
+
+    if plot_kind == "flim_phasor":
+        phasor = spec.phasor_plan
+        reference_id = "derived_phasor_reference_semicircle"
+        derived_items.append(DerivedDataItem(
+            item_id=reference_id, semantic_role="mathematical_reference_not_experimental_data",
+            disposition=DataDisposition.RENDER_SECONDARY, operation_id="phasor_reference_semicircle",
+            input_item_ids=_unique_existing((phasor.g_column, phasor.s_column), item_ids), confidence=1.0,
+            parameters=(("center_g", 0.5), ("center_s", 0.0), ("radius", 0.5), ("point_count", 181),
+                        ("reference_kind", phasor.reference_kind),
+                        ("lineage_kind", "coordinate_definition_not_value_derivation")),
+            evidence_codes=("fixed_phasor_coordinate_reference_not_lifetime_fit",),
+        ))
+        elements.append(FigureElement(
+            element_id="phasor_reference_semicircle", element_kind="line", data_item_ids=(reference_id,),
+            required=True, axis=phasor.reference_kind, legend_label="Universal semicircle / 数学参考半圆",
+        ))
 
     if plot_kind == "circular_network":
         network_bindings = _unique_existing(

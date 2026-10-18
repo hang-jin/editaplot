@@ -166,9 +166,13 @@ I made and manually checked these examples with synthetic teaching data. Metadat
   <img src="assets/gallery/circular-network.png" alt="Multi-panel circular directed weighted network" width="31%">
 </div>
 
-➡️ [Browse one representative for each of the 41 templates](docs/gallery.en.md)
+➡️ [Browse one representative for each of the 42 templates](docs/gallery.en.md)
 
-The current public capability set contains 41 Origin plotting routes, with one representative image per template: 41 displayed images. I retain all 50 verification PNGs that passed live artifacts, object readback, human visual review, and the public-asset audit. The other nine palette or mode examples are no longer repeated in the gallery, but their images, sample data, and plotting capabilities remain available. You can still choose all three SHAP palettes, steady-state or temperature-series PL, multi-sample UV–Vis, signed-effect bars, PR curves, and different heatmap sizes. DSC, NMR, FTIR/IR, XPS comparison, multi-condition PL, multi-sample UV–Vis, the 30×30 dense heatmap, the 576-point composite SHAP figure, the multi-period circular directed weighted network, and the 3D dual-density baseline-locator route have all completed the Origin 2024b gate.
+I currently provide 42 Origin plotting routes and display one representative per template: 42 images. All 51 reviewed verification PNGs remain in the repository. The other nine palette or mode examples, their data, and their plotting capabilities remain available.
+
+This update adds a **FLIM phasor plot** for upstream G/S coordinates and optional group names, with equal physical scales and a mathematical reference semicircle. The example uses synthetic teaching data; the route displays supplied phasors rather than calculating lifetimes from raw images. I also updated the bar example's palette and borderless external legend, with separate native checks for fill color, border color, and physical border width.
+
+All three SHAP palettes, steady-state and temperature-series PL, multi-sample UV–Vis, signed-effect bars, PR curves, and heatmap sizes remain available. The existing DSC, NMR, FTIR/IR, XPS comparison, dense heatmap, composite SHAP, circular network, and 3D density routes are retained. Origin 2024b remains the complete live baseline.
 
 ### How long should one run take?
 
@@ -338,7 +342,7 @@ I keep the public repository complete and runnable. To avoid mixing private data
 |---|---|
 | Apache-2.0 source, complete Skill, sanitized runtime | `DEVELOPMENT_LEDGER.md`, internal plans, development logs |
 | Neutral synthetic examples and original palette assets | Your original data, reference screenshots, material without redistribution rights |
-| 50 reviewed, metadata-sanitized verification PNGs; one representative per route, 41 displayed images | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
+| 51 reviewed, metadata-sanitized verification PNGs; one representative per route, 42 displayed images | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
 | Bilingual docs, tests, dependency locks, asset/runtime manifests | Absolute paths, caches, virtual environments, temporary outputs, secrets and tokens |
 
 To avoid publishing local material by mistake, I use an allowlist, secret scanning, PNG checks, and SHA-256 manifests. See [release and licensing boundaries](docs/release-boundaries.md).

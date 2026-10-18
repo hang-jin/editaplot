@@ -196,6 +196,15 @@ OriginLab 官方说明，Origin 2025b 调整了图页比例、边距、字体呈
 
 ## 普通用户只需要看什么
 
+我根据社区反馈补上了三类检查：柱图分别核对填充色、边框色和真正的边框宽度；图例明确定位并
+检查是否超出物理页面；页面尺寸按官方的点数/实际打印分辨率换算，COM返回值另存为诊断。
+这些路径已在本机2024b验证，其他构建仍需各自跑通实际测试。我不会仅凭一条社区结果把其他版本
+写成完整基线，也不会靠放大容差或跳过图层、文本检查来宣布兼容。
+
+如果出现 `origin_page_geometry_mismatch`，可以把短错误代码和 `geometry_check`、
+`measured_value`、`expected_value`、`tolerance_value` 发给我。这几个字段只说明图页尺寸，
+无需发送原始研究数据或整个输出文件夹。
+
 运行前不必自己判断构建号。把数据交给 EditaPlot 后，重点看三类结果：
 
 - `verified`：当前环境与路线拥有完整证据；
@@ -203,6 +212,13 @@ OriginLab 官方说明，Origin 2025b 调整了图页比例、边距、字体呈
 - `unknown`：产品或构建无法可靠归类，正在或需要运行完整探针。
 
 如果探针失败，报告应指出失败阶段和受影响能力；不会用一大段版本术语淹没初次使用者。
+
+## 社区实验路线
+
+感谢用户在 [Issue #36](https://github.com/hang-jin/editaplot/issues/36) 分享 Apple Silicon Mac、
+Parallels、Windows 11 ARM 与 x64 Python 的实验结果。该组合的实际绘图仍在 Windows 虚拟机内完成，
+用户报告基础 smoke 和误差折线已跑通。我目前没有在同等环境复测全部模板，因此正式支持范围仍是
+Windows 10/11 x64 实体电脑；这条社区实验记录不代表原生 macOS 支持，也不等于所有虚拟机均可使用。
 
 ## 官方与公开来源
 
@@ -216,3 +232,7 @@ OriginLab 官方说明，Origin 2025b 调整了图页比例、边距、字体呈
   <https://docs.originlab.com/quick-help/why-graph-looks-different-in-2025b/>
 - OriginLab Python Samples：
   <https://github.com/originlab/Python-Samples>
+- OriginLab 页面物理尺寸与打印点数换算：
+  <https://docs.originlab.com/quick-help/specify-graph-size/>
+- OriginLab 柱图填充、边框与宽度命令：
+  <https://docs.originlab.com/labtalk/ref/options_for_bar_and_column_plots/>

@@ -18,11 +18,11 @@ examples:
   - id: basic
     name_zh: 双系列误差折线
     file: example_standard.csv
-    description_zh: 两个中心值系列及其 SD/SEM 误差。
+    description_zh: 两个教学中心值系列使用相同的 SD 定义；误差数值为示例设定，不代表实测重复。
   - id: chinese
     name_zh: 中文列名多组示例
     file: example_chinese.csv
-    description_zh: 中文 X、均值、标准差和标准误列名的自动识别样例。
+    description_zh: 中文三组教学中心值与统一标准差列名的识别样例；误差为教学设定。
 blank_template: data_template.csv
 data_guide:
   headline_zh: 展示有序 X 上的中心值变化及其已计算不确定性。

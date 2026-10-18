@@ -16,6 +16,17 @@ from .circular_network_layout import NETWORK_NODE_GROUP_COLORS
 from .palette_catalog import list_palettes
 
 PALETTES: dict[str, tuple[str, ...]] = {
+    # Independent comparisons: neutral baseline, restrained teal, coral signal.
+    # All eight remain visible on white; composition ramps stay separate.
+    "publication_comparison": (
+        "#59666F", "#247B8B", "#C66454", "#7E669C",
+        "#A58C4B", "#61937D", "#487CB0", "#B6688D",
+    ),
+    # A neutral comparator and restrained signal accents stay visible on white.
+    "publication_signal": (
+        "#59666F", "#247B8B", "#C66454", "#7E669C",
+        "#A58C4B", "#61937D", "#487CB0", "#B6688D",
+    ),
     # Verified direct ``set -c`` colors for 1–6 editable 3D trajectories.
     "trajectory3d_family": (
         "#17304C",
@@ -302,6 +313,7 @@ def resolve_adaptive_style(
     row_count: int,
     series_count: int,
     max_label_length: int = 0,
+    max_legend_label_length: int | None = None,
     category_rotation_deg: float = 0.0,
     signed_values: bool = False,
 ) -> AdaptiveOriginStyle:
@@ -310,6 +322,7 @@ def resolve_adaptive_style(
     rows = max(1, int(row_count))
     series = max(1, int(series_count))
     label_len = max(0, int(max_label_length))
+    legend_label_len = label_len if max_legend_label_length is None else max(0, int(max_legend_label_length))
 
     width = 23.5
     height = 16.0
@@ -325,22 +338,38 @@ def resolve_adaptive_style(
     transparency = 8.0
     heatmap_palette = "RedWhiteBlue.PAL" if signed_values else "Viridis.PAL"
     layer_width_override: float | None = None
+    categorical_external_legend = False
 
     if plot_kind == "bar_error":
         width = min(42.0, max(22.0, 15.0 + rows * 1.55 + series * 0.85))
         height = 16.5 if rows <= 6 else 18.0
-        left = 16.0
-        palette = "comparison_family"
-        transparency = 14.0
+        label_width_cm = width * 0.16
+        data_width_cm = width * 0.80
+        legend_width_cm = max(8.5, min(16.0, 2.5 + legend_label_len * 0.30))
+        width = label_width_cm + data_width_cm + legend_width_cm
+        left = label_width_cm / width * 100.0
+        layer_width_override = data_width_cm / width * 100.0
+        palette = "publication_comparison"
+        transparency = 6.0
+        frame = 1.3
+        categorical_external_legend = True
     elif plot_kind == "horizontal_bar":
-        width = min(46.0, max(27.0, 22.0 + label_len * 0.38 + series * 0.8))
+        # Allocate physical regions, not a growing percentage of a growing
+        # page. The plot field and typography stay readable for long labels.
+        label_width_cm = max(2.6, 1.0 + label_len * tick * 2.54 / 72.0 * 0.52)
+        data_width_cm = 17.0 + max(0, series - 3) * 0.4
+        legend_width_cm = max(8.5, min(16.0, 2.5 + legend_label_len * 0.30))
+        width = label_width_cm + data_width_cm + legend_width_cm
         height = min(30.0, max(15.5, 10.5 + rows * 1.15))
-        left = min(57.0, max(35.0, 31.0 + label_len * 0.72))
+        left = label_width_cm / width * 100.0
+        layer_width_override = data_width_cm / width * 100.0
         top = 5.0
         # Reserve a real bottom gutter for tick labels and the value-axis title.
         layer_height = 77.0
         palette = "diverging_effect" if signed_values else "ablation_blue"
         transparency = 16.0
+        frame = 1.3
+        categorical_external_legend = True
     elif plot_kind in {"stacked_bar", "percent_stacked_bar"}:
         width = min(38.0, max(22.0, 16.0 + rows * 1.65 + series * 0.35))
         height = 16.5
@@ -397,12 +426,24 @@ def resolve_adaptive_style(
     elif plot_kind == "radar":
         width = min(36.0, max(28.0, 24.0 + rows * 0.70))
         height = min(26.0, max(18.5, 15.0 + rows * 0.70))
-        left = 20.0
+        label_width_cm = width * 0.20
+        data_width_cm = width * 0.54
+        legend_width_cm = max(8.5, min(16.0, 2.5 + legend_label_len * 0.30))
+        width = label_width_cm + data_width_cm + legend_width_cm
+        left = label_width_cm / width * 100.0
         top = 8.0
         layer_height = 76.0
-        layer_width_override = 54.0
-        palette = "comparison_family"
+        plot_height_cm = height * layer_height / 100
+        top_cm = height * top / 100 + 0.8
+        height += 0.8
+        top = top_cm / height * 100
+        layer_height = plot_height_cm / height * 100
+        layer_width_override = data_width_cm / width * 100.0
+        palette = "publication_comparison"
+        line = 2.3
+        frame = 1.3
         transparency = 82.0
+        categorical_external_legend = True
     elif plot_kind == "heatmap":
         dense = rows > 12 or series > 10 or rows * series > 120
         if dense:
@@ -616,14 +657,34 @@ def resolve_adaptive_style(
         layer_height = min(layer_height, 68.0)
 
     layer_width = layer_width_override or max(34.0, 96.0 - left)
+    external_legend = series > 1 and plot_kind in {
+        "line", "stacked_line", "line_error", "scatter", "diagnostic_curve", "decision_curve"
+    }
+    if external_legend:
+        # Add a real page column, preserving the physical plot field rather
+        # than squeezing the data or shrinking the typography. Native text
+        # bounds are checked again by the renderer before accepting the plot.
+        original_width = width
+        width += max(6.5, min(16.0, 2.5 + legend_label_len * 0.30))
+        left *= original_width / width
+        layer_width *= original_width / width
+        palette = "publication_signal"
+        line = 2.2
+        frame = 1.3
     return AdaptiveOriginStyle(
-        profile_name=f"adaptive-{template_id}-{plot_kind}",
+        profile_name=f"adaptive-{template_id}-{plot_kind}" + (
+            "-external-legend" if external_legend or categorical_external_legend else ""
+        ),
         page_width_cm=round(width, 2),
         page_height_cm=round(height, 2),
         layer_left_percent=round(left, 2),
         layer_top_percent=top,
         layer_width_percent=round(layer_width, 2),
         layer_height_percent=layer_height,
+        x_title_upshift_page_percent=(
+            0.0
+            if external_legend or categorical_external_legend or plot_kind == "percent_stacked_bar" else 1.5
+        ),
         axis_title_size_pt=axis_title,
         tick_label_size_pt=tick,
         legend_size_pt=legend,

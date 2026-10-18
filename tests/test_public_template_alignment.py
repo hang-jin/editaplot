@@ -21,7 +21,7 @@ def test_public_template_registry_matches_verified_skill_routes() -> None:
     registry = TemplateRegistry(ROOT / "runtime" / "templates")
     public_implemented = {manifest.id for manifest in registry.implemented()}
 
-    assert len(public_implemented) == 41
+    assert len(public_implemented) == 42
     assert public_implemented == VERIFIED_TEMPLATE_IDS
     assert {manifest.id for manifest in registry.internal_implemented()} == {
         "xps_adaptive",
@@ -30,4 +30,14 @@ def test_public_template_registry_matches_verified_skill_routes() -> None:
 
 
 def test_scientific_table_routes_match_public_routes_except_xps_router() -> None:
-    assert SUPPORTED_SCIENTIFIC_TEMPLATE_IDS == VERIFIED_TEMPLATE_IDS - {"xps"}
+    registry = TemplateRegistry(ROOT / "runtime" / "templates")
+    implemented_scientific = {
+        manifest.id for manifest in registry.implemented() if manifest.workflow == "scientific_table"
+    }
+    assert implemented_scientific == VERIFIED_TEMPLATE_IDS - {"xps"}
+    assert SUPPORTED_SCIENTIFIC_TEMPLATE_IDS >= implemented_scientific
+    for template_id in SUPPORTED_SCIENTIFIC_TEMPLATE_IDS - implemented_scientific:
+        manifest = registry.get(template_id)
+        assert manifest.status == "planned"
+        assert manifest.visibility == "public"
+        assert manifest.workflow == "scientific_table"

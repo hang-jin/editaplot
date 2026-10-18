@@ -42,6 +42,7 @@ from .scientific_renderer import (
     _figure_style,
     _origin_font_code,
     _position_axis_titles_on_page,
+    _position_publication_legend,
     _position_x_title,
     _read_axis_state,
     _set_axis_titles,
@@ -54,8 +55,13 @@ from .scientific_renderer import (
 from .session import OriginSession
 from .verify_utils import (
     PAGE_SIZE_TOLERANCE_CM,
+    NativePlotReference,
+    _read_plot_option,
+    apply_column_style,
     read_layer_geometry_percent,
     require_nonempty,
+    verify_column_border_widths,
+    verify_column_colors,
     verify_page_and_layer,
     verify_plot_line_widths,
     verify_text_fonts,
@@ -183,7 +189,7 @@ def _selected_plot_frame(
         helpers.extend((total_name, x_name))
     if spec.plot_kind != "percent_stacked_bar":
         return selected, tuple(helpers)
-    values = selected.iloc[:, 1:].to_numpy(dtype=float, copy=True)
+    values = selected.loc[:, [item.source_column for item in spec.series]].to_numpy(dtype=float, copy=True)
     totals = np.nansum(values, axis=1)
     normalized = (
         np.divide(
@@ -349,7 +355,10 @@ def _bar_series_plans(preparation: ScientificPreparation) -> tuple[OriginSeriesP
     return tuple(
         OriginSeriesPlan(
             source_column=series.source_column,
-            plot_column=series.source_column,
+            plot_column=(
+                f"{series.label} (%)"
+                if preparation.plot_spec.plot_kind == "percent_stacked_bar" else series.source_column
+            ),
             x_column=None,
             error_column=series.error_column,
             label=series.label,
@@ -476,6 +485,48 @@ def _style_bar_data_labels(
     return state
 
 
+def _owned_column_plot_refs(graph: Any, layer: Any) -> list[NativePlotReference]:
+    return [
+        NativePlotReference(f"[{graph.name}]1!{i}", layer.obj)
+        for i in range(1, len(layer.plot_list()) + 1)
+    ]
+
+
+def _verify_column_y_bindings(
+    op: Any, layer: Any, sheet: Any, plots: dict[str, Any], plans: tuple[OriginSeriesPlan, ...]
+) -> dict[str, Any]:
+    bindings: dict[str, Any] = {}
+    for plan in plans:
+        column_index = sheet.lt_col_index(plan.plot_column)
+        if column_index < 1:
+            raise OriginDrawError("Origin column source is missing from its helper worksheet.")
+        plot_range = plots[plan.label].lt_range()
+        if not layer.obj.LT_execute(
+            f"range -wy __cy_actual={plot_range};"
+            f"range __cy_expected={sheet.lt_range(False)}!col({column_index});"
+            "string __cy_actual_name$=nameof(__cy_actual)$;"
+            "string __cy_expected_name$=nameof(__cy_expected)$;"
+            "__cy_actual_count=count(__cy_actual,1);__cy_expected_count=count(__cy_expected,1);"
+        ):
+            raise OriginDrawError("Origin column source binding could not be read.")
+        actual_name = str(op.get_lt_str("__cy_actual_name"))
+        expected_name = str(op.get_lt_str("__cy_expected_name"))
+        actual_count = float(op.lt_float("__cy_actual_count"))
+        expected_count = float(op.lt_float("__cy_expected_count"))
+        if (
+            not actual_name or actual_name != expected_name
+            or not all(math.isfinite(value) and value > 0 for value in (actual_count, expected_count))
+            or actual_count != expected_count
+        ):
+            raise OriginDrawError("Origin column source binding differs from the frozen series.")
+        bindings[plan.label] = {
+            "native_range": plot_range, "source_column": plan.source_column,
+            "actual_dataset": actual_name, "expected_dataset": expected_name,
+            "numeric_count": int(actual_count),
+        }
+    return bindings
+
+
 def _build_bar_graph(
     op: Any,
     plot_sheet: Any,
@@ -514,10 +565,12 @@ def _build_bar_graph(
         origin=op,
         style=style,
     )
-    initial_plots = list(layer.plot_list())
+    initial_plots = _owned_column_plot_refs(graph, layer)
     expected_initial = len(spec.series) + (len(error_columns) if spec.plot_kind == "horizontal_bar" else 0)
     if len(initial_plots) != expected_initial:
         raise OriginDrawError(f"Origin created {len(initial_plots)} plots; expected {expected_initial}.")
+    if len(spec.series) > 1:
+        initial_plots[0].set_cmd("-gm 1")
 
     # Origin's BAR template transposes the data axes.  Plot the explicit error
     # columns, then convert each one with Origin's documented
@@ -540,25 +593,30 @@ def _build_bar_graph(
             ):
                 raise OriginDrawError(f"Origin could not bind {plan.error_column} to {plan.label}.")
 
-    plots = list(layer.plot_list())
+    plots = _owned_column_plot_refs(graph, layer)
     if len(plots) != expected_initial:
         raise OriginDrawError("Origin changed the categorical plot count during styling.")
-    value_plots = plots[: len(spec.series)]
-    converted_error_plots = plots[len(spec.series) :]
+    native_types = {
+        plot.lt_range(): int(_read_plot_option(op, plot, "-pt", f"__column_type_{index}"))
+        for index, plot in enumerate(plots)
+    }
+    value_plots = [plot for plot in plots if native_types[plot.lt_range()] == plot_id]
+    converted_error_plots = [plot for plot in plots if native_types[plot.lt_range()] in {231, 233}]
+    if len(value_plots) != len(plans) or len(converted_error_plots) != len(error_columns):
+        raise OriginDrawError("Origin categorical value/error plot types differ from the frozen mapping.")
     main_plots: dict[str, Any] = {}
     error_plots: dict[str, Any] = {}
     for plan, plot in zip(plans, value_plots, strict=True):
-        plot.color = plan.color
-        plot.set_cmd(f"-w {pt_to_origin_width_units(style.bar_border_width_pt)}")
+        apply_column_style(op, plot, plan.color, border_width_pt=style.bar_border_width_pt)
         plot.set_cmd("-vg 20")
         main_plots[plan.label] = plot
 
     for index, error_plot in enumerate(converted_error_plots, start=1):
-        error_plot.color = op.ocolor("#202020")
+        error_plot.set_cmd(f"-c {op.ocolor('#202020')}")
         error_plot.set_cmd(f"-w {pt_to_origin_width_units(style.error_bar_width_pt)}")
         error_plots[f"horizontal error {index}"] = error_plot
 
-    plot_indices = {plot.lt_range(): index for index, plot in enumerate(layer.plot_list(), start=1)}
+    plot_indices = {plot.lt_range(): plot.native_index for plot in _owned_column_plot_refs(graph, layer)}
     transparency_state: dict[str, float] = {}
     for plan, plot in zip(plans, value_plots, strict=True):
         plot_index = plot_indices.get(plot.lt_range())
@@ -615,7 +673,7 @@ def _build_bar_graph(
         error_column = plot_sheet.lt_col_index(spec.aggregate_error_column)
         if min(total_column, x_column, error_column) < 1:
             raise OriginDrawError("Origin stacked total/error helper columns are missing.")
-        before = {item.lt_range() for item in layer.plot_list()}
+        before = {item.lt_range() for item in _owned_column_plot_refs(graph, layer)}
         total_plot = layer.add_plot(
             plot_sheet,
             "__StackTotal",
@@ -625,12 +683,17 @@ def _build_bar_graph(
         )
         if total_plot is None:
             raise OriginDrawError("Origin could not add the stacked-total error plot.")
-        total_plot.symbol_size = 0.01
-        additions = [item for item in layer.plot_list() if item.lt_range() not in before]
+        additions = [item for item in _owned_column_plot_refs(graph, layer) if item.lt_range() not in before]
+        total_ref = next(
+            (item for item in additions if _read_plot_option(op, item, "-pt", "__stack_pid") == 201), None
+        )
+        if total_ref is None:
+            raise OriginDrawError("Origin stacked-total marker plot is missing.")
+        total_ref.set_cmd("-z 0.01")
         for index, error_plot in enumerate(additions, start=1):
-            if error_plot.lt_range() == total_plot.lt_range():
+            if error_plot.lt_range() == total_ref.lt_range():
                 continue
-            error_plot.color = op.ocolor("#202020")
+            error_plot.set_cmd(f"-c {op.ocolor('#202020')}")
             error_plot.set_cmd(f"-w {pt_to_origin_width_units(style.error_bar_width_pt)}")
             error_plots[f"stack total error {index}"] = error_plot
 
@@ -644,20 +707,8 @@ def _build_bar_graph(
         layer.axis("x").set_limits(len(plot_sheet.to_df()) + 0.5, 0.5, -1.0)
     else:
         layer.axis("x").set_limits(0.5, len(plot_sheet.to_df()) + 0.5, 1.0)
-    if spec.plot_kind == "percent_stacked_bar":
-        layer.axis("y").set_limits(0.0, 100.0, 20.0)
-    elif spec.plot_kind == "stacked_bar":
-        plot_values = plot_sheet.to_df().iloc[:, 1:].to_numpy(dtype=float)
-        upper = float(np.nanmax(np.nansum(plot_values, axis=1)))
-        if spec.aggregate_error_column:
-            errors = plot_sheet.to_df()[spec.aggregate_error_column].to_numpy(dtype=float)
-            upper = float(np.nanmax(np.nansum(plot_values[:, : len(spec.series)], axis=1) + errors))
-        y_to = upper * 1.08
-        y_step = _nice_stacked_step(y_to)
-        layer.axis("y").set_limits(0.0, y_to, y_step)
-    else:
-        plan = spec.axis_plan
-        layer.axis("y").set_limits(plan.y_from, plan.y_to, plan.y_step)
+    plan = spec.axis_plan
+    layer.axis("y").set_limits(plan.y_from, plan.y_to, plan.y_step)
     title_labels = _set_axis_titles(op, layer, preparation)
     graph.activate()
     graph.set_int("background", op.ocolor("#FFFFFF"))
@@ -700,8 +751,11 @@ def _build_bar_graph(
     else:
         _position_x_title(op, title_labels["x_title"], style)
     op.lt_exec("doc -uw;")
+    if spec.plot_kind == "horizontal_bar":
+        external_legend_state = _position_publication_legend(op, layer, legend, style)
 
     axis_state = _read_axis_state(op, layer, preparation)
+    source_bindings = _verify_column_y_bindings(op, layer, plot_sheet, main_plots, plans)
     axis_state["x.label.rotate"] = layer.get_float("x.label.rotate")
     if spec.plot_kind == "horizontal_bar":
         axis_state["x.label.wrap"] = layer.get_int("x.label.wrap")
@@ -714,7 +768,13 @@ def _build_bar_graph(
     try:
         text_state = verify_text_sizes(labels_for_verify, expected_text)
         font_state = verify_text_fonts(op, labels_for_verify, style.font_family)
-        line_state = verify_plot_line_widths(op, main_plots, style.bar_border_width_pt)
+        line_state = verify_column_border_widths(op, main_plots, style.bar_border_width_pt)
+        color_state = {
+            plan.label: verify_column_colors(
+                op, main_plots[plan.label], plan.color, variable_name=f"__cat_color_{index}"
+            )
+            for index, plan in enumerate(plans)
+        }
         error_state = (
             verify_plot_line_widths(op, error_plots, style.error_bar_width_pt) if error_plots else {}
         )
@@ -737,6 +797,8 @@ def _build_bar_graph(
         },
         "origin_plot_state": {
             "bar_border_widths": line_state,
+            "colors": color_state,
+            "source_bindings": source_bindings,
             "error_bar_widths": error_state,
             "palette_name": style.palette_name,
             "bar_transparency_percent": transparency_state,
@@ -960,21 +1022,13 @@ def _build_radar_graph(
         plot.set_cmd(f"-c color({plan.color})", f"-cl {color_code}")
         plot.set_cmd(f"-w {pt_to_origin_width_units(style.plot_line_width_pt)}")
         plot.symbol_kind = 2
-        plot.symbol_interior = 2
+        plot.set_cmd("-kf 1")
         plot.symbol_size = plan.marker_size_pt
         plot.set_cmd("-kh 32")
         main_plots[plan.label] = plot
     layer.rescale()
-    values = plot_sheet.to_df().iloc[:, 1 : len(plans) + 1].to_numpy(dtype=float)
-    maximum = float(np.nanmax(values))
-    if maximum <= 1.0:
-        upper = 1.0
-        increment = 0.2
-    else:
-        upper = maximum * 1.08
-        increment = _nice_stacked_step(upper, target_intervals=5)
-        upper = math.ceil(upper / increment) * increment
-    layer.axis("y").set_limits(0.0, upper, increment)
+    axis = preparation.plot_spec.axis_plan
+    layer.axis("y").set_limits(axis.y_from, axis.y_to, axis.y_step)
     layer.set_float("x.label.pt", style.tick_label_size_pt)
     layer.set_float("y.label.pt", style.tick_label_size_pt * 0.88)
     layer.set_float("x.tickthickness", style.frame_line_width_pt)
@@ -989,10 +1043,9 @@ def _build_radar_graph(
         "doc -uw;"
     ):
         raise OriginDrawError("Origin could not style the Radar axes.")
-    for title_name in ("xb", "yl"):
-        title = layer.label(title_name)
-        if title is not None:
-            title.set_int("show", 0)
+    # Radar uses the X values as radial-axis titles.  Unlike Cartesian plots,
+    # its native title objects carry metric names and must not be hidden.
+    # https://docs.originlab.com/origin-help/radar-axes-dialog/#title
     legend = _style_legend(op, layer, list(plans), main_plots, style)
     graph.set_int("background", op.ocolor("#FFFFFF"))
     op.lt_exec("doc -uw;")
@@ -1006,8 +1059,11 @@ def _build_radar_graph(
         if legend is not None:
             text_state.update(verify_text_fonts(op, {"legend": legend}, style.font_family))
             text_state["legend.showframe"] = int(legend.get_int("showframe"))
+            if text_state["legend.showframe"] != 0:
+                raise OriginDrawError("Origin Radar did not retain the borderless legend after refresh.")
     except RuntimeError as exc:
         raise OriginDrawError(str(exc)) from exc
+    text_state["external_legend"] = _position_publication_legend(op, layer, legend, style)
     axis_state = {
         "plot_kind": "radar",
         "plot_count": len(plots),
@@ -1019,15 +1075,19 @@ def _build_radar_graph(
         "category_label_font_code": float(layer.get_float("x.label.font")),
         "radial_label_font_code": float(layer.get_float("y.label.font")),
         "font_code_expected": float(op.lt_float(f"font({style.font_family})")),
-        "radial_label_offset_percent_font": float(layer.get_float("y.label.offsetH")),
+        "radial_label_offset_percent": float(layer.get_float("y.label.offsetH")),
     }
+    for key, value in (("radial_from", axis.y_from), ("radial_to", axis.y_to),
+                       ("radial_increment", axis.y_step)):
+        if value is None or not math.isclose(axis_state[key], value, rel_tol=1e-8, abs_tol=1e-8):
+            raise OriginDrawError("Origin Radar radius differs from its frozen axis plan.")
     if abs(axis_state["category_label_size_pt"] - style.tick_label_size_pt) > 0.05:
         raise OriginDrawError("Origin Radar category labels failed the adaptive font contract.")
     arial_font_code = float(op.lt_float(f"font({style.font_family})"))
     if (
         int(round(axis_state["category_label_font_code"])) != int(round(arial_font_code))
         or int(round(axis_state["radial_label_font_code"])) != int(round(arial_font_code))
-        or abs(axis_state["radial_label_offset_percent_font"] - radial_label_offset) > 0.05
+        or abs(axis_state["radial_label_offset_percent"] - radial_label_offset) > 0.05
     ):
         raise OriginDrawError("Origin Radar labels failed the font or offset readback contract.")
     return graph, {

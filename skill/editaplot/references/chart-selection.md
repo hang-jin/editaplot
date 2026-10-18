@@ -10,7 +10,7 @@ is the current fully verified baseline.
 
 ## Verified V1 routes
 
-The registry exposes 41 public plotting routes. Some table rows group closely related candidates,
+The registry exposes 42 public plotting routes. Some table rows group closely related candidates,
 so the number of rows is not the route count.
 我已验证 `density_ridgeline3d` 的完整 Origin 路线；它仍只接受冻结的六角色表，并遵守下面的
 数据与焦点边界。
@@ -26,6 +26,7 @@ so the number of rows is not the route count.
 | Absolute/relative composition | `stacked_bar`, `percent_stacked_bar` | category + >=2 nonnegative series | Confirm denominator for percent |
 | Small part-to-whole | `pie` | category + one nonnegative series | Prefer bar when categories are many |
 | Relationship | `scatter` | numeric X + numeric Y series | Do not auto-fit or delete outliers |
+| FLIM phasor distribution | `flim_phasor` | supplied G + S, optional Group; 1–8 groups | Equal physical G/S scale; mathematical semicircle only; preserve outside points; no lifetime inversion, fitting or unmixing |
 | Trend with uncertainty | `line_error` | X + value/error pairs | Define SD/SE/SEM/custom |
 | Ordered progression without uncertainty | `trend` | ordered numeric X + one or more numeric series | Preserve source order; do not smooth |
 | Comparable multimetric profile | `radar` | metric labels + >=2 nonnegative series; >=3 metrics | Confirm scales are comparable; never auto-normalize |

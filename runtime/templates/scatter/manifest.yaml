@@ -16,9 +16,9 @@ ui_order: 80
 family: general_relationship
 examples:
   - id: basic
-    name_zh: 基础双系列
+    name_zh: 三组关系与组内变异
     file: example_standard.csv
-    description_zh: 少量观测点，用于快速理解 X + 多个 Y 的宽表格式。
+    description_zh: 三组各240个合成观测，展示宽表格式、组间关系和非周期的组内变异，不代表实测数据。
   - id: dense
     name_zh: 密集散点自动适配
     file: example_dense.csv

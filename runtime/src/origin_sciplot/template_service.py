@@ -9,6 +9,7 @@ from typing import Any
 
 from .scientific_preview import ScientificPreviewError, render_scientific_preview_png
 from .scientific_workflow import (
+    SUPPORTED_SCIENTIFIC_TEMPLATE_IDS,
     ScientificColumnMapping,
     ScientificPreparation,
     ScientificWorkflowError,
@@ -16,7 +17,7 @@ from .scientific_workflow import (
     prepare_scientific,
     role_options,
 )
-from .template_registry import TemplateManifest, TemplateRegistry
+from .template_registry import TemplateManifest, TemplateRegistry, TemplateRegistryError
 from .xps_preview import XpsPreviewError, render_xps_preview_png
 from .xps_workflow import (
     XpsColumnMapping,
@@ -401,6 +402,13 @@ class ScientificTemplateService:
                 ("Target", spec.target_column or "—"),
                 ("Value", spec.series[0].source_column),
             )
+        elif spec.plot_kind == "flim_phasor":
+            plan = spec.phasor_plan
+            roles = (("G / 已提供相量坐标", plan.g_column), ("S / 已提供相量坐标", plan.s_column),
+                     ("Group / 分组", plan.group_column))
+            facts = (*facts, ("数学参考", "中心(0.5, 0)、半径0.5的上半圆；不是实验观测或拟合"),
+                     ("坐标比例", "G/S等物理单位，保留全部圈外点"),
+                     ("参考圈外点", str(plan.outside_reference_count)))
         elif spec.plot_kind == "shap_summary":
             series = spec.series[0]
             shap_plan = spec.shap_plan
@@ -571,6 +579,19 @@ class TemplateServiceRegistry:
         try:
             return self._services[template_id]
         except KeyError as exc:
+            try:
+                manifest = self.registry.get(template_id)
+            except TemplateRegistryError:
+                manifest = None
+            if (
+                manifest is not None and manifest.visibility == "public" and manifest.status == "planned"
+                and manifest.workflow == "scientific_table"
+                and template_id in SUPPORTED_SCIENTIFIC_TEMPLATE_IDS
+            ):
+                # Planned routes may expose read-only preparation, not render
+                # permission. Do not execute planned service.py or include the
+                # service in implemented(); the release gate stays separate.
+                return ScientificTemplateService(manifest)
             raise TemplateServiceError("template_unknown", f"Unknown public template: {template_id}") from exc
 
 

@@ -16,7 +16,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch, Patch, PathPatch, Rectangle
 from matplotlib.path import Path
 from matplotlib.text import Text
-from matplotlib.ticker import AutoMinorLocator, FixedLocator, MaxNLocator
+from matplotlib.ticker import AutoMinorLocator, FixedLocator, MaxNLocator, MultipleLocator
 
 from .circular_network_layout import (
     MAX_NODE_GROUP_COUNT,
@@ -984,7 +984,10 @@ def _draw_horizontal_bars(axis: Any, frame: Any, preparation: ScientificPreparat
         if finite.size and float(np.min(finite)) < 0 < float(np.max(finite)):
             ablation_colors = signed_effect_colors(values)
         else:
-            ablation_colors = interpolate_hex_colors(style.colors[0], style.colors[-1], len(categories))
+            origin_style = spec.display_plan.figure_style
+            assert origin_style is not None
+            palette = palette_colors(origin_style.palette_name)
+            ablation_colors = interpolate_hex_colors(palette[0], palette[-1], len(categories))
     for index, series in enumerate(spec.series):
         offset = (index - (count - 1) / 2.0) * spacing
         axis.barh(
@@ -1965,8 +1968,6 @@ def _draw_radar(figure: Figure, frame: Any, preparation: ScientificPreparation) 
     )
     axis.set_theta_offset(np.pi / 2.0)
     axis.set_theta_direction(-1)
-    upper = max(float(np.nanmax(series_values(frame, series))) for series in spec.series)
-    upper = max(upper * 1.08, 1.0)
     for index, series in enumerate(spec.series):
         values = series_values(frame, series)
         closed_values = np.concatenate([values, values[:1]])
@@ -1984,15 +1985,21 @@ def _draw_radar(figure: Figure, frame: Any, preparation: ScientificPreparation) 
             zorder=3,
         )
     axis.set_xticks(angles, categories, fontsize=style.tick_label_pt)
-    axis.set_ylim(0.0, upper)
-    axis.yaxis.set_major_locator(MaxNLocator(nbins=5))
+    axis.set_ylim(spec.axis_plan.y_from, spec.axis_plan.y_to)
+    axis.yaxis.set_major_locator(MultipleLocator(spec.axis_plan.y_step))
     axis.tick_params(axis="y", labelsize=style.tick_label_pt * 0.86, pad=2)
     axis.grid(color="#D9DEE5", linewidth=style.frame_line_pt * 0.50, alpha=0.85)
     axis.spines["polar"].set_color("#39424E")
     axis.spines["polar"].set_linewidth(style.frame_line_pt)
     axis.legend(
         loc="upper left",
-        bbox_to_anchor=(1.01, 1.08),
+        bbox_to_anchor=(
+            (origin_style.layer_left_percent + origin_style.layer_width_percent) / 100.0
+            + 0.6 / origin_style.page_width_cm,
+            1.0 - origin_style.layer_top_percent / 100.0,
+        ),
+        bbox_transform=figure.transFigure,
+        borderaxespad=0,
         frameon=False,
         fontsize=style.legend_pt,
         handlelength=1.5,
@@ -2108,11 +2115,8 @@ def _set_axis_contract(axis: Any, preparation: ScientificPreparation, right_axis
             fontsize=style.axis_title_pt,
             fontweight="bold",
         )
-        axis.set_ylabel(
-            _matplotlib_label(spec.x_title),
-            fontsize=style.axis_title_pt,
-            fontweight="bold",
-        )
+        # Category names already identify the vertical axis, as in Origin.
+        axis.set_ylabel("")
         axis.set_xlim(plan.y_from, plan.y_to)
         axis.xaxis.set_major_locator(MaxNLocator(nbins=6))
         axis.xaxis.set_minor_locator(AutoMinorLocator(2))
@@ -2201,11 +2205,14 @@ def _add_legend(axis: Any, right_axis: Any | None, preparation: ScientificPrepar
         handles.extend(right_handles)
         labels.extend(right_labels)
     external = preparation.plot_spec.plot_kind == "percent_stacked_bar"
+    publication_external = preparation.plot_spec.display_plan.figure_style.profile_name.endswith(
+        "-external-legend"
+    )
     legend = axis.legend(
         handles,
         labels,
-        loc="center left" if external else "best",
-        bbox_to_anchor=(1.03, 0.5) if external else None,
+        loc="upper left" if publication_external else "center left" if external else "best",
+        bbox_to_anchor=(1.03, 1.0) if publication_external else (1.03, 0.5) if external else None,
         frameon=False,
         fontsize=style.legend_pt,
         handlelength=1.5,
@@ -2221,6 +2228,45 @@ def _apply_font_contract(figure: Figure) -> None:
             text.set_fontfamily("Arial")
 
 
+def _draw_flim_phasor_preview(axis: Any, frame: Any, preparation: ScientificPreparation) -> None:
+    from matplotlib.ticker import MultipleLocator
+
+    spec = preparation.plot_spec
+    plan = spec.phasor_plan
+    if plan is None:
+        raise ScientificPreviewError("phasor_plan_missing", "The phasor coordinate plan is missing.")
+    style = _preview_style(axis.figure)
+    origin_style = spec.display_plan.figure_style
+    physical_scale = PREVIEW_WIDTH_IN / (origin_style.page_width_cm / 2.54)
+    reference_width = min(1.2, origin_style.plot_line_width_pt * 0.5) * physical_scale
+    reference_label = "Universal semicircle"
+    while reference_label in plan.group_order:
+        reference_label += " (reference)"
+    axis.plot(
+        plan.reference_g, plan.reference_s, color="#89939D", linewidth=reference_width,
+        label=reference_label, zorder=1,
+    )
+    for index, (label, positions) in enumerate(plan.group_rows):
+        group = frame.iloc[list(positions)]
+        axis.scatter(
+            group[plan.g_column].to_numpy(dtype=float), group[plan.s_column].to_numpy(dtype=float),
+            s=style.marker_pt**2, facecolors="none", edgecolors=style.colors[index],
+            linewidths=style.marker_pt * 0.175, label=label, zorder=3,
+        )
+    axis.set_xlim(*plan.x_range)
+    axis.set_ylim(*plan.y_range)
+    axis.set_aspect("equal", adjustable="box")
+    axis.set_xlabel(spec.x_title, fontsize=style.axis_title_pt, fontweight="bold")
+    axis.set_ylabel(spec.y_title, fontsize=style.axis_title_pt, fontweight="bold")
+    axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
+    axis.yaxis.set_major_locator(MultipleLocator(spec.axis_plan.y_step))
+    plot_width_cm = origin_style.page_width_cm * origin_style.layer_width_percent / 100
+    axis.legend(
+        loc="upper left", bbox_to_anchor=(1 + 0.6 / plot_width_cm, 1.0),
+        frameon=False, fontsize=style.legend_pt, borderaxespad=0.0,
+    )
+
+
 def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figure:
     try:
         frame = load_scientific_frame(preparation.source_path, preparation)
@@ -2229,6 +2275,12 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         raise ScientificPreviewError(code, str(exc)) from exc
 
     spec = preparation.plot_spec
+    if spec.plot_kind == "flim_phasor":
+        figure, axis = _new_figure(preparation)
+        _style_axis(axis)
+        _draw_flim_phasor_preview(axis, frame, preparation)
+        _apply_font_contract(figure)
+        return figure
     if spec.plot_kind == "trajectory3d":
         figure = _new_empty_figure(preparation)
         _draw_trajectory3d(figure, frame, preparation)

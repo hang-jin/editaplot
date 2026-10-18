@@ -1,16 +1,16 @@
 {
   "schema_version": "1.0",
   "asset_policy": "programmatically verified and explicitly manually reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
-  "case_count": 50,
-  "display_case_count": 41,
+  "case_count": 51,
+  "display_case_count": 42,
   "cases": [
     {
       "id": "bar-error-groups",
       "title_zh": "分组柱状图与 SD 误差棒",
       "title_en": "grouped bar with SD error bars",
       "display_in_gallery": true,
-      "sha256": "2b8e80b3865f46c8c2a76714555cfb4c189aff5a3b3bc4edb2feaf50be450ee8",
-      "size_bytes": 40793
+      "sha256": "a7e086f9fc3dc5ca326fb54f9e6a6012107e441ff5de41752093c2d32f4a035c",
+      "size_bytes": 31281
     },
     {
       "id": "bubble-indexed-size",
@@ -33,8 +33,8 @@
       "title_zh": "CV 循环伏安曲线",
       "title_en": "CV cyclic voltammetry",
       "display_in_gallery": true,
-      "sha256": "aa833fcc1c84bcd1228c0503a349121e5e62eb5faaf3644872faff6fb2c15fb4",
-      "size_bytes": 45041
+      "sha256": "322a541d8eb6ca07de91e0800b3ac741b4c6ce2960d8040453cd380f88a6c3c1",
+      "size_bytes": 36031
     },
     {
       "id": "density-ridgeline3d",
@@ -65,8 +65,16 @@
       "title_zh": "EIS Nyquist 阻抗图",
       "title_en": "EIS Nyquist impedance",
       "display_in_gallery": true,
-      "sha256": "81c3d11fbd416e9ed06b38750b8914e2afee04b359cbbf0048e5098b0fdcb8ef",
-      "size_bytes": 38248
+      "sha256": "702f7636e2d082304e6735838ea02a4b35bbef9391bd8ee3d7f5491ed3f228bc",
+      "size_bytes": 36946
+    },
+    {
+      "id": "flim-phasor",
+      "title_zh": "FLIM 荧光寿命相量分布",
+      "title_en": "FLIM phasor distribution",
+      "display_in_gallery": true,
+      "sha256": "e084c5fab2c2af3267acd1595861ef123140fcb33ef081937434364cc410491f",
+      "size_bytes": 33137
     },
     {
       "id": "forest-intervals",
@@ -121,24 +129,24 @@
       "title_zh": "长标签横向条形图",
       "title_en": "horizontal bar for long labels",
       "display_in_gallery": true,
-      "sha256": "c28e195ee11ba9b3fe21f7ecd95b4324314760b11e0b5e769af9f86478c0f186",
-      "size_bytes": 36741
+      "sha256": "8439248e37a1417bee2a6b1c623ec3fc94d118335b048840772ac821644ce409",
+      "size_bytes": 33466
     },
     {
       "id": "line-error",
       "title_zh": "带 SD / SEM 的趋势图",
       "title_en": "trend with SD and SEM error bars",
       "display_in_gallery": true,
-      "sha256": "947abc2b43816da39fb121ba715615624f2d946c352d198dadee279105e98bcc",
-      "size_bytes": 42193
+      "sha256": "09cc85efdb57458bc0ef1575d8a1359caf954e75a5947fc0af216f37408e6b4a",
+      "size_bytes": 31073
     },
     {
       "id": "lsv-multi",
       "title_zh": "LSV 线性扫描曲线",
       "title_en": "LSV linear sweep",
       "display_in_gallery": true,
-      "sha256": "ba2d4621f2d6eb87ba5c5ec63a8a1fcbe5adb298998e0737615a7df1a1aa09b5",
-      "size_bytes": 47321
+      "sha256": "f8b0b1260755b1742e632f1934e3984e598c9cb94034978c436b458bc5722a4d",
+      "size_bytes": 35704
     },
     {
       "id": "medical-agreement",
@@ -169,8 +177,8 @@
       "title_zh": "医学决策曲线 DCA",
       "title_en": "medical decision curve DCA net benefit",
       "display_in_gallery": true,
-      "sha256": "6d2f48233c0b8db1640ae2d70d365f151abbeadd9b25b3bf90c77dfdb81af17c",
-      "size_bytes": 48762
+      "sha256": "cebe2f031c5f21bc2d0e0f2a9f6c97487d220f08d5fa3a0d0ea94a84f043bf3d",
+      "size_bytes": 40465
     },
     {
       "id": "medical-grouped-box",
@@ -193,8 +201,8 @@
       "title_zh": "医学模型 PR 曲线",
       "title_en": "medical imaging precision recall PR curve",
       "display_in_gallery": false,
-      "sha256": "e5b312190236477f15f2c3e9527897e3f851e90c5621dfceab0e841698b34664",
-      "size_bytes": 51957
+      "sha256": "a9e924b07bd6cf0cf7f4cfc0fac1683fae3ded64280b9cd8eeffc3cce300c762",
+      "size_bytes": 41232
     },
     {
       "id": "medical-raincloud",
@@ -209,8 +217,8 @@
       "title_zh": "医学模型 ROC 曲线",
       "title_en": "medical imaging ROC diagnostic curve",
       "display_in_gallery": true,
-      "sha256": "48f6d231725c67dc1bc417050304756a961cf65f3b9d21f470613d7c5a78fc5b",
-      "size_bytes": 60062
+      "sha256": "c44b3ecb1eca6551698cceb1efdd5f48f61d9f042c26a26353933cfc42d454e6",
+      "size_bytes": 47756
     },
     {
       "id": "medical-shap",
@@ -233,8 +241,8 @@
       "title_zh": "百分比堆叠组成图",
       "title_en": "percentage composition with confirmed row denominator",
       "display_in_gallery": true,
-      "sha256": "f9b288608c88b0068d944dbe2c6b84b1ee667a3f4c7a5bdb23fe7bfea3d268cc",
-      "size_bytes": 58827
+      "sha256": "d188c40ab525d085757175c2249ae5ab5cc8f5bc3d38a0937cf672426a03abfd",
+      "size_bytes": 60837
     },
     {
       "id": "pie-five-parts",
@@ -273,8 +281,8 @@
       "title_zh": "多指标雷达图",
       "title_en": "radar multimetric comparison",
       "display_in_gallery": true,
-      "sha256": "2b36550711fffb9ef5ea66f139fd0e19b1076d08eb97e6b9902b88feb29bbfc7",
-      "size_bytes": 170728
+      "sha256": "6628b4cc66a714562e417a1401808110140b509c00202348e6b88ae63b61bb3c",
+      "size_bytes": 167592
     },
     {
       "id": "raw-observations",
@@ -297,8 +305,8 @@
       "title_zh": "多组密集散点图",
       "title_en": "dense scatter relationship",
       "display_in_gallery": true,
-      "sha256": "8f2c4ffc428c4e70f5a6a717455bdcc58c6477dd9dcf95626b79ef364344e3f6",
-      "size_bytes": 92294
+      "sha256": "3b1d17fc6a9cb82bee6233e71db946d9e8f8ae347bd43a58c91ca2349a6744af",
+      "size_bytes": 62097
     },
     {
       "id": "shap-dashboard-blue-red",
@@ -329,8 +337,8 @@
       "title_zh": "绝对值堆叠组成图",
       "title_en": "absolute stacked composition",
       "display_in_gallery": true,
-      "sha256": "16ce1362ca424227581b2fe106dc625fffb560cf0f4fa7855ac56c7acbacd413",
-      "size_bytes": 37375
+      "sha256": "8508b81ee323d61dc40b5df6452201742986c668a49d0e8f35cf25a61ebc206e",
+      "size_bytes": 38598
     },
     {
       "id": "trajectory3d",
@@ -345,8 +353,8 @@
       "title_zh": "多系列进展折线图",
       "title_en": "multi-series progression trendline",
       "display_in_gallery": true,
-      "sha256": "7908b309b86e2628e9980e9367ff717c47015e5ab1d3031592cfd4fdd7d4f575",
-      "size_bytes": 39934
+      "sha256": "c4cec750c803767e78859f7f8ed41bd472b645830e30f95a9801626a668efac1",
+      "size_bytes": 31677
     },
     {
       "id": "uv-vis-multi",
@@ -369,16 +377,16 @@
       "title_zh": "小提琴分布对比",
       "title_en": "violin distribution comparison",
       "display_in_gallery": true,
-      "sha256": "fd7bd3394e38426d37ffefc0057af149ea9af11ec9c0753043746d2696f83229",
-      "size_bytes": 88788
+      "sha256": "4f0e07dad5ee0fd9b69b11063188ae9440f81e0c3f8b6c6899891cb32f92614f",
+      "size_bytes": 78166
     },
     {
       "id": "xas-profiles",
       "title_zh": "XAS 吸收谱对比",
       "title_en": "XAS absorption spectrum",
       "display_in_gallery": true,
-      "sha256": "c0a93898ffb6fbc148c0c6368db1776c90e8aa075bab16d15935a82215fc4e47",
-      "size_bytes": 47719
+      "sha256": "11743c0a8b36c3af11bb8790ff64365eb97ea54e64f2d628ff2ee4aee7f7a3b3",
+      "size_bytes": 37622
     },
     {
       "id": "xps-comparison",

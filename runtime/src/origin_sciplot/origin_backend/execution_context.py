@@ -16,6 +16,7 @@ class OriginExecutionContext:
     account_name: str | None
     identity_source: str
     is_codex_sandbox: bool
+    is_app_container: bool | None = False
 
     @property
     def status(self) -> str:
@@ -25,6 +26,8 @@ class OriginExecutionContext:
             return "non_windows"
         if self.is_codex_sandbox:
             return "codex_sandbox"
+        if self.is_app_container is None:
+            return "unknown"
         if self.account_name:
             return "interactive_user"
         return "unknown"
@@ -69,6 +72,50 @@ def _windows_token_name_from_winapi() -> str | None:
         return None
 
 
+def _windows_token_is_app_container() -> bool | None:
+    """Read TokenIsAppContainer (29) from this process's primary token.
+
+    A Codex AppContainer can keep the signed-in account name while restricting
+    desktop COM. The account name alone does not establish desktop access.
+    """
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        security = ctypes.WinDLL("advapi32", use_last_error=True)
+        kernel.GetCurrentProcess.argtypes = []
+        kernel.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel.CloseHandle.restype = wintypes.BOOL
+        security.OpenProcessToken.argtypes = [
+            wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(wintypes.HANDLE)
+        ]
+        security.OpenProcessToken.restype = wintypes.BOOL
+        security.GetTokenInformation.argtypes = [
+            wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD,
+            ctypes.POINTER(wintypes.DWORD),
+        ]
+        security.GetTokenInformation.restype = wintypes.BOOL
+        token = wintypes.HANDLE()
+        if not security.OpenProcessToken(kernel.GetCurrentProcess(), 0x0008, ctypes.byref(token)):
+            return None
+        try:
+            value = wintypes.DWORD()
+            length = wintypes.DWORD()
+            if not security.GetTokenInformation(
+                token, 29, ctypes.byref(value), ctypes.sizeof(value), ctypes.byref(length)
+            ):
+                return None
+            return bool(value.value) if length.value == ctypes.sizeof(value) else None
+        finally:
+            kernel.CloseHandle(token)
+    except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
+        return None
+
+
 def _account_leaf(account_name: str | None) -> str:
     if not account_name:
         return ""
@@ -80,18 +127,20 @@ def classify_origin_execution_context(
     os_name: str,
     account_name: str | None,
     identity_source: str,
+    is_app_container: bool | None = False,
 ) -> OriginExecutionContext:
     """Classify an explicit account name without consulting profile variables."""
 
     is_windows = os_name == "nt"
-    is_codex_sandbox = is_windows and _account_leaf(account_name).startswith(
-        "codexsandbox"
+    is_codex_sandbox = is_windows and (
+        _account_leaf(account_name).startswith("codexsandbox") or is_app_container is True
     )
     return OriginExecutionContext(
         is_windows=is_windows,
         account_name=account_name,
         identity_source=identity_source,
         is_codex_sandbox=is_codex_sandbox,
+        is_app_container=is_app_container if is_windows else False,
     )
 
 
@@ -121,6 +170,7 @@ def detect_origin_execution_context(
         os_name=effective_os_name,
         account_name=account_name,
         identity_source=source,
+        is_app_container=_windows_token_is_app_container(),
     )
 
 

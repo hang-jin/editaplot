@@ -35,6 +35,7 @@ ALLOWED_DERIVED_OPERATIONS = frozenset(
         "fraction_of_group_total",
         "normalize_within_category_minmax",
         "deterministic_binned_symmetric_offset",
+        "phasor_reference_semicircle",
     }
 )
 
@@ -421,6 +422,22 @@ class DerivedDataItem:
                 )
         for value in self.evidence_codes:
             _require_stable_text(value, "derived evidence code")
+        if self.operation_id == "phasor_reference_semicircle":
+            expected = {
+                "center_g": 0.5, "center_s": 0.0, "radius": 0.5, "point_count": 181,
+                "reference_kind": "mathematical_reference_not_experimental_data",
+                "lineage_kind": "coordinate_definition_not_value_derivation",
+            }
+            parameters = dict(self.parameters)
+            if (
+                parameters != expected or len(self.input_item_ids) != 2
+                or type(parameters.get("point_count")) is not int
+                or any(isinstance(parameters.get(key), bool) for key in ("center_g", "center_s", "radius"))
+            ):
+                raise SemanticContractError(
+                    "semantic_phasor_reference_invalid",
+                    "The phasor semicircle requires fixed mathematical geometry and two coordinate inputs.",
+                )
 
     def to_dict(self) -> dict[str, object]:
         return {

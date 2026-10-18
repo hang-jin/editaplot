@@ -10,7 +10,7 @@
 
 Keep the original file read-only.
 
-These contracts cover the 41 registered public plotting routes. The data contract is independent
+These contracts cover the 42 registered public plotting routes. The data contract is independent
 of the installed Origin version. After semantic confirmation and plan creation, run the isolated
 `origin-smoke` before formal rendering. Rendering starts a dedicated EditaPlot-owned Origin
 instance and then checks the selected template against the detected host. Target Origin/OriginPro
@@ -238,6 +238,15 @@ or a third-axis header without a unit is insufficient.
 和焦点；我不会在绘图流程中运行 KDE、平滑、插值、归一化或焦点计算。该路线已在 Origin
 2024b / 10.15 基线上完成 OPJU、PNG/PDF/TIF、对象反读和人工视觉验收；其他主机仍须通过
 实时 smoke 与 `OPEN_GL_3D` 能力检查。
+
+## FLIM phasor coordinates
+
+Provide finite, upstream `G` and `S` coordinates with an optional `Group` column (1–8 groups).
+Chinese mappings include 相量G、相量S、分组. Keep the original row order and all outside-circle
+or negative-S points; they are not automatically rejected as outliers. The route preserves equal
+physical units on G and S and adds only the explicitly approved mathematical reference semicircle
+centred at (0.5, 0) with radius 0.5. It does not calculate lifetimes, transform raw decay traces,
+fit, unmix, normalize or cluster. Extra source columns need an explicit retained/support mapping.
 
 ## Repair guidance
 

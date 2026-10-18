@@ -714,6 +714,7 @@ class ReleaseAudit:
         for field, policy_key in (
             ("inventory_generator", "inventory_generator"),
             ("gallery_fixture_generator", "gallery_fixture_generator"),
+            ("research_fixture_generator", "research_fixture_generator"),
         ):
             binding = manifest.get(field)
             expected_path = str(spec[policy_key])

@@ -1,0 +1,35 @@
+id: flim_phasor
+name: FLIM 荧光寿命相量图
+category: research/fluorescence
+version: 0.1.0
+description: 展示上游预计算的 G/S 相量坐标、显式分组及独立数学参考半圆
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 151
+family: research_imaging
+examples:
+  - id: synthetic-gs-groups
+    name_zh: 三组预计算 G/S 教学点
+    file: example_standard.csv
+    description_zh: 合成教学数据（synthetic）；3 组各 180 点，不对应真实荧光团、实验测量或拟合寿命。
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 上传 G、S、Group 长表；相量坐标须在上游计算完成，本模板只负责可编辑展示。
+  required_columns: [G, S, Group]
+  optional_columns: []
+  accepted_layouts: [长表，每行一个相量观测]
+  aliases: [相量G, 相量S, 分组, 组别]
+  notes_zh:
+    - 原生构建器已通过 Origin 2024b 的四格式、逐值反读及工程重开；每次正式运行仍需通过当前主机与数据门禁。
+    - 映射 G 到 x、S 到 series、Group 到 category；中文列名或额外列须确认含义，不将其他数值列自动当作相量。
+    - 支持 1–8 个显式组；G/S 必须为有限实数，Group 不可为空，保留组首次出现顺序与全部原始观测。
+    - 181 点参考半圆的圆心为 (0.5, 0)、半径为 0.5；它是需明确审批的数学参考，不是实验数据。
+    - 圈外点保留并提示，不自动删点、拟合、聚类、推算寿命或混合比例。
+    - G 与 S 每单位实际物理长度保持一致；页面尺寸按数据范围和图例空间调整。

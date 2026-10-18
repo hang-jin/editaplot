@@ -36,6 +36,7 @@
     "skill/editaplot/agents/openai.yaml",
     "skill/editaplot/scripts/editaplot.py",
     "skill/editaplot/scripts/bootstrap_editaplot.py",
+    "skill/editaplot/scripts/launch_managed.ps1",
     "skill/editaplot/scripts/editaplot_core.py",
     "skill/editaplot/scripts/requirements-runtime.lock",
     "tests/test_editaplot.py",
@@ -46,6 +47,7 @@
     "tools/build_showcase.py",
     "tools/build_star_trend.py",
     "tools/generate_showcase_data.py",
+    "tools/generate_research_data.py",
     "tools/generate_shap_dashboard_data.py",
     "tools/sync_public_gallery.py",
     "tools/verify_public_release.py"
@@ -95,12 +97,14 @@
     "runtime/NOTICE",
     "skill/editaplot/LICENSE",
     "skill/editaplot/NOTICE",
+    "skill/editaplot/scripts/launch_managed.ps1",
     "tools/build_palette_assets.py",
     "tools/build_asset_provenance.py",
     "tools/build_runtime_manifest.py",
     "tools/build_showcase.py",
     "tools/build_star_trend.py",
     "tools/generate_showcase_data.py",
+    "tools/generate_research_data.py",
     "tools/generate_shap_dashboard_data.py",
     "tools/sync_public_gallery.py",
     "tools/verify_public_release.py"
@@ -368,9 +372,9 @@
   "gallery": {
     "directory": "assets/gallery",
     "manifest": "assets/gallery/gallery-manifest.json",
-    "expected_case_count": 50,
-    "expected_display_case_count": 41,
-    "expected_public_route_count": 41,
+    "expected_case_count": 51,
+    "expected_display_case_count": 42,
+    "expected_public_route_count": 42,
     "reject_nonempty_png_text": true
   },
   "palettes": {
@@ -390,8 +394,9 @@
     "documentation": "ASSET_PROVENANCE.md",
     "inventory_generator": "tools/build_asset_provenance.py",
     "gallery_fixture_generator": "tools/generate_showcase_data.py",
+    "research_fixture_generator": "tools/generate_research_data.py",
     "required_review_decision": "approved_for_public_source_release",
-    "expected_asset_count": 235,
+    "expected_asset_count": 239,
     "require_synthetic_or_generated": true,
     "require_contains_phi_false": true
   }

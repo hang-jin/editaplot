@@ -184,6 +184,9 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
   Neither a user style request nor a reference image may change source values or column roles, the
   high-to-low binding-energy axis contract, component identity, residual disposition, or the
   verified single-region `set_fill_area(..., type=9)` / `-pfm 3` fill implementation.
+- For FLIM, use `flim_phasor` for upstream G/S coordinates with optional groups. Keep every point,
+  including points outside the reference semicircle. Confirm the mathematical semicircle helper;
+  preserve equal physical G/S scales. Do not infer lifetimes, fit decays, unmix or cluster.
 - For SHAP, accept only externally precomputed per-sample contributions. Never train a model or
   invoke SHAP. Mean |SHAP| and optional group percentages may only summarize those supplied rows
   with the allow-listed formulas recorded in the semantic proposal and explicitly approved; never

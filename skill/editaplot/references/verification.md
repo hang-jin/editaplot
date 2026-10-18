@@ -42,6 +42,10 @@ prove that every template is available. Apply the selected template's capability
   correctly mapped `layer -x` values, raw bridge values when available, and
   `bridge_geometry_consistent`. Accept a stale bridge only when the two native LabTalk paths agree
   and still match the registered contract; otherwise fail closed.
+- Read physical page centimetres from documented printer dots divided by the actual positive
+  `page.resx/resy`, then multiply by 2.54. Record COM page dimensions as diagnostics; never substitute
+  a guessed DPI or widen the page-size tolerance to hide a mismatch. A failed physical-size check
+  may report only its check ID, measured value, expected value and tolerance.
 - Confirm required axes, titles, label tables, scale direction, tick visibility, text sizes and font codes,
   plot widths, frame widths, and special plot labels where applicable.
 - Confirm the X and Y tick-label font codes are identical to the registered profile after any

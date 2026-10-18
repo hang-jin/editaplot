@@ -15,11 +15,22 @@ if not defined EDITAPLOT_BOOTSTRAP (
 )
 
 rem 1. Explicit override.
-if not defined EDITAPLOT_PYTHON goto launcher_312
+if not defined EDITAPLOT_PYTHON goto configured_runtime
 "%EDITAPLOT_PYTHON%" -c "%EDITAPLOT_PYTHON_PROBE%" >nul 2>nul
-if errorlevel 1 goto launcher_312
+if errorlevel 1 goto configured_runtime
 "%EDITAPLOT_PYTHON%" "%EDITAPLOT_BOOTSTRAP%" %*
 exit /b %errorlevel%
+
+:configured_runtime
+rem Read setup's external-runtime pointer before looking for global Python.
+if not defined EDITAPLOT_ENGINE_HOME if not exist "%EDITAPLOT_LAUNCHER_ROOT%.editaplot-local.json" goto launcher_312
+for %%B in ("%EDITAPLOT_BOOTSTRAP%") do set "EDITAPLOT_MANAGED_HELPER=%%~dpBlaunch_managed.ps1"
+if not exist "%EDITAPLOT_MANAGED_HELPER%" goto launcher_312
+rem ExecutionPolicy applies to this helper process only; no system policy is changed.
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%EDITAPLOT_MANAGED_HELPER%" %*
+set "EDITAPLOT_MANAGED_EXIT=%errorlevel%"
+if "%EDITAPLOT_MANAGED_EXIT%"=="64" goto launcher_312
+exit /b %EDITAPLOT_MANAGED_EXIT%
 
 :managed_runtime
 rem 6. Last-resort fallback. The Python bootstrap rechecks the managed fingerprint.

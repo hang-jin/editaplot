@@ -117,6 +117,7 @@ TEMPLATE_PRIMITIVE_COMPATIBILITY: dict[str, frozenset[str]] = {
     "cv": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "lsv": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "scatter": _COMMON_CONTEXT_PRIMITIVES | frozenset({"symbol", "line", "reference_line"}),
+    "flim_phasor": _COMMON_CONTEXT_PRIMITIVES | frozenset({"symbol"}),
     "line_error": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES | frozenset({"error_bar"}),
     "trend": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "bar": _COMMON_CONTEXT_PRIMITIVES | frozenset({"bar", "error_bar", "symbol", "reference_line"}),
