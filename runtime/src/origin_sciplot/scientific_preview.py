@@ -200,6 +200,7 @@ def _new_figure(
     dual_y: bool = False,
     horizontal_bar: bool = False,
     rotated_category: bool = False,
+    frozen_geometry: bool = False,
 ) -> tuple[Figure, Any]:
     origin_style = preparation.plot_spec.display_plan.figure_style
     if origin_style is None:
@@ -216,7 +217,9 @@ def _new_figure(
     )
     setattr(figure, "_origin_sciplot_preview_style", preview)
     left = origin_style.layer_left_percent / 100.0
-    bottom = max(0.06, 1.0 - (origin_style.layer_top_percent + origin_style.layer_height_percent) / 100.0)
+    bottom = 1.0 - (origin_style.layer_top_percent + origin_style.layer_height_percent) / 100.0
+    if not frozen_geometry:
+        bottom = max(0.06, bottom)
     width = origin_style.layer_width_percent / 100.0
     height = origin_style.layer_height_percent / 100.0
     if dual_y:
@@ -2277,7 +2280,7 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
 
     spec = preparation.plot_spec
     if spec.plot_kind == "signal_stack":
-        figure, axis = _new_figure(preparation)
+        figure, axis = _new_figure(preparation, frozen_geometry=True)
         _style_axis(axis)
         plan, layout = spec.signal_stack_plan, spec.signal_stack_layout
         if plan is None or layout is None:
@@ -2312,7 +2315,7 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
     if spec.plot_kind == "time_frequency":
         from matplotlib.colors import ListedColormap
 
-        figure, axis = _new_figure(preparation)
+        figure, axis = _new_figure(preparation, frozen_geometry=True)
         _style_axis(axis)
         plan = spec.time_frequency_plan
         if plan is None:

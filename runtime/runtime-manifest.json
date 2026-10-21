@@ -110,8 +110,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
-      "size_bytes": 149720,
-      "sha256": "f657e8c6f71acd118dac314fffc9a6867493571a053900631427431cfa367e5a"
+      "size_bytes": 150141,
+      "sha256": "096c364cf3b79a41a57c11a49478498a72dedc43fd2c9ec73deacf57c39a4ef2"
     },
     {
       "path": "src/origin_sciplot/origin_backend/execution_context.py",
@@ -245,8 +245,8 @@
     },
     {
       "path": "src/origin_sciplot/scientific_preview.py",
-      "size_bytes": 95446,
-      "sha256": "790b15cf983ad04fd3a8108e834abf51e730d4399e4382af973a8096542cabb2"
+      "size_bytes": 95577,
+      "sha256": "c8f89aa00ece41fbedf22d9fa63eac52f4d798eecca77a6358b927005710cd16"
     },
     {
       "path": "src/origin_sciplot/scientific_visual.py",

@@ -2465,6 +2465,15 @@ def _read_shap_plot_binding(
     return result
 
 
+def _verify_page_label_text(actual: str, expected: str, name: str) -> str:
+    # Origin's text objects serialize newlines as CRLF (also confirmed on 10.15).
+    # Only that equivalent representation is allowed: keep spaces, symbols,
+    # blank lines and the original raw readback intact.
+    if actual.replace("\r\n", "\n") != expected.replace("\r\n", "\n"):
+        raise OriginDrawError(f"Origin changed text object {name!r}.")
+    return actual
+
+
 def _add_shap_page_label(
     op: Any,
     graph: Any,
@@ -2531,8 +2540,7 @@ def _add_shap_page_label(
         or actual_top + actual_height > page_height
     ):
         raise OriginDrawError(f"Origin SHAP text object {name!r} is clipped by the page.")
-    if str(label.text) != text:
-        raise OriginDrawError(f"Origin changed SHAP text object {name!r}.")
+    actual_text = _verify_page_label_text(str(label.text), text, name)
     if actual_attach != 1:
         raise OriginDrawError(
             f"Origin SHAP text object {name!r} is not attached to the graph page."
@@ -2543,7 +2551,7 @@ def _add_shap_page_label(
         )
     text_state.update(
         {
-            f"{name}.text": text,
+            f"{name}.text": actual_text,
             f"{name}.attach": actual_attach,
             f"{name}.rotate": actual_rotation,
             f"{name}.left": actual_left,

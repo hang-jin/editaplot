@@ -81,6 +81,42 @@ def test_more_channels_and_long_names_allocate_physical_space(tmp_path):
     assert b.legend_size_pt == a.legend_size_pt == 17
 
 
+@pytest.mark.parametrize("tall_case", ["multiline_channels", "long_y_title"])
+def test_tall_signal_preview_keeps_traces_and_ruler_aligned_with_page_labels(tmp_path, tall_case):
+    from origin_sciplot.scientific_preview import _build_scientific_preview_figure
+    from origin_sciplot.scientific_workflow import apply_scientific_text_overrides
+
+    names = [f"Sensor {i}\nRegion A\nTrial 1\nLeft hemisphere" for i in range(16)]
+    if tall_case == "long_y_title":
+        names = ["A", "B"]
+    source = tmp_path / "tall.csv"
+    pd.DataFrame([
+        {"Time (s)": t, "Channel": name, "Amplitude (uV)": value}
+        for name in names for t, value in ((0, -1), (1, 1))
+    ]).to_csv(source, index=False)
+    prep = prepare_scientific(source, "signal_stack")
+    if tall_case == "long_y_title":
+        prep = apply_scientific_text_overrides(prep, y_title="W" * 115 + " (uV)")
+    style = prep.plot_spec.display_plan.figure_style
+    assert style.page_height_cm > 54  # Exercises the former 6% minimum-margin clamp.
+    figure = _build_scientific_preview_figure(prep)
+    axis = figure.axes[0]
+    try:
+        to_page = axis.transData + figure.transFigure.inverted()
+        labels = {text.get_text(): text for text in figure.texts}
+        for name, line in zip(names, axis.lines[:-1], strict=True):
+            center = np.mean(line.get_ydata())  # Symmetric [-1, 1] source; no per-channel centering.
+            assert to_page.transform((0, center))[1] == pytest.approx(labels[name].get_position()[1])
+        ruler = axis.lines[-1]
+        ruler_text = labels[prep.plot_spec.signal_stack_layout.reference_text]
+        assert to_page.transform((0, np.mean(ruler.get_ydata())))[1] == pytest.approx(
+            ruler_text.get_position()[1]
+        )
+        assert axis.get_position().y1 < 1.0
+    finally:
+        figure.clear()
+
+
 def test_chinese_units_and_extra_columns_require_explicit_mapping_confirmation(tmp_path):
     path = tmp_path / "信号.csv"
     frame = signal_stack_data().rename(

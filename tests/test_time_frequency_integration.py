@@ -176,6 +176,24 @@ def test_explicit_time_frequency_axis_title_also_reflows_physical_page(source):
     assert changed.plot_spec.axis_plan == prepared.plot_spec.axis_plan
 
 
+def test_tall_time_frequency_preview_keeps_colorbar_aligned_with_grid(source):
+    from origin_sciplot.scientific_preview import _build_scientific_preview_figure
+    from origin_sciplot.scientific_workflow import apply_scientific_text_overrides
+
+    prepared = apply_scientific_text_overrides(
+        prepare_scientific(source, "time_frequency"), y_title="W" * 115 + " (Hz)"
+    )
+    assert prepared.plot_spec.display_plan.figure_style.page_height_cm > 54
+    figure = _build_scientific_preview_figure(prepared)
+    try:
+        grid, colorbar = figure.axes
+        assert grid.get_position().y0 == pytest.approx(colorbar.get_position().y0)
+        assert grid.get_position().y1 == pytest.approx(colorbar.get_position().y1)
+        assert grid.get_position().y1 < 1.0
+    finally:
+        figure.clear()
+
+
 def test_native_axis_writer_uses_signed_spacing_for_descending_coordinates():
     from types import SimpleNamespace
 
