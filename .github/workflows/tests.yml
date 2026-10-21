@@ -40,6 +40,7 @@ jobs:
           skill/editaplot/scripts
           runtime/src/origin_sciplot/app.py
           runtime/src/origin_sciplot/event_raster.py
+          runtime/src/origin_sciplot/event_raster_layout.py
           runtime/src/origin_sciplot/event_response.py
           runtime/src/origin_sciplot/flim_phasor.py
           runtime/src/origin_sciplot/research_grid.py

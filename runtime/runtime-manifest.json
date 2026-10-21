@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 459,
+  "file_count": 460,
   "files": [
     {
       "path": "LICENSE",
@@ -57,6 +57,11 @@
       "path": "src/origin_sciplot/event_raster.py",
       "size_bytes": 6923,
       "sha256": "f751cb42261a4dc8cc49678961c1b0f94f7168b2c3c96d547df8562f070f7ada"
+    },
+    {
+      "path": "src/origin_sciplot/event_raster_layout.py",
+      "size_bytes": 4278,
+      "sha256": "65d38604318a36fa9108f5ef17fa1e814d93e1b06a74422a57fbbcfecba8bf25"
     },
     {
       "path": "src/origin_sciplot/event_response.py",
