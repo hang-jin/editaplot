@@ -119,6 +119,7 @@ TEMPLATE_PRIMITIVE_COMPATIBILITY: dict[str, frozenset[str]] = {
     "scatter": _COMMON_CONTEXT_PRIMITIVES | frozenset({"symbol", "line", "reference_line"}),
     "flim_phasor": _COMMON_CONTEXT_PRIMITIVES | frozenset({"symbol"}),
     "time_frequency": _COMMON_CONTEXT_PRIMITIVES | frozenset({"heatmap_cell", "colorbar"}),
+    "signal_stack": _COMMON_CONTEXT_PRIMITIVES | frozenset({"line", "reference_line"}),
     "line_error": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES | frozenset({"error_bar"}),
     "trend": _COMMON_CONTEXT_PRIMITIVES | _LINE_PRIMITIVES,
     "bar": _COMMON_CONTEXT_PRIMITIVES | frozenset({"bar", "error_bar", "symbol", "reference_line"}),

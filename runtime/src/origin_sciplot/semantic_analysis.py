@@ -299,6 +299,35 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
         for column in getattr(spec, "phase_tick_columns", ())
     )
 
+    if plot_kind == "signal_stack":
+        signal = spec.signal_stack_plan
+        for index, (label, offset) in enumerate(signal.offsets):
+            derived_id = f"derived_signal_offset_{index:02d}"
+            derived_items.append(DerivedDataItem(
+                item_id=derived_id, semantic_role="display_channel_offset_only",
+                disposition=DataDisposition.RENDER_PRIMARY, operation_id="offset_by_constant",
+                input_item_ids=(item_ids[signal.value_column], item_ids[signal.channel_column]),
+                confidence=1.0, parameters=(("offset", offset), ("channel_index", index)),
+                evidence_codes=("common_amplitude_no_normalization",),
+            ))
+            elements.append(FigureElement(
+                element_id=f"signal_channel_{index:02d}", element_kind="line",
+                data_item_ids=(item_ids[signal.time_column], derived_id), required=True,
+                axis="common_amplitude_display_offsets", legend_label=label,
+            ))
+        ruler_id = "derived_signal_amplitude_ruler"
+        derived_items.append(DerivedDataItem(
+            item_id=ruler_id, semantic_role="amplitude_display_reference",
+            disposition=DataDisposition.RENDER_SECONDARY, operation_id="signal_amplitude_ruler",
+            input_item_ids=(item_ids[signal.value_column],), confidence=1.0,
+            parameters=(("length", signal.amplitude_scale_length), ("unit", signal.value_unit),
+                        ("reference_kind", signal.amplitude_scale_kind), ("rule", "nice_125_global_span_quarter")),
+        ))
+        elements.append(FigureElement(
+            element_id="signal_amplitude_ruler", element_kind="reference_line", data_item_ids=(ruler_id,),
+            required=True, axis=signal.amplitude_scale_kind, legend_label=spec.signal_stack_layout.reference_text,
+        ))
+
     if plot_kind == "time_frequency":
         value_column = spec.time_frequency_plan.value_column
         elements.append(FigureElement(
@@ -590,7 +619,7 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
 
     scientific_series = (
         ()
-        if plot_kind in {"circular_network", "density_ridgeline3d", "shap_summary"}
+        if plot_kind in {"circular_network", "density_ridgeline3d", "shap_summary", "signal_stack"}
         else spec.series
     )
     for index, series in enumerate(scientific_series):

@@ -162,6 +162,20 @@ def test_frequency_axis_is_numeric_in_origin_bound_source_copy(source):
     assert frame["Frequency (Hz)"].iloc[0] == 3.0
 
 
+def test_explicit_time_frequency_axis_title_also_reflows_physical_page(source):
+    from origin_sciplot.scientific_workflow import apply_scientific_text_overrides
+
+    prepared = prepare_scientific(source, "time_frequency")
+    title = "Time coordinate of the supplied recording measured for every retained observation (s)"
+    changed = apply_scientific_text_overrides(prepared, x_title=title)
+    assert (
+        changed.plot_spec.display_plan.figure_style.page_width_cm
+        > prepared.plot_spec.display_plan.figure_style.page_width_cm
+    )
+    assert changed.plot_spec.time_frequency_plan == prepared.plot_spec.time_frequency_plan
+    assert changed.plot_spec.axis_plan == prepared.plot_spec.axis_plan
+
+
 def test_native_axis_writer_uses_signed_spacing_for_descending_coordinates():
     from types import SimpleNamespace
 

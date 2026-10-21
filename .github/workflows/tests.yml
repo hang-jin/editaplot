@@ -44,6 +44,7 @@ jobs:
           runtime/src/origin_sciplot/flim_phasor.py
           runtime/src/origin_sciplot/research_grid.py
           runtime/src/origin_sciplot/signal_stack.py
+          runtime/src/origin_sciplot/signal_stack_layout.py
           runtime/src/origin_sciplot/spectral_density.py
           runtime/src/origin_sciplot/time_frequency.py
           runtime/src/origin_sciplot/circular_network_layout.py
@@ -75,6 +76,7 @@ jobs:
           runtime/templates/density_ridgeline3d/service.py
           runtime/templates/flim_phasor
           runtime/templates/time_frequency
+          runtime/templates/signal_stack
           runtime/templates/xps_adaptive/runner.py
           runtime/templates/xps_c1s_fit/runner.py
           tests

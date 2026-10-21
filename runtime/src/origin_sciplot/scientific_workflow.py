@@ -29,7 +29,11 @@ from .data_loader import DataLoadError, LoadedTable, load_table
 from .flim_phasor import PhasorPlan, build_phasor_plan
 from .heatmap_layout import heatmap_cell_labels_enabled
 from .palette_catalog import get_palette
-from .scientific_visual import AdaptiveOriginStyle, resolve_adaptive_style, resolve_time_frequency_style
+from .scientific_visual import (
+    AdaptiveOriginStyle, resolve_adaptive_style, resolve_signal_stack_style, resolve_time_frequency_style,
+)
+from .signal_stack import SignalStackPlan, build_signal_stack_plan
+from .signal_stack_layout import SignalStackLayout, build_signal_stack_layout
 from .shap_composite import (
     SHAP_COMPOSITE_PROFILES,
     ShapCompositeError,
@@ -79,6 +83,7 @@ ScientificTemplateId = Literal[
     "shap_dashboard",
     "flim_phasor",
     "time_frequency",
+    "signal_stack",
     "grouped_box",
     "dsc",
     "nmr",
@@ -128,6 +133,7 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "shap_dashboard",
         "flim_phasor",
         "time_frequency",
+        "signal_stack",
         "grouped_box",
         "dsc",
         "nmr",
@@ -282,6 +288,8 @@ class ScientificPlotSpec:
     shap_dashboard: ShapDashboardPlan | None = None
     phasor_plan: PhasorPlan | None = None
     time_frequency_plan: TimeFrequencyPlan | None = None
+    signal_stack_plan: SignalStackPlan | None = None
+    signal_stack_layout: SignalStackLayout | None = None
     color_scale_hex: tuple[str, ...] = ()
 
 
@@ -317,6 +325,10 @@ def _plot_digest_payload(spec: ScientificPlotSpec) -> dict:
         payload.pop("phasor_plan")
     if spec.time_frequency_plan is None:
         payload.pop("time_frequency_plan")
+    if spec.signal_stack_plan is None:
+        payload.pop("signal_stack_plan")
+    if spec.signal_stack_layout is None:
+        payload.pop("signal_stack_layout")
     if not spec.color_scale_hex:
         payload.pop("color_scale_hex")
     return payload
@@ -402,6 +414,25 @@ def apply_scientific_text_overrides(
     )
     if overridden == spec:
         return preparation
+    if preparation.template_id in {"time_frequency", "signal_stack"}:
+        if preparation.template_id == "time_frequency":
+            measured = resolve_time_frequency_style(resolved_x_title, resolved_y_title, spec.series[0].label)
+        else:
+            measured = resolve_signal_stack_style(
+                spec.signal_stack_plan.channel_order, resolved_x_title, resolved_y_title,
+                spec.signal_stack_layout.reference_text,
+            )
+        geometry_keys = (
+            "page_width_cm", "page_height_cm", "layer_left_percent", "layer_top_percent",
+            "layer_width_percent", "layer_height_percent",
+        )
+        style = replace(spec.display_plan.figure_style, **{key: getattr(measured, key) for key in geometry_keys})
+        overridden = replace(overridden, display_plan=replace(spec.display_plan, figure_style=style))
+        if preparation.template_id == "signal_stack":
+            layout = build_signal_stack_layout(
+                spec.signal_stack_plan, style, y_range=(spec.axis_plan.y_from, spec.axis_plan.y_to)
+            )
+            overridden = replace(overridden, signal_stack_layout=layout)
     return replace(
         preparation,
         plot_spec=overridden,
@@ -1257,7 +1288,7 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
     elif template_id == "time_frequency":
         keys = ("x", "frequency_axis", "series", "ignored")
         unique = {"x", "frequency_axis", "series"}
-    elif template_id == "flim_phasor":
+    elif template_id in {"flim_phasor", "signal_stack"}:
         keys = ("x", "series", "category", "ignored")
         unique = {"x", "series", "category"}
     elif template_id in {"raw_summary", "violin", "histogram", "raincloud", "grouped_box"}:
@@ -1329,6 +1360,8 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
 
 
 def mapping_context_options(template_id: str) -> tuple[tuple[str, str], ...]:
+    if template_id == "signal_stack":
+        return (("common_amplitude", "共同幅度单位；仅纵向显示偏移"),)
     if template_id == "time_frequency":
         return (("sequential", "已提供数值的连续高低（不进行基线或dB计算）"),)
     if template_id == "shap_dashboard":
@@ -3114,6 +3147,11 @@ def _validate_assignment_shape(
             raise ScientificWorkflowError(
                 "mapping_plot_mode", "This route supports sequential mode only; no color reference is inferred."
             )
+    if template_id == "signal_stack":
+        if mode == "default":
+            mode = "common_amplitude"
+        if mode != "common_amplitude":
+            raise ScientificWorkflowError("mapping_plot_mode", "Select common_amplitude mode; no normalization is performed.")
     if template_id == "diagnostic_curve" and mode not in {"roc", "pr"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select ROC or Precision-Recall mode.")
     if template_id == "pl" and mode not in {"steady_state", "trpl"}:
@@ -6007,6 +6045,63 @@ def _eis_axis_title(symbol: str, source_column: str) -> str:
     return f"{symbol} ({formatted})" if unit else symbol
 
 
+def _explicit_header_unit(column: str) -> str:
+    match = re.search(r"(?:\(([^()]+)\)|\[([^\[\]]+)\]|（([^（）]+)）|［([^［］]+)］)\s*$", column)
+    unit = next((part.strip() for part in match.groups() if part), "") if match else ""
+    if not unit or len(column) > 80:
+        raise ScientificWorkflowError("research_unit_required", f"{column}: provide an explicit unit in parentheses or brackets.")
+    return unit
+
+
+def _automatic_signal_mapping(loaded: LoadedTable) -> _AutoMapping:
+    aliases = {
+        "x": {"time", "时间", "时刻"},
+        "category": {"channel", "通道", "sensor", "传感器", "roi", "区域", "cell", "细胞"},
+        "series": {"value", "amplitude", "voltage", "response", "intensity", "fluorescence",
+                   "幅值", "振幅", "电压", "信号", "强度", "响应", "荧光"},
+    }
+    assignments = {}
+    for column in loaded.columns:
+        name = re.split(r"[\(\[（［]", column, maxsplit=1)[0]
+        assignments[column] = next((role for role, names in aliases.items() if _canonical(name) in names), "ignored")
+    reasons = []
+    if any(list(assignments.values()).count(role) != 1 for role in aliases):
+        reasons.append("signal_explicit_time_value_channel_required")
+    if "ignored" in assignments.values():
+        reasons.append("signal_extra_columns_require_confirmation")
+    return _AutoMapping(assignments, "common_amplitude", 0.75 if reasons else 0.98, tuple(reasons), ())
+
+
+def _build_signal_stack_spec(frame: pd.DataFrame, assignments: dict[str, str]):
+    time_column, value_column, channel_column = (_require_one(assignments, role) for role in ("x", "series", "category"))
+    try:
+        plan = build_signal_stack_plan(
+            frame, time_column=time_column, value_column=value_column, channel_column=channel_column,
+            time_unit=_explicit_header_unit(time_column), value_unit=_explicit_header_unit(value_column),
+        )
+    except ValueError as error:
+        raise ScientificWorkflowError("signal_stack_data_invalid", str(error)) from error
+    y_title = f"Amplitude ({plan.value_unit}; display offsets)"
+    style = resolve_signal_stack_style(plan.channel_order, time_column, y_title,
+                                       f"{plan.amplitude_scale_length:g} {plan.value_unit}")
+    lower, upper = plan.display_y_range
+    center = lower * 0.5 + upper * 0.5
+    half_span = max(upper - lower, plan.amplitude_scale_length * 4) * 0.58
+    y_range = (center - half_span, center + half_span)
+    layout = build_signal_stack_layout(plan, style, y_range=y_range)
+    series = tuple(ScientificSeries(value_column, label, group=label, display_offset=offset)
+                   for label, offset in plan.offsets)
+    return ScientificPlotSpec(
+        plot_kind="signal_stack", plot_mode="common_amplitude", x_column=time_column,
+        category_column=channel_column, series=series, x_title=time_column, y_title=y_title, y2_title=None,
+        x_scale="linear", y_scale="linear", display_transform=plan.display_transform,
+        display_plan=ScientificDisplayPlan(0.0, 0.8, 0.7, figure_style=style),
+        axis_plan=ScientificAxisPlan(*plan.time_range, _nice_number((plan.time_range[1]-plan.time_range[0])/6, round_value=True),
+                                     *y_range, _nice_number((y_range[1]-y_range[0])/5, round_value=True)),
+        signal_stack_plan=plan, signal_stack_layout=layout,
+    ), ("display_offsets_only_common_amplitude_no_filtering",)
+
+
 def _automatic_time_frequency_mapping(loaded: LoadedTable) -> _AutoMapping:
     aliases = {
         "x": {"time", "时间", "时刻"},
@@ -6035,15 +6130,7 @@ def _build_time_frequency_spec(
     columns = tuple(_require_one(assignments, role) for role in ("x", "frequency_axis", "series"))
     units = []
     for column in columns:
-        title = column
-        match = re.search(r"(?:\(([^()]+)\)|\[([^\[\]]+)\]|（([^（）]+)）|［([^［］]+)］)\s*$", title)
-        unit = next((part.strip() for part in match.groups() if part), "") if match else ""
-        if not unit or len(title) > 80:
-            raise ScientificWorkflowError(
-                "time_frequency_unit_required",
-                f"{column}: supply an explicit unit in the column header, e.g. Time (s), Frequency (Hz), Power (dB).",
-            )
-        units.append(unit)
+        units.append(_explicit_header_unit(column))
     try:
         plan = build_time_frequency_plan(
             frame, time_column=columns[0], frequency_column=columns[1], value_column=columns[2],
@@ -6142,6 +6229,8 @@ def _build_plot_spec(
     *,
     source_profile: str | None = None,
 ) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    if template_id == "signal_stack":
+        return _build_signal_stack_spec(frame, assignments)
     if template_id == "time_frequency":
         return _build_time_frequency_spec(frame, assignments)
     if template_id == "flim_phasor":
@@ -6195,6 +6284,8 @@ def _build_plot_spec(
 
 
 def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
+    if template_id == "signal_stack":
+        return _automatic_signal_mapping(loaded)
     if template_id == "time_frequency":
         return _automatic_time_frequency_mapping(loaded)
     if template_id == "flim_phasor":
@@ -6277,7 +6368,7 @@ def prepare_scientific(
     # Physical-cell validation must see Excel's original bool/date types.
     # The source-bound reload still creates a numeric working copy for COM.
     frame = (
-        loaded.copy_frame() if template_id == "time_frequency"
+        loaded.copy_frame() if template_id in {"time_frequency", "signal_stack", "flim_phasor"}
         else _coerced_selected_frame(loaded, assignments)
     )
     source_profile = detect_xrd_source_profile(loaded) if template_id == "xrd" else None

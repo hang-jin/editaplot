@@ -166,11 +166,11 @@ I made and manually checked these examples with synthetic teaching data. Metadat
   <img src="assets/gallery/circular-network.png" alt="Multi-panel circular directed weighted network" width="31%">
 </div>
 
-➡️ [Browse one representative for each of the 43 templates](docs/gallery.en.md)
+➡️ [Browse one representative for each of the 44 templates](docs/gallery.en.md)
 
-I currently provide 43 Origin plotting routes and display one representative per template: 43 images. All 52 reviewed verification PNGs remain in the repository. The other nine palette or mode examples, their data, and their plotting capabilities remain available.
+I currently provide 44 Origin plotting routes and display one representative per template: 44 images. All 53 reviewed verification PNGs remain in the repository. The other nine palette or mode examples, their data, and their plotting capabilities remain available.
 
-My [fluorescence phasor and time-frequency guide](docs/research_signals.md) explains the processed-data boundary: the time-frequency route displays supplied cells, not a spectrum calculated from raw EEG.
+My [fluorescence, time-frequency and multichannel signal guide](docs/research_signals.md) explains the input boundary. Time-frequency figures display supplied cells; multichannel figures retain supplied waveform samples and a common amplitude scale.
 
 This update adds a **FLIM phasor plot** for upstream G/S coordinates and optional group names, with equal physical scales and a mathematical reference semicircle. The example uses synthetic teaching data; the route displays supplied phasors rather than calculating lifetimes from raw images. I also updated the bar example's palette and borderless external legend, with separate native checks for fill color, border color, and physical border width.
 
@@ -344,7 +344,7 @@ I keep the public repository complete and runnable. To avoid mixing private data
 |---|---|
 | Apache-2.0 source, complete Skill, sanitized runtime | `DEVELOPMENT_LEDGER.md`, internal plans, development logs |
 | Neutral synthetic examples and original palette assets | Your original data, reference screenshots, material without redistribution rights |
-| 52 reviewed, metadata-sanitized verification PNGs; one representative per route, 43 displayed images | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
+| 53 reviewed, metadata-sanitized verification PNGs; one representative per route, 44 displayed images | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
 | Bilingual docs, tests, dependency locks, asset/runtime manifests | Absolute paths, caches, virtual environments, temporary outputs, secrets and tokens |
 
 To avoid publishing local material by mistake, I use an allowlist, secret scanning, PNG checks, and SHA-256 manifests. See [release and licensing boundaries](docs/release-boundaries.md).

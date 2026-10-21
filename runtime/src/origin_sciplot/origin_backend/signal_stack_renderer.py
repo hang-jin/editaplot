@@ -1,13 +1,14 @@
 """Native Line plots for an explicit, display-only common-amplitude signal stack.
 
 The caller owns Origin sessions, capability probes, saving and exports. This
-builder is not a public registered template and does not filter or resample.
+builder does not filter or resample.
 """
 
 from __future__ import annotations
 
 import math
 import re
+from dataclasses import asdict
 from typing import Any
 
 import numpy as np
@@ -16,13 +17,24 @@ import pandas as pd
 from ..scientific_visual import interpolate_hex_colors
 from ..scientific_workflow import ScientificPreparation
 from ..signal_stack import SignalStackPlan, build_signal_stack_plan
+from ..signal_stack_layout import build_signal_stack_layout
 from .base_style_contract import pt_to_origin_width_units
 from .safe_errors import OriginDrawError
 
 REFERENCE_COLOR = "#52616B"
 SOURCE_RECOVERY_TOLERANCE = 1e-12
-LEFT_RESERVE_FRACTION = 0.14
-RIGHT_RESERVE_FRACTION = 0.22
+
+
+def _signal_import_copy(frame: pd.DataFrame, plan: SignalStackPlan) -> pd.DataFrame:
+    """Use originpro's documented categorical-to-DF_TEXT path for source labels."""
+    imported = frame.copy(deep=True)
+    for column in imported:
+        values = imported[column]
+        if column == plan.channel_column:
+            imported[column] = pd.Categorical(values.map(str), categories=plan.channel_order, ordered=True)
+        elif len(values.dropna()) and all(isinstance(value, str) for value in values.dropna()):
+            imported[column] = pd.Categorical(values, categories=pd.unique(values.dropna()), ordered=True)
+    return imported
 
 
 def _prepare_signal_channel_data(
@@ -101,83 +113,61 @@ def _resolve_signal_stack_layout(preparation: ScientificPreparation, plan: Signa
     x0, x1, dx, y0, y1, dy = (float(value) for value in limits)
     if x1 <= x0 or y1 <= y0 or dx <= 0 or dy <= 0:
         raise OriginDrawError("Signal stack axes require increasing frozen limits and positive steps.")
-    time0, time1 = plan.time_range
-    time_span = time1 - time0
-    if not math.isfinite(time_span) or time_span <= 0:
-        raise OriginDrawError("Signal source timestamps do not provide a finite plotting span.")
-    left_reserve, right_reserve = time0 - x0, x1 - time1
-    if left_reserve < time_span * LEFT_RESERVE_FRACTION or right_reserve < time_span * RIGHT_RESERVE_FRACTION:
-        raise OriginDrawError(
-            "Signal stack frozen X limits must reserve at least 14% of the source time span "
-            "on the left for channel names and 22% on the right for the amplitude ruler."
-        )
-    if y0 > plan.display_y_range[0] or y1 < plan.display_y_range[1]:
-        raise OriginDrawError("Signal stack frozen Y limits do not include all unscaled channel values.")
-    y_span = y1 - y0
-    reference_from = y0 + y_span * 0.08
-    reference_to = reference_from + plan.amplitude_scale_length
-    if not math.isfinite(reference_to) or reference_to > y1 - y_span * 0.08:
-        raise OriginDrawError(
-            "Signal stack frozen Y limits leave insufficient space for the amplitude ruler."
-        )
-    source_midpoint = plan.source_value_range[0] * 0.5 + plan.source_value_range[1] * 0.5
-    return {
-        "x_range": (x0, x1),
-        "y_range": (y0, y1),
-        "x_step": dx,
-        "y_step": dy,
-        "channel_label_x": x0 + left_reserve * 0.08,
-        "channel_label_y": tuple((label, source_midpoint + offset) for label, offset in plan.offsets),
-        "reference_x": time1 + right_reserve * 0.18,
-        "reference_label_x": time1 + right_reserve * 0.32,
-        "reference_y_from": reference_from,
-        "reference_y_to": reference_to,
-        "source_time_range": plan.time_range,
+    if (x0, x1) != plan.time_range:
+        raise OriginDrawError("Signal frozen X limits must equal the supplied time extent.")
+    try:
+        expected = build_signal_stack_layout(plan, spec.display_plan.figure_style, y_range=(y0, y1))
+    except ValueError as error:
+        raise OriginDrawError(str(error)) from error
+    if expected != spec.signal_stack_layout:
+        raise OriginDrawError("The frozen signal label/ruler layout differs from its physical contract.")
+    return {**asdict(expected), "x_step": dx, "y_step": dy, "source_time_range": plan.time_range}
+
+
+def _clear_fresh_layer_objects(layer: Any) -> dict[str, Any]:
+    """Clear inherited visible objects only on a new empty caller-owned layer."""
+    if layer.plot_list():
+        raise OriginDrawError("Template cleanup requires a fresh empty graph layer.")
+    names = [obj.GetName() for obj in layer.obj.GraphObjects if not obj.GetName().startswith("__")]
+    for name in names:
+        layer.remove_label(name)
+    remaining = [obj.GetName() for obj in layer.obj.GraphObjects if not obj.GetName().startswith("__")]
+    if remaining:
+        raise OriginDrawError("The new signal graph retained inherited template objects.")
+    return {"removed_inherited_objects": names, "remaining_visible_objects": remaining}
+
+
+def _verify_signal_ruler(op: Any, line: Any, layout: dict[str, Any], width: float) -> dict[str, Any]:
+    expected = {
+        "x1": layout["reference_x"],
+        "x2": layout["reference_x"],
+        "y1": layout["reference_y_from"],
+        "y2": layout["reference_y_to"],
     }
-
-
-def _signal_text(
-    op: Any,
-    layer: Any,
-    *,
-    name: str,
-    text: str,
-    x: float,
-    y: float,
-    size: float,
-    font_code: int,
-) -> Any:
-    from .scientific_renderer import _style_label
-
-    label = layer.add_label(text)
-    if label is None:
-        raise OriginDrawError(f"Origin could not create signal text {name}.")
-    label.name = name
-    label.set_int("attach", 2)
-    label.set_float("x1", x)
-    label.set_float("y1", y)
-    _style_label(label, size, bold=False)
-    label.set_int("font", font_code)
-    label.color = op.ocolor("#263D46")
-    return label
-
-
-def _verify_signal_text(label: Any, text: str, x: float, y: float) -> dict[str, Any]:
-    native_text = str(label.text)
-    expected_text = text.replace("\r\n", "\n")
-    state = {
-        "text": native_text.replace("\r\n", "\n"),
-        "native_text": native_text,
-        "attach": int(label.get_int("attach")),
-        "x": float(label.get_float("x1")),
-        "y": float(label.get_float("y1")),
-        "show": int(label.get_int("show")),
-    }
-    if state["text"] != expected_text or state["attach"] != 2 or state["show"] != 1:
-        raise OriginDrawError("Origin signal labels lost their source text or scale attachment.")
-    for key, expected in (("x", x), ("y", y)):
-        if not math.isclose(state[key], expected, rel_tol=1e-10, abs_tol=1e-12):
-            raise OriginDrawError("Origin signal label position differs from its frozen layout.")
+    state = {key: float(line.get_float(key)) for key in expected}
+    state.update(
+        {
+            "attach": line.get_int("attach"),
+            "width_pt": float(line.width),
+            "color": float(line.get_float("color")),
+        }
+    )
+    for key in ("arrowbeginwidth", "arrowbeginlength", "arrowendwidth", "arrowendlength"):
+        state[key] = float(line.get_float(key))
+        if state[key] != 0:
+            raise OriginDrawError("The amplitude ruler retained a nonzero arrowhead dimension.")
+    if (
+        state["attach"] != 2
+        or not math.isclose(state["width_pt"], width, abs_tol=0.05)
+        or state["color"] != op.ocolor(REFERENCE_COLOR)
+        or any(
+            not math.isclose(state[key], value, rel_tol=1e-10, abs_tol=1e-12)
+            for key, value in expected.items()
+        )
+    ):
+        raise OriginDrawError("The common amplitude ruler failed native geometry/style readback.")
+    state["amplitude_length"] = state["y2"] - state["y1"]
+    state["physical_height_cm"] = layout["reference_height_cm"]
     return state
 
 
@@ -233,7 +223,8 @@ def build_signal_stack_graph(
         _apply_page_layer,
         _clean_numeric_x_axis,
         _figure_style,
-        _origin_font_code,
+        _position_x_title,
+        _set_axis_titles,
         _title_geometry,
     )
     from .verify_utils import (
@@ -248,11 +239,13 @@ def build_signal_stack_graph(
     layout = _resolve_signal_stack_layout(preparation, plan)
     style = _figure_style(preparation)
     source_snapshot = frame.copy(deep=True)
-    source_sheet = evidence._source_sheet(op, frame, preparation)
+    imported_source = _signal_import_copy(frame, plan)
+    source_sheet = evidence._source_sheet(op, imported_source, preparation)
     graph = op.new_graph("Processed Signal Stack", template="Line")
-    if graph is None:
-        raise OriginDrawError("Origin could not create the signal stack graph.")
+    if graph is None or len(graph) != 1:
+        raise OriginDrawError("Origin must create one fresh single-layer signal graph.")
     layer = graph[0]
+    template_cleanup = _clear_fresh_layer_objects(layer)
     _apply_page_layer(op, graph, layer, dual_y=False, preparation=preparation)
     graph.set_int("background", op.ocolor("#FFFFFF"))
     colors = interpolate_hex_colors("#24485A", "#207E80", len(channels))
@@ -272,55 +265,77 @@ def build_signal_stack_graph(
         plots[label] = plot
         helpers.append((label, sheet, data))
 
-    reference_data = pd.DataFrame(
-        {
-            "ReferenceX": [layout["reference_x"]] * 2,
-            "ReferenceY": [layout["reference_y_from"], layout["reference_y_to"]],
-        }
-    )
-    reference_sheet = op.new_sheet("w", "Signal Amplitude Reference")
-    if reference_sheet is None:
-        raise OriginDrawError("Origin could not create the signal amplitude reference helper.")
-    reference_sheet.from_df(reference_data)
-    reference_sheet.cols_axis("xy")
-    reference = layer.add_plot(reference_sheet, "ReferenceY", "ReferenceX", type="l")
-    if reference is None:
-        raise OriginDrawError("Origin could not create the signal amplitude reference line.")
-    reference_width = min(1.5, float(style.plot_line_width_pt))
-    reference.color = REFERENCE_COLOR
-    reference.set_cmd(f"-c color({REFERENCE_COLOR})", f"-w {pt_to_origin_width_units(reference_width)}")
-
     graph.activate()
     layer.activate()
     layer.rescale()
     _clean_numeric_x_axis(op, graph)
+    for axis in ("x", "y"):
+        layer.set_int(f"{axis}.type", 1)
+        layer.set_int(f"{axis}.label.table", 0)
     evidence._style_evidence_axes(op, layer, preparation, x_numeric=True, y_numeric=False)
-    titles, title_geometry, text_state = evidence._style_titles(op, graph, layer, preparation)
+    titles = _set_axis_titles(op, layer, preparation)
     for name in ("legend", "Legend"):
         evidence._remove_label(layer, name)
-    font_code = _origin_font_code(op, style.font_family)
+    page_width, page_height = float(op.lt_float("page.width")), float(op.lt_float("page.height"))
+    y_title = titles["y_title"]
+    y_title.set_float("rotate", 90)
+    titles["x_title"].set_float("rotate", 0)
+    op.lt_exec("doc -uw;")
+    _position_x_title(op, titles["x_title"], style)
+    y_title.set_float("left", page_width * layout["y_title_x_percent"] / 100 - y_title.get_float("width") / 2)
+    y_title.set_float(
+        "top", page_height * layout["y_title_y_percent"] / 100 - y_title.get_float("height") / 2
+    )
     text_objects: dict[str, Any] = {}
-    expected_text: dict[str, tuple[str, float, float]] = {}
-    for index, (label, y) in enumerate(layout["channel_label_y"], start=1):
+    text_readback = {}
+    for index, (label, right, center_y) in enumerate(layout["channel_labels"], start=1):
         name = f"SignalChannelLabel{index}"
-        x = layout["channel_label_x"]
-        text_objects[name] = _signal_text(
-            op, layer, name=name, text=label, x=x, y=y, size=style.legend_size_pt, font_code=font_code
+        obj, report = evidence._add_shap_page_label(
+            op,
+            graph,
+            layer,
+            name=name,
+            text=label,
+            center_x_percent=right - 2,
+            center_y_percent=center_y,
+            size_pt=style.legend_size_pt,
+            font_family=style.font_family,
+            bold=False,
+            color="#263D46",
         )
-        expected_text[name] = (label, x, y)
-    reference_text = f"Shared scale\n{plan.amplitude_scale_length:g} {plan.value_unit}\n(display offsets)"
-    reference_text_y = (layout["reference_y_from"] + layout["reference_y_to"]) * 0.5
-    text_objects["SignalAmplitudeScale"] = _signal_text(
+        obj.set_float("left", page_width * right / 100 - obj.get_float("width"))
+        op.lt_exec("doc -uw;")
+        left = float(obj.get_float("left"))
+        if left < page_width * 1.8 / style.page_width_cm:
+            raise OriginDrawError("A channel label overlaps the reserved amplitude-title column.")
+        if not math.isclose((left + obj.get_float("width")) / page_width * 100, right, abs_tol=0.03):
+            raise OriginDrawError("A channel label lost its right-aligned physical position.")
+        report[f"{name}.left"] = left
+        text_objects[name], text_readback[name] = obj, report
+    obj, report = evidence._add_shap_page_label(
         op,
+        graph,
         layer,
         name="SignalAmplitudeScale",
-        text=reference_text,
-        x=layout["reference_label_x"],
-        y=reference_text_y,
-        size=style.legend_size_pt,
-        font_code=font_code,
+        text=layout["reference_text"],
+        center_x_percent=layout["reference_text_x_percent"],
+        center_y_percent=layout["reference_text_y_percent"],
+        size_pt=style.legend_size_pt,
+        font_family=style.font_family,
+        bold=False,
+        color="#263D46",
     )
-    expected_text["SignalAmplitudeScale"] = (reference_text, layout["reference_label_x"], reference_text_y)
+    text_objects["SignalAmplitudeScale"], text_readback["SignalAmplitudeScale"] = obj, report
+    reference = layer.add_line(
+        layout["reference_x"], layout["reference_y_from"], layout["reference_x"], layout["reference_y_to"]
+    )
+    if reference is None:
+        raise OriginDrawError("Origin could not create the native amplitude ruler object.")
+    reference.name = "SignalAmplitudeRuler"
+    reference_width = min(1.5, float(style.plot_line_width_pt))
+    reference.width, reference.color = reference_width, REFERENCE_COLOR
+    for key in ("arrowbeginwidth", "arrowbeginlength", "arrowendwidth", "arrowendlength"):
+        reference.set_float(key, 0)
     # Keep the already frozen axes: reserves belong to the plan, not a runtime
     # rescale. Restore numeric X and hidden numeric Y after all text refreshes.
     for axis in ("x", "y"):
@@ -332,16 +347,15 @@ def build_signal_stack_graph(
     op.lt_exec("doc -uw;")
     axis_state = _verify_signal_axes(op, layer, style, layout)
     geometry = verify_page_and_layer(graph, layer, origin=op, style=style)
-    text_readback = {
-        name: _verify_signal_text(text_objects[name], *expected) for name, expected in expected_text.items()
-    }
+    reference_state = _verify_signal_ruler(op, reference, layout, reference_width)
     label_geometry = _title_geometry(op, text_objects)
     try:
         pd.testing.assert_frame_equal(frame, source_snapshot, check_exact=True)
         pd.testing.assert_frame_equal(
             source_sheet.to_df().reset_index(drop=True),
-            frame.reset_index(drop=True),
+            imported_source.reset_index(drop=True),
             check_dtype=False,
+            check_categorical=False,
             check_exact=True,
         )
     except AssertionError as error:
@@ -352,27 +366,18 @@ def build_signal_stack_graph(
         label: _verify_signal_helper_arrays(sheet.to_df(), expected, label, dict(plan.offsets)[label])
         for label, sheet, expected in helpers
     }
-    try:
-        reference_actual = reference_sheet.to_df().loc[:, reference_data.columns].to_numpy(dtype=float)
-        if not np.array_equal(reference_actual, reference_data.to_numpy(dtype=float)):
-            raise ValueError("Reference coordinates changed.")
-        reference_length = float(reference_actual[1, 1] - reference_actual[0, 1])
-        if not math.isclose(reference_length, plan.amplitude_scale_length, rel_tol=1e-12, abs_tol=1e-12):
-            raise ValueError("Reference length changed.")
-    except (KeyError, TypeError, ValueError, IndexError) as error:
-        raise OriginDrawError(
-            "Origin signal amplitude ruler does not match its display-unit length."
-        ) from error
+    bindings = [
+        evidence._read_shap_plot_binding(
+            op, layer, f"[{graph.name}]1!{index}", sheet, "SourceTime", "PlotY", prefix=f"signal{index}"
+        )
+        for index, (_label, sheet, _expected) in enumerate(helpers, start=1)
+    ]
     try:
         color_state = {
             label: verify_plot_color(op, plots[label], color, variable_name=f"__signal_color_{index}")
             for index, (label, color) in enumerate(zip(plan.channel_order, colors, strict=True))
         }
-        reference_color = verify_plot_color(
-            op, reference, REFERENCE_COLOR, variable_name="__signal_reference_color"
-        )
         widths = verify_plot_line_widths(op, plots, style.plot_line_width_pt)
-        reference_widths = verify_plot_line_widths(op, {"amplitude_reference": reference}, reference_width)
         all_labels = {**titles, **text_objects}
         fonts = verify_text_fonts(op, all_labels, style.font_family)
         sizes = verify_text_sizes(
@@ -384,19 +389,17 @@ def build_signal_stack_graph(
         )
     except RuntimeError as error:
         raise OriginDrawError(str(error)) from error
-    native_pids = [int(layer.get_int(f"plot{index}.pid")) for index in range(1, len(channels) + 2)]
-    if native_pids != [200] * (len(channels) + 1):
-        raise OriginDrawError(
-            "Origin signal graph must retain all channel and amplitude-reference native Line plots."
-        )
+    native_pids = [int(layer.get_int(f"plot{index}.pid")) for index in range(1, len(channels) + 1)]
+    if native_pids != [200] * len(channels):
+        raise OriginDrawError("Origin signal graph must retain exactly the supplied channel Line plots.")
     return graph, {
         **geometry,
         "origin_axis_state": axis_state,
-        "origin_text_state": {**text_state, **title_geometry, **label_geometry, **fonts, **sizes},
+        "origin_text_state": {**_title_geometry(op, titles), **label_geometry, **fonts, **sizes},
         "origin_plot_state": {
-            "colors": {"channels": color_state, "amplitude_reference": reference_color},
+            "colors": {"channels": color_state},
             "channel_widths": widths,
-            "reference_width": reference_widths,
+            "amplitude_ruler": reference_state,
         },
         "origin_signal_stack_readback": {
             "source_observation_count": len(frame),
@@ -409,15 +412,25 @@ def build_signal_stack_graph(
             "display_transform": plan.display_transform,
             "common_amplitude_units": plan.value_unit,
             "amplitude_reference_kind": plan.amplitude_scale_kind,
-            "amplitude_reference_value": reference_length,
+            "amplitude_reference_value": reference_state["amplitude_length"],
             "channel_helpers": helpers_readback,
+            "source_sheet_range": source_sheet.lt_range(),
+            "channel_helper_sheets": {label: sheet.lt_range() for label, sheet, _data in helpers},
             "layout": layout,
             "direct_labels": text_readback,
+            "plot_bindings": bindings,
+            "template_cleanup": template_cleanup,
             "native_plot_types": native_pids,
             "source_dataframe_unchanged": True,
             "source_table_values_roundtrip_checked": True,
+            "source_category_encoding": "original_channel_labels_as_text",
+            "source_text_columns": [
+                str(column)
+                for column in imported_source
+                if isinstance(imported_source[column].dtype, pd.CategoricalDtype)
+            ],
         },
-        "origin_helper_columns": ["SourceTime", "SourceAmplitude", "PlotY", "ReferenceX", "ReferenceY"],
+        "origin_helper_columns": ["SourceTime", "SourceAmplitude", "PlotY"],
         "origin_plot_data_columns": [plan.time_column, plan.value_column],
         "title_objects": list(titles),
     }

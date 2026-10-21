@@ -4,7 +4,6 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 import numpy as np
 import pandas as pd
@@ -19,7 +18,9 @@ from origin_sciplot.origin_backend.signal_stack_renderer import (  # noqa: E402
     _resolve_signal_stack_layout,
     _verify_signal_helper_arrays,
 )
+from origin_sciplot.scientific_visual import resolve_signal_stack_style  # noqa: E402
 from origin_sciplot.signal_stack import build_signal_stack_plan  # noqa: E402
+from origin_sciplot.signal_stack_layout import build_signal_stack_layout  # noqa: E402
 
 
 def _source():
@@ -44,13 +45,17 @@ def _source():
 
 
 def _preparation():
+    _, plan = _source()
+    style = resolve_signal_stack_style(plan.channel_order, "Time (s)", "Amplitude (µV)", "1 µV")
     return SimpleNamespace(
         plot_spec=SimpleNamespace(
             x_scale="linear",
             y_scale="linear",
             x_title="Time (s)",
             y_title="Amplitude (µV)",
-            axis_plan=SimpleNamespace(x_from=-0.5, x_to=2.6, x_step=0.5, y_from=-3.0, y_to=8.0, y_step=1.0),
+            axis_plan=SimpleNamespace(x_from=0.0, x_to=2.0, x_step=0.5, y_from=-3.0, y_to=8.0, y_step=1.0),
+            display_plan=SimpleNamespace(figure_style=style),
+            signal_stack_layout=build_signal_stack_layout(plan, style, y_range=(-3.0, 8.0)),
         )
     )
 
@@ -104,22 +109,25 @@ def test_layout_reserves_frozen_space_and_ruler_has_exact_unit_length():
     prep = _preparation()
     layout = _resolve_signal_stack_layout(prep, plan)
 
-    assert layout["x_range"] == (-0.5, 2.6)
+    assert layout["x_range"] == (0.0, 2.0)
     assert layout["y_range"] == (-3.0, 8.0)
-    assert -0.5 < layout["channel_label_x"] < plan.time_range[0]
-    assert plan.time_range[1] < layout["reference_x"] < layout["reference_label_x"] < 2.6
+    assert all(
+        right < prep.plot_spec.display_plan.figure_style.layer_left_percent
+        for _, right, _ in layout["channel_labels"]
+    )
+    assert layout["reference_x"] > plan.time_range[1]
     assert layout["reference_y_to"] - layout["reference_y_from"] == plan.amplitude_scale_length
-    assert layout["channel_label_y"] == (("Cz", 5.0), ("Pz", 0.0))
-    assert prep.plot_spec.axis_plan.x_from == -0.5
-    assert prep.plot_spec.axis_plan.x_to == 2.6
+    assert [label for label, _, _ in layout["channel_labels"]] == ["Cz", "Pz"]
+    assert prep.plot_spec.axis_plan.x_from == 0.0
+    assert prep.plot_spec.axis_plan.x_to == 2.0
 
 
 @pytest.mark.parametrize(
     "property_name,value",
     [
-        ("x_from", 0.0),
+        ("x_from", -0.5),
         ("x_from", -0.01),
-        ("x_to", 2.0),
+        ("x_to", 2.6),
         ("x_to", 2.01),
         ("y_from", -1.0),
         ("y_to", 6.0),
@@ -146,6 +154,7 @@ def test_constant_single_channel_requires_frozen_space_for_its_reference_ruler()
         value_unit="µV",
     )
     prep = _preparation()
+    prep.plot_spec.axis_plan.x_to = 1.0
     prep.plot_spec.axis_plan.y_from, prep.plot_spec.axis_plan.y_to = plan.display_y_range
     with pytest.raises(OriginDrawError, match="ruler"):
         _resolve_signal_stack_layout(prep, plan)
@@ -163,146 +172,75 @@ def test_requires_linear_axes_and_explicit_source_units_in_frozen_titles(propert
         _resolve_signal_stack_layout(prep, plan)
 
 
-class _EditableText:
-    def __init__(self, text, *, size=18.0):
-        self.text = text
-        self.properties = {"font": 72, "fsize": size, "show": 1}
+def test_new_layer_cleanup_rejects_populated_layers_and_removes_only_visible_objects():
+    from origin_sciplot.origin_backend.signal_stack_renderer import _clear_fresh_layer_objects
 
-    def set_int(self, key, value):
-        self.properties[key] = value
+    names = ["XB", "YL", "Old annotation", "__FRAMESRCDATAINFOS"]
 
-    def set_float(self, key, value):
-        self.properties[key] = value
+    class Objects:
+        def __iter__(self):
+            return iter([SimpleNamespace(GetName=lambda name=name: name) for name in names])
 
-    def get_int(self, key):
-        return int(self.properties[key])
-
-    def get_float(self, key):
-        return float(self.properties[key])
-
-
-def test_native_builder_preserves_source_restores_frozen_axes_and_draws_common_unit_ruler(monkeypatch):
-    from origin_sciplot.origin_backend import evidence_renderer, scientific_renderer, verify_utils
-    from origin_sciplot.origin_backend.signal_stack_renderer import build_signal_stack_graph
-
-    frame, plan = _source()
-    original = frame.copy(deep=True)
-    prep = _preparation()
-    prep.template_id = "signal_stack"
-    style = SimpleNamespace(
-        plot_line_width_pt=1.8,
-        tick_label_size_pt=15.0,
-        frame_line_width_pt=1.3,
-        font_family="Arial",
-        legend_size_pt=15.0,
-        axis_title_size_pt=18.0,
+    layer = SimpleNamespace(
+        obj=SimpleNamespace(GraphObjects=Objects()),
+        plot_list=lambda: [],
+        remove_label=lambda name: names.remove(name),
     )
-    written, state, text_objects, native_plots = {}, {}, [], []
-    op, graph, layer = (MagicMock() for _ in range(3))
-    op.new_graph.return_value = graph
-    graph.__getitem__.return_value = layer
-    op.lt_float.return_value = 72.0
-    op.ocolor.return_value = 1
-
-    def new_sheet(_kind, name):
-        sheet = MagicMock()
-        sheet.from_df.side_effect = lambda data: written.__setitem__(name, data.copy(deep=True))
-        sheet.to_df.side_effect = lambda: written[name].copy(deep=True)
-        return sheet
-
-    def add_plot(*args, **kwargs):
-        assert kwargs["type"] == "l"
-        plot = MagicMock()
-        native_plots.append(plot)
-        return plot
-
-    def axis(name):
-        handle = MagicMock()
-        handle.set_limits.side_effect = lambda start, stop, step: state.update(
-            {f"{name}.from": start, f"{name}.to": stop, f"{name}.inc": step}
-        )
-        return handle
-
-    def style_axes(*_args, **_kwargs):
-        for name in ("x", "y"):
-            for key, value in {
-                "from": 0,
-                "to": 1,
-                "inc": 1,
-                "type": 1,
-                "showAxes": 3,
-                "ticks": 1,
-                "minorTicks": 1,
-                "showLabels": 1,
-                "label.table": 0,
-                "label.type": 0,
-                "label.pt": 15,
-                "label.font": 72,
-                "label.rotate": 0,
-                "thickness": 1.3,
-                "tickthickness": 1.3,
-                "atZero": 0,
-            }.items():
-                state[f"{name}.{key}"] = value
-
-    def style_titles(*_args):
-        state.update({"x.from": 0, "x.to": 1, "y.from": 0, "y.to": 1})
-        return {"x_title": _EditableText("Time (s)"), "y_title": _EditableText("Amplitude (µV)")}, {}, {}
-
-    def add_label(text):
-        label = _EditableText(text)
-        text_objects.append(label)
-        return label
-
-    op.new_sheet.side_effect = new_sheet
-    layer.add_plot.side_effect = add_plot
-    layer.add_label.side_effect = add_label
-    layer.label.return_value = None
-    layer.axis.side_effect = axis
-    layer.set_int.side_effect = state.__setitem__
-    layer.get_int.side_effect = lambda key: 200 if key.endswith(".pid") else int(state[key])
-    layer.get_float.side_effect = lambda key: float(state[key])
-    monkeypatch.setattr(scientific_renderer, "_figure_style", lambda _prep: style)
-    monkeypatch.setattr(scientific_renderer, "_apply_page_layer", lambda *_args, **_kwargs: {})
-    monkeypatch.setattr(scientific_renderer, "_clean_numeric_x_axis", lambda *_args: None)
-    monkeypatch.setattr(scientific_renderer, "_title_geometry", lambda *_args: {})
-    monkeypatch.setattr(evidence_renderer, "_style_evidence_axes", style_axes)
-    monkeypatch.setattr(evidence_renderer, "_style_titles", style_titles)
-    monkeypatch.setattr(verify_utils, "verify_page_and_layer", lambda *_args, **_kwargs: {})
-    monkeypatch.setattr(verify_utils, "verify_plot_color", lambda *_args, **_kwargs: {})
-    monkeypatch.setattr(verify_utils, "verify_plot_line_widths", lambda *_args, **_kwargs: {})
-
-    result, report = build_signal_stack_graph(op, frame, prep, plan)
-
-    assert result is graph
-    pd.testing.assert_frame_equal(frame, original)
-    pd.testing.assert_frame_equal(written["SIGNAL_STACK Source"], original)
-    assert (state["x.from"], state["x.to"]) == (-0.5, 2.6)
-    assert (state["y.from"], state["y.to"]) == (-3.0, 8.0)
-    assert state["x.showLabels"] == 1
-    assert state["y.showLabels"] == state["y.ticks"] == state["y.minorTicks"] == 0
-    assert state["x.label.font"] == state["y.label.font"] == 72
-    assert len(native_plots) == 3
-    assert [label.text for label in text_objects[:2]] == list(plan.channel_order)
-    assert "Shared scale" in text_objects[-1].text and "1 µV" in text_objects[-1].text
-    readback = report["origin_signal_stack_readback"]
-    assert readback["source_observation_count"] == 5
-    assert readback["channel_offsets"] == plan.offsets
-    assert readback["amplitude_reference_value"] == 1.0
-    assert readback["native_plot_types"] == [200, 200, 200]
-    assert all(label.get_int("attach") == 2 for label in text_objects)
-    assert all(label.get_float("font") == 72 for label in text_objects)
+    result = _clear_fresh_layer_objects(layer)
+    assert result["remaining_visible_objects"] == []
+    assert names == ["__FRAMESRCDATAINFOS"]
+    layer.plot_list = lambda: [object()]
+    with pytest.raises(OriginDrawError, match="fresh empty"):
+        _clear_fresh_layer_objects(layer)
 
 
-def test_native_windows_line_endings_preserve_exact_multiline_label_content():
-    from origin_sciplot.origin_backend.signal_stack_renderer import _verify_signal_text
+def test_amplitude_ruler_rejects_changed_coordinates_or_nonzero_arrowhead():
+    from origin_sciplot.origin_backend.signal_stack_renderer import _verify_signal_ruler
 
-    values = {"attach": 2, "show": 1, "x1": 4.4, "y1": 5.0}
-    label = SimpleNamespace(
-        text="Shared scale\r\n10 uV", get_int=values.__getitem__, get_float=values.__getitem__
+    layout = dict(reference_x=2.1, reference_y_from=-1.0, reference_y_to=0.0, reference_height_cm=1.2)
+    values = dict(
+        x1=2.1,
+        x2=2.1,
+        y1=-1.0,
+        y2=0.0,
+        attach=2,
+        color=7,
+        arrowbeginwidth=0.0,
+        arrowbeginlength=0.0,
+        arrowendwidth=0.0,
+        arrowendlength=0.0,
     )
-    report = _verify_signal_text(label, "Shared scale\n10 uV", 4.4, 5.0)
-    assert report["text"] == "Shared scale\n10 uV"
-    label.text = "Shared scale\r\n20 uV"
-    with pytest.raises(OriginDrawError, match="source text"):
-        _verify_signal_text(label, "Shared scale\n10 uV", 4.4, 5.0)
+    line = SimpleNamespace(width=1.4, get_float=values.__getitem__, get_int=values.__getitem__)
+    op = SimpleNamespace(ocolor=lambda _color: 7)
+    result = _verify_signal_ruler(op, line, layout, 1.4)
+    assert result["amplitude_length"] == 1.0
+    values["y2"] = 0.5
+    with pytest.raises(OriginDrawError, match="readback"):
+        _verify_signal_ruler(op, line, layout, 1.4)
+    values["y2"] = 0.0
+    values["arrowendwidth"] = 4
+    with pytest.raises(OriginDrawError, match="arrowhead"):
+        _verify_signal_ruler(op, line, layout, 1.4)
+
+
+def test_origin_import_copy_preserves_numeric_looking_channel_labels_as_text():
+    from origin_sciplot.origin_backend.signal_stack_renderer import _signal_import_copy
+
+    source = pd.DataFrame(
+        {"Time": [0.0, 1.0, 0.0, 1.0], "Channel": ["01", "01", "02", "02"], "Value": [1.0, 2.0, 3.0, 4.0]}
+    )
+    before = source.copy(deep=True)
+    plan = build_signal_stack_plan(
+        source,
+        time_column="Time",
+        value_column="Value",
+        channel_column="Channel",
+        time_unit="s",
+        value_unit="uV",
+    )
+    imported = _signal_import_copy(source, plan)
+    assert str(imported.Channel.dtype) == "category"
+    assert imported.Channel.tolist() == ["01", "01", "02", "02"]
+    assert list(imported.Channel.cat.categories) == ["01", "02"]
+    np.testing.assert_array_equal(imported[["Time", "Value"]], source[["Time", "Value"]])
+    pd.testing.assert_frame_equal(source, before)

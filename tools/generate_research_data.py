@@ -43,8 +43,9 @@ def flim_phasor_data() -> pd.DataFrame:
 def signal_stack_data() -> pd.DataFrame:
     """Return eight synthetic channels on a 1001-point, 0-4 second time grid.
 
-    Designed oscillations span 8-14 Hz and share a brief artificial event near
-    1.53 seconds. Small locally seeded nonperiodic noise provides texture. These
+    Designed carriers span 8-14 Hz, use a changing envelope and share a brief
+    artificial event near 1.53 seconds. Seeded correlated and white variation
+    provides texture; it is authored noise, not filtered measurement data. These
     are not real scalp recordings, electrode locations, or detected physiology.
     """
     rng = np.random.default_rng(3032)
@@ -57,11 +58,17 @@ def signal_stack_data() -> pd.DataFrame:
     parts = []
     for channel, frequency in enumerate(frequencies):
         phase = channel * 0.36
+        envelope = (0.45 + 0.65 * np.exp(-0.5 * ((time - 0.8) / 0.23) ** 2)
+                    + 1.10 * np.exp(-0.5 * ((time - 2.82) / 0.33) ** 2))
+        innovations = rng.normal(0.0, 1.0, len(time))
+        authored_noise = np.zeros_like(time)
+        for index in range(1, len(time)):
+            authored_noise[index] = 0.84 * authored_noise[index - 1] + innovations[index]
         signal = (
-            (2.7 + 0.12 * channel) * np.sin(2.0 * np.pi * frequency * time + phase)
+            (2.7 + 0.12 * channel) * envelope * np.sin(2.0 * np.pi * frequency * time + phase)
             + 0.6 * np.sin(2.0 * np.pi * 1.7 * time + phase)
             + (0.85 + 0.04 * channel) * common_event
-            + rng.normal(0.0, 0.22, len(time))
+            + 0.30 * authored_noise + rng.normal(0.0, 0.18, len(time))
         )
         parts.append(pd.DataFrame({
             "Time (s)": time,

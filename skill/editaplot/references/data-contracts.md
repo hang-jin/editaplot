@@ -10,7 +10,7 @@
 
 Keep the original file read-only.
 
-These contracts cover the 43 registered public plotting routes. The data contract is independent
+These contracts cover the 44 registered public plotting routes. The data contract is independent
 of the installed Origin version. After semantic confirmation and plan creation, run the isolated
 `origin-smoke` before formal rendering. Rendering starts a dedicated EditaPlot-owned Origin
 instance and then checks the selected template against the detected host. Target Origin/OriginPro
@@ -23,6 +23,21 @@ place the RenderPlan, OPJU, PNG, PDF, TIF, readback, validation, and provenance 
 destination only after an explicit user request.
 
 ## Recognized layouts
+
+### Multichannel signal table
+
+Use `Time (s),Channel,Amplitude (uV)` or an explicitly mapped fluorescence table such as
+`Time (s),ROI,Intensity (a.u.)`. Require 1–16 named channels, at least two finite observations per
+channel, and strictly increasing source times within each channel. Different sampling times are
+retained. The route performs no filtering, alignment, interpolation, centering or normalization.
+Typed boolean/date cells cannot become measurements through numeric coercion.
+
+Confirm each channel's additive display offset and the independently declared unit-length ruler;
+neither is an estimate or error bar. The source table is unchanged. Source channel labels are
+stored as text in the editable workbook, preserving identifiers such as `01`. Use actual text
+cells when leading zeros are meaningful in Excel. Channel names and the ruler occupy separate
+page columns, without extending the data time range. Long names, channel count and explicit axis
+titles determine physical geometry while font sizes remain fixed.
 
 ### Precomputed time–frequency field
 

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 450,
+  "file_count": 459,
   "files": [
     {
       "path": "LICENSE",
@@ -110,8 +110,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
-      "size_bytes": 149357,
-      "sha256": "7646d462cb51b39fb723d079712099084545b3227d040cbefaa1b7e6cc3dad37"
+      "size_bytes": 149720,
+      "sha256": "f657e8c6f71acd118dac314fffc9a6867493571a053900631427431cfa367e5a"
     },
     {
       "path": "src/origin_sciplot/origin_backend/execution_context.py",
@@ -165,8 +165,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/signal_stack_renderer.py",
-      "size_bytes": 19123,
-      "sha256": "e37d5018b2a8ca2063f45f5764db944c13c6e41c6b1dc4b96e50507d7423e2c5"
+      "size_bytes": 19982,
+      "sha256": "6692b19c90e7ff06ae2380160103bf3b694e766b4875d00ca0227afb3cf3cb89"
     },
     {
       "path": "src/origin_sciplot/origin_backend/smoke_test.py",
@@ -175,8 +175,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/template_capabilities.py",
-      "size_bytes": 15753,
-      "sha256": "9efb753de122ae877717815b2aaf682ae867c7674475e94a1151746e6eca94f1"
+      "size_bytes": 15836,
+      "sha256": "4010dfa0dbb97b6c42ed65f1af6806a7a98c1f4c1a40ca2d4571f925e95b1f2d"
     },
     {
       "path": "src/origin_sciplot/origin_backend/time_frequency_renderer.py",
@@ -215,8 +215,8 @@
     },
     {
       "path": "src/origin_sciplot/reference_adaptation.py",
-      "size_bytes": 29711,
-      "sha256": "ac94358daed06b053788b375cbdad6d64cd8d25ea7789dddd2d10cf3dcbab10d"
+      "size_bytes": 29799,
+      "sha256": "ab0133812cef0379c1da159fc0867ba793ba8ec542981776b7ba83d1fc4ef1fd"
     },
     {
       "path": "src/origin_sciplot/reference_figure.py",
@@ -245,28 +245,28 @@
     },
     {
       "path": "src/origin_sciplot/scientific_preview.py",
-      "size_bytes": 93403,
-      "sha256": "93c870c5f3720fae18d8cbae17793dc6c2cc71459342a4001dec6397dcba9aca"
+      "size_bytes": 95446,
+      "sha256": "790b15cf983ad04fd3a8108e834abf51e730d4399e4382af973a8096542cabb2"
     },
     {
       "path": "src/origin_sciplot/scientific_visual.py",
-      "size_bytes": 27167,
-      "sha256": "48b37515de3d63db3733181d8697f44d212c29489df9ff55120a913245699a58"
+      "size_bytes": 28385,
+      "sha256": "f056a3f8d89a83145fcd0c8be56ee0071d00760f882d918108ee4ec6290a6c35"
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 234555,
-      "sha256": "bd4a718d57a2cba002d9453c0227e8bc3320ed6b1fca8c6c6f5bd6a642a90b1c"
+      "size_bytes": 239842,
+      "sha256": "ac224ea7767288a08079f5bd47a63522f31a297abe6361ca2242cdbd2138ae26"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
-      "size_bytes": 30912,
-      "sha256": "32ff3bd67e297b2a90117dd7af912a870f6a816473092c2f0401b8f676152ca3"
+      "size_bytes": 32777,
+      "sha256": "d6fbdafe31938fea8d49be34e090d0cc75002ff8027b39085ec22e48a88d9e64"
     },
     {
       "path": "src/origin_sciplot/semantic_contract.py",
-      "size_bytes": 46596,
-      "sha256": "df142fa692857e504eed35a95902005a2d28e434550c2c7602f5ac3bd2da838d"
+      "size_bytes": 47392,
+      "sha256": "5ecc6e996d1e430c684e889022785d7b096d0fadd48507873db1f8d6336f759f"
     },
     {
       "path": "src/origin_sciplot/shap_composite.py",
@@ -285,8 +285,13 @@
     },
     {
       "path": "src/origin_sciplot/signal_stack.py",
-      "size_bytes": 8320,
-      "sha256": "9428cd7d48f88ba2ca3f1eb0e836ef2e9c66cf70db37296fe76e7ef7f15971e6"
+      "size_bytes": 8328,
+      "sha256": "bfe8df4584f6d7c795bf06703cb0a10720e42e14bd0d017a6be2a61348df4925"
+    },
+    {
+      "path": "src/origin_sciplot/signal_stack_layout.py",
+      "size_bytes": 3019,
+      "sha256": "6e4fb914889d30baae0c45f8e80d409e6ba35d2edb671603b0980d5d05d8672e"
     },
     {
       "path": "src/origin_sciplot/spectral_density.py",
@@ -300,8 +305,8 @@
     },
     {
       "path": "src/origin_sciplot/template_service.py",
-      "size_bytes": 26334,
-      "sha256": "394ec34478b581663f76a3e287d11c7e488d44864edd0d70a52216c184fcdbfc"
+      "size_bytes": 26854,
+      "sha256": "9e8c7b37d79fa07e66988696e50473a1e1a5f528525c653c9d5a1005e5bfe9cf"
     },
     {
       "path": "src/origin_sciplot/time_frequency.py",
@@ -1732,6 +1737,46 @@
       "path": "templates/shap_summary/visual_contract.md",
       "size_bytes": 1177,
       "sha256": "272c64fb9ab8ba6e89662d99ca40ff481f1f75749fd0d00716649fa096d66c31"
+    },
+    {
+      "path": "templates/signal_stack/data_contract.md",
+      "size_bytes": 944,
+      "sha256": "4129277d1aa567148a97e386282c1f13be758fe3e226fff448725aa01d8beeb6"
+    },
+    {
+      "path": "templates/signal_stack/data_template.csv",
+      "size_bytes": 32,
+      "sha256": "1b55a776000949b04c10fb0ed2a27f1a7856f2dd3b433dfe5eb9524e9c6e9f29"
+    },
+    {
+      "path": "templates/signal_stack/example_standard.csv",
+      "size_bytes": 292235,
+      "sha256": "610dcd347f5893ece3e27b23be1ab75c40f243bb6ecc39dd1589849df54d5fbb"
+    },
+    {
+      "path": "templates/signal_stack/manifest.yaml",
+      "size_bytes": 1569,
+      "sha256": "1c3058c866f48b8e012b6ab8c88025b6dc64ab72fa8069e35d7d0509008aa85d"
+    },
+    {
+      "path": "templates/signal_stack/runner.py",
+      "size_bytes": 385,
+      "sha256": "06df4fad1d7dafdda474e5b9ced78a5f95de407dd144b0abc9a96d27997606cc"
+    },
+    {
+      "path": "templates/signal_stack/schema.json",
+      "size_bytes": 448,
+      "sha256": "613ba2f379fe15d2e341cba8898504f01447f1c736e4ee6e249b581f596fa91f"
+    },
+    {
+      "path": "templates/signal_stack/service.py",
+      "size_bytes": 196,
+      "sha256": "6c036b9afaf60f1ea68b7b32c57dfd24de677af219c82440968df7b73721cb5f"
+    },
+    {
+      "path": "templates/signal_stack/visual_contract.md",
+      "size_bytes": 1067,
+      "sha256": "f6cd4b4de7b2b0cd2632a6357a03278d321b17b5fd5c9ccffa9ca6007523d132"
     },
     {
       "path": "templates/stacked_bar/data_contract.md",

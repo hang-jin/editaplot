@@ -74,6 +74,15 @@ def test_extreme_aspect_fails_without_shrinking_fonts(tmp_path):
         prepare_scientific(path, "flim_phasor")
 
 
+def test_boolean_excel_phasor_coordinates_are_rejected_before_coercion(tmp_path):
+    import pandas as pd
+
+    path = tmp_path / "boolean_phasor.xlsx"
+    pd.DataFrame({"G": [True, False], "S": [0.2, 0.3], "Group": ["A", "A"]}).to_excel(path, index=False)
+    with pytest.raises(ScientificWorkflowError, match="bool"):
+        prepare_scientific(path, "flim_phasor")
+
+
 def test_preview_keeps_all_points_and_semicircle_metric(source):
     from origin_sciplot.scientific_preview import _build_scientific_preview_figure
     from origin_sciplot.scientific_workflow import load_scientific_frame

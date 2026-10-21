@@ -1,6 +1,6 @@
 # Origin 2024b figures generated and reviewed on a live installation
 
-I selected 43 public examples from 52 retained verification assets.
+I selected 44 public examples from 53 retained verification assets.
 Use the question and minimum-table guide below to choose a direction before adapting a route
 to your own data. Historical verification images do not occupy duplicate gallery slots;
 the heatmap section displays only the live Origin-rendered 30×30 dense case.
@@ -56,6 +56,7 @@ or clinical claim. The public source tree retains only sanitized PNGs.
 <img src="../assets/gallery/sankey-flow.png" alt="four-stage Sankey flow" width="31%" />
 <img src="../assets/gallery/scatter-dense.png" alt="dense scatter relationship" width="31%" />
 <img src="../assets/gallery/shap-dashboard-blue-red.png" alt="SHAP importance nested doughnut and beeswarm (blue_red)" width="31%" />
+<img src="../assets/gallery/signal-stack.png" alt="multichannel processed signal traces" width="31%" />
 <img src="../assets/gallery/stacked-composition.png" alt="absolute stacked composition" width="31%" />
 <img src="../assets/gallery/time-frequency.png" alt="precomputed time frequency matrix" width="31%" />
 <img src="../assets/gallery/trajectory3d.png" alt="multi-position 3D Nyquist trajectory" width="31%" />

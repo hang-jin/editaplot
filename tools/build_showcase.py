@@ -35,6 +35,12 @@ class ShowcaseCase:
 
 CASES = (
     ShowcaseCase(
+        "signal-stack", "signal_stack", "signal_stack.csv",
+        "Synthetic channels retain all observations and common amplitude units with explicit display offsets.",
+        "signal comparison", "multichannel processed signal traces",
+        title_zh="多通道信号与共同幅度尺",
+    ),
+    ShowcaseCase(
         "time-frequency", "time_frequency", "time_frequency.csv",
         "Synthetic supplied time-frequency values show two illustrative regions without signal processing.",
         "time-frequency distribution", "precomputed time frequency matrix",

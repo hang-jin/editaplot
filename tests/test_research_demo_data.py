@@ -75,6 +75,14 @@ def test_signal_example_has_eight_increasing_time_grids_and_a_common_short_event
     assert sum(len(rows) for _, rows in plan.channel_rows) == len(frame)
 
 
+def test_signal_example_includes_time_varying_activity_not_stationary_sine_rows() -> None:
+    frame = signal_stack_data()
+    for _, rows in frame.groupby("Channel", sort=False):
+        quiet = rows.loc[rows["Time (s)"].between(0.05, 0.35), "Amplitude (uV)"].std()
+        burst = rows.loc[rows["Time (s)"].between(2.65, 3.05), "Amplitude (uV)"].std()
+        assert burst > 1.5 * quiet
+
+
 def test_event_responses_have_declared_asymmetric_illustrative_intervals_not_ci() -> None:
     frame = event_response_data()
     assert list(frame.columns) == ["Time (s)", "Condition", "Mean (uV)", "Lower (uV)", "Upper (uV)"]

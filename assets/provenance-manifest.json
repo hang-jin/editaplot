@@ -11,14 +11,14 @@
   },
   "research_fixture_generator": {
     "path": "tools/generate_research_data.py",
-    "sha256": "9d80ccd16bfa09e93bf43cd5165e4443aa63120c73ffca14d0bc0c179a7a3006"
+    "sha256": "949eec4e39c5fe2d65b7292c9050e81695e2aad8c69ac5b9092a5295fa954823"
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
     "reviewed_on": "2026-10-21",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, payment-identifier intent, and redistribution boundary"
   },
-  "asset_count": 243,
+  "asset_count": 247,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
@@ -841,6 +841,26 @@
       }
     },
     {
+      "path": "assets/gallery/signal-stack.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 90591,
+      "sha256": "85501bbe1f7bb98c69e28f1367eab463647f59c27c3b3039f41c2a75f202a1f2",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
       "path": "assets/gallery/stacked-composition.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 38598,
@@ -1520,6 +1540,14 @@
       "kind": "synthetic_public_example",
       "size_bytes": 76886,
       "sha256": "58622e3b2d6854323555165cf3e37065c0293d3cc563fb1dfe3e4a02b8d0416d",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/signal_stack.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 292235,
+      "sha256": "610dcd347f5893ece3e27b23be1ab75c40f243bb6ecc39dd1589849df54d5fbb",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -2225,6 +2253,22 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 2746,
       "sha256": "aa1ed6a3c993952dba6285845f8f15f7c8f6b184d37c2d36152e07f32a948504",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/signal_stack/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 32,
+      "sha256": "1b55a776000949b04c10fb0ed2a27f1a7856f2dd3b433dfe5eb9524e9c6e9f29",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/signal_stack/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 292235,
+      "sha256": "610dcd347f5893ece3e27b23be1ab75c40f243bb6ecc39dd1589849df54d5fbb",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

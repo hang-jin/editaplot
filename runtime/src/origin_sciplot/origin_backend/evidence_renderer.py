@@ -81,6 +81,7 @@ _SUPPORTED_KINDS = frozenset(
         "grouped_box",
         "flim_phasor",
         "time_frequency",
+        "signal_stack",
     }
 )
 
@@ -3679,7 +3680,14 @@ def _build_origin_graph(
     preparation: ScientificPreparation,
 ) -> tuple[Any, dict[str, Any]]:
     kind = preparation.plot_spec.plot_kind
-    if kind == "time_frequency":
+    if kind == "signal_stack":
+        from .signal_stack_renderer import build_signal_stack_graph
+
+        plan = preparation.plot_spec.signal_stack_plan
+        if plan is None:
+            raise OriginDrawError("The frozen signal source plan is missing.")
+        graph, state = build_signal_stack_graph(op, frame, preparation, plan)
+    elif kind == "time_frequency":
         from .time_frequency_renderer import build_time_frequency_graph
 
         graph, state = build_time_frequency_graph(op, frame, preparation)

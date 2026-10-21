@@ -89,6 +89,7 @@ VERIFIED_TEMPLATE_IDS = frozenset(
         "shap_dashboard",
         "flim_phasor",
         "time_frequency",
+        "signal_stack",
         "grouped_box",
         "pl",
         "dsc",
@@ -922,6 +923,9 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "shap_dashboard": ("shap dashboard", "nested donut", "双层环图", "分栏 SHAP", "shap 分栏"),
     "flim_phasor": ("flim phasor", "phasor plot", "相量图", "荧光相量", "荧光寿命相量"),
     "time_frequency": ("time frequency", "spectrogram", "时频", "时间频率", "预计算时频"),
+    "signal_stack": (
+        "multichannel", "signal stack", "eeg traces", "fluorescence traces", "多通道", "脑电波形", "荧光轨迹",
+    ),
     "shap_summary": (
         "shapsummary",
         "shapbeeswarm",

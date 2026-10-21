@@ -1,6 +1,6 @@
 # 我怎样用 EditaPlot 展示荧光与脑电相关数据
 
-这部分我正在逐步扩充。现在已能使用荧光寿命相量和时间–频率物理矩阵两条独立路线；
+这部分我正在逐步扩充。现在已能使用荧光寿命相量、时间–频率物理矩阵和多通道信号三条独立路线；
 其余研究信号模板还在开发、验证中，我不会把候选清单写成已经完成的功能。
 
 ## 时间–频率图：先有时频表，再来画图
@@ -39,12 +39,31 @@
 模板保留全部观测，包括参考半圆外的点，G与S使用相同物理比例。
 参考半圆只是数学几何，不是拟合结果；我不会据此自动推算寿命、组分比例或做聚类。
 
+## 多通道信号：同一个幅度尺，逐条看清楚
+
+我提供了[八通道教学表](../examples/gallery/signal_stack.csv)，一共8008个观测。它有随时间变化的
+活动和自拟波动，仍然是合成数据，不是实际EEG记录。数据结构是 `Time (s)、Channel、Amplitude (uV)`；
+荧光轨迹也可以用 `Time (s)、ROI、Intensity (a.u.)`。
+
+> 使用EditaPlot绘制这个多通道信号表。请保留全部观测和通道顺序，使用共同幅度单位，只做明确说明的纵向显示偏移，通道名和幅度尺放到图外。请先让我确认列的含义与显示偏移，不要滤波或逐通道归一化。
+
+我保留原始时间范围，支持1–16个明确通道，每个通道至少两个点且时间已递增。不同通道的
+采样时间可以不同。名字长、通道多时，页面会扩展；“01”这样的文本编号也会保留前导零。
+右侧标尺代表一个幅度单位长度，不是误差棒。源文件保持不变，Origin内部另存可编辑显示数据。
+
+我参考了[这项Nature Neuroscience神经信号研究](https://www.nature.com/articles/s41593-023-01260-4)
+中的多通道时间轴与幅度表达方式，使用独立拟定的示例。模板不会进行设备文件解码、滤波、
+去伪迹、重参考、插值或事件检测。
+
 ## English summary
 
-I provide two verified research-signal routes here: supplied FLIM G/S coordinates with explicit
-groups, and complete uniform time–frequency cells with units in their headers. The examples are
+I provide three verified research-signal routes here: supplied FLIM G/S coordinates with explicit
+groups, complete uniform time–frequency cells, and multichannel waveform tables. Units are explicit. The examples are
 my own synthetic teaching data, not reproduced measurements or algorithm results. The latter
 uses native editable matrix marks, numeric physical axes and a detached sequential color scale.
 It preserves every cell and either source-coordinate direction. It does not compute FFT, STFT,
 wavelets, interpolation, baseline correction or dB conversion. Raw EEG needs upstream processing.
-Both routes retain source data and require real OPJU/PNG/PDF/TIF, object readback and visual QA.
+The signal stack preserves every sample and channel name, uses approved additive display offsets,
+and places a common unit ruler beside the true time range. It performs no filtering, alignment,
+centering or normalization. All three routes retain source data and require real OPJU/PNG/PDF/TIF,
+object readback and visual QA.

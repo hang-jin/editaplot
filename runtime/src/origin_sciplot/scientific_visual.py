@@ -307,25 +307,28 @@ def signed_effect_colors(values: Iterable[float]) -> tuple[str, ...]:
     return tuple(colors)
 
 
-def resolve_time_frequency_style(x_title: str, y_title: str, value_title: str) -> AdaptiveOriginStyle:
-    """Allocate physical text space without shrinking titles or changing supplied labels."""
+def text_span_cm(text: str, size: float, *, bold: bool = False) -> float:
+    """Measure Latin glyphs and reserve full physical ems for wide source text."""
     from matplotlib.font_manager import FontProperties
     from matplotlib.textpath import TextToPath
 
-    def span_cm(text: str, size: float, *, bold: bool) -> float:
-        properties = FontProperties(family=["Arial", "DejaVu Sans"], size=size,
-                                    weight="bold" if bold else "normal")
-        wide = sum(unicodedata.east_asian_width(char) in {"W", "F"} for char in text)
-        regular_text = "".join(char for char in text if unicodedata.east_asian_width(char) not in {"W", "F"})
+    properties = FontProperties(family=["Arial", "DejaVu Sans"], size=size,
+                                weight="bold" if bold else "normal")
+    widths = []
+    for line in text.splitlines() or [""]:
+        wide = sum(unicodedata.east_asian_width(char) in {"W", "F"} for char in line)
+        regular_text = "".join(char for char in line if unicodedata.east_asian_width(char) not in {"W", "F"})
         width = TextToPath().get_text_width_height_descent(regular_text, properties, ismath=False)[0]
-        # Arial has no CJK glyphs. Reserve their full physical em instead of
-        # measuring missing-glyph boxes or emitting font warnings to beginners.
         width += wide * 1.05 * size
-        return float(width) * 2.54 / 72 * 1.12
+        widths.append(float(width) * 2.54 / 72 * 1.12)
+    return max(widths)
 
-    plot_width = max(18.0, span_cm(x_title, 20.0, bold=True) + 1.0)
-    plot_height = max(13.0, span_cm(y_title, 20.0, bold=True) + 1.0,
-                      span_cm(value_title, 17.0, bold=False) + 1.0)
+
+def resolve_time_frequency_style(x_title: str, y_title: str, value_title: str) -> AdaptiveOriginStyle:
+    """Allocate physical text space without shrinking titles or changing supplied labels."""
+    plot_width = max(18.0, text_span_cm(x_title, 20.0, bold=True) + 1.0)
+    plot_height = max(13.0, text_span_cm(y_title, 20.0, bold=True) + 1.0,
+                      text_span_cm(value_title, 17.0) + 1.0)
     width, height = plot_width + 10.0, plot_height + 5.0
     return AdaptiveOriginStyle(
         profile_name="research-time-frequency", page_width_cm=width, page_height_cm=height,
@@ -348,6 +351,27 @@ def time_frequency_scale_region(style: AdaptiveOriginStyle) -> dict[str, float]:
         "title_x_percent": (style.page_width_cm - 1.12) / style.page_width_cm * 100,
         "title_y_percent": style.layer_top_percent + style.layer_height_percent / 2,
     }
+
+
+def resolve_signal_stack_style(
+    channel_labels: tuple[str, ...], x_title: str, y_title: str, scale_label: str
+) -> AdaptiveOriginStyle:
+    """Reserve separate label/data/ruler columns at unchanged physical type sizes."""
+    left = max(3.5, max(text_span_cm(label, 17.0) for label in channel_labels) + 2.8)
+    right = max(5.0, text_span_cm(scale_label, 17.0) + 1.8)
+    row_height = max(
+        2.1, max(len(label.splitlines()) for label in channel_labels) * 17 * 2.54 / 72 * 1.4 + 0.4
+    )
+    plot_width = max(22.0, text_span_cm(x_title, 20.0, bold=True) + 1.0)
+    plot_height = max(11.0, len(channel_labels) * row_height, text_span_cm(y_title, 20.0, bold=True) + 1.0)
+    width, height = left + plot_width + right, plot_height + 4.5
+    return AdaptiveOriginStyle(
+        profile_name="research-signal-stack", page_width_cm=width, page_height_cm=height,
+        layer_left_percent=left / width * 100, layer_top_percent=1.3 / height * 100,
+        layer_width_percent=plot_width / width * 100, layer_height_percent=plot_height / height * 100,
+        plot_line_width_pt=1.4, frame_line_width_pt=1.1, x_title_upshift_page_percent=0.0,
+        palette_name="publication_signal",
+    )
 
 
 def resolve_adaptive_style(

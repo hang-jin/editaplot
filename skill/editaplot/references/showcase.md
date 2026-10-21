@@ -16,8 +16,8 @@ data, labels, conclusions, or private template assets.
 
 ## Current verified public gallery scope
 
-The retained verification inventory contains 52 reviewed, metadata-sanitized PNGs across 43 public
-plotting routes. The public page displays exactly one representative per template: 43 cases.
+The retained verification inventory contains 53 reviewed, metadata-sanitized PNGs across 44 public
+plotting routes. The public page displays exactly one representative per template: 44 cases.
 The other nine palette or mode examples retain their PNGs, source samples, and render modes.
 Do not count palette variants as separate templates or remove functionality when hiding a case.
 Keep inventory count, display count, and route

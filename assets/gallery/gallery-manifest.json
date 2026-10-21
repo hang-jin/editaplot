@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "asset_policy": "programmatically verified and explicitly manually reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
-  "case_count": 52,
-  "display_case_count": 43,
+  "case_count": 53,
+  "display_case_count": 44,
   "cases": [
     {
       "id": "bar-error-groups",
@@ -331,6 +331,14 @@
       "display_in_gallery": false,
       "sha256": "a152b9febf8c2b69dafb6f833b9ce48f287d2cc247a9d78ed75ff4ef50c35f31",
       "size_bytes": 152322
+    },
+    {
+      "id": "signal-stack",
+      "title_zh": "多通道信号与共同幅度尺",
+      "title_en": "multichannel processed signal traces",
+      "display_in_gallery": true,
+      "sha256": "85501bbe1f7bb98c69e28f1367eab463647f59c27c3b3039f41c2a75f202a1f2",
+      "size_bytes": 90591
     },
     {
       "id": "stacked-composition",

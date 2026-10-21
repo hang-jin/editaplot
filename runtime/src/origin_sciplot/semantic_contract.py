@@ -36,6 +36,7 @@ ALLOWED_DERIVED_OPERATIONS = frozenset(
         "normalize_within_category_minmax",
         "deterministic_binned_symmetric_offset",
         "phasor_reference_semicircle",
+        "signal_amplitude_ruler",
     }
 )
 
@@ -438,6 +439,15 @@ class DerivedDataItem:
                     "semantic_phasor_reference_invalid",
                     "The phasor semicircle requires fixed mathematical geometry and two coordinate inputs.",
                 )
+        if self.operation_id == "signal_amplitude_ruler":
+            parameters = dict(self.parameters)
+            length = parameters.get("length")
+            if (set(parameters) != {"length", "unit", "reference_kind", "rule"}
+                    or isinstance(length, bool) or not isinstance(length, (int, float)) or length <= 0
+                    or not isinstance(parameters["unit"], str) or not parameters["unit"].strip()
+                    or parameters["reference_kind"] != "display_unit_length_not_statistical_estimate"
+                    or parameters["rule"] != "nice_125_global_span_quarter"):
+                raise SemanticContractError("semantic_signal_ruler_invalid", "The amplitude ruler requires an explicit display-unit length and rule.")
 
     def to_dict(self) -> dict[str, object]:
         return {

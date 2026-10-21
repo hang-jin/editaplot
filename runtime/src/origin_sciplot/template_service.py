@@ -402,6 +402,13 @@ class ScientificTemplateService:
                 ("Target", spec.target_column or "—"),
                 ("Value", spec.series[0].source_column),
             )
+        elif spec.plot_kind == "signal_stack":
+            plan = spec.signal_stack_plan
+            roles = (("Time / 时间", plan.time_column), ("Channel / 通道", plan.channel_column),
+                     ("Amplitude / 原始幅度", plan.value_column))
+            facts = (*facts, ("通道数", str(len(plan.channel_order))),
+                     ("共同幅度尺", spec.signal_stack_layout.reference_text),
+                     ("显示转换", "仅逐通道加常数偏移；不归一化、滤波或居中"))
         elif spec.plot_kind == "time_frequency":
             plan = spec.time_frequency_plan
             roles = (("时间 / X", plan.time_column), ("频率 / Y", plan.frequency_column),

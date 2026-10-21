@@ -229,6 +229,12 @@ filtering, interpolation, baseline or dB conversion. A raw EEG voltage table nee
 processing, not an invented frequency column. Read `references/data-contracts.md` for the input
 and unit contract; confirm any extra columns instead of silently drawing them.
 
+For multichannel EEG or fluorescence traces already supplied as a table, choose `signal_stack`.
+Require explicit Time/Channel/Amplitude roles and units, keep every observation and the channel
+order, and confirm the additive display offsets and common unit ruler. Channel/ROI identities
+remain text, including leading zeros. Do not filter, align, center, normalize, infer events or
+decode acquisition files. Direct names and the ruler live outside the true time-axis data range.
+
 - Make every chart defend one explicit conclusion or evidence role.
 - Use a white background, Arial, restrained color families, clear hierarchy, and no rainbow palette,
   decorative 3D, or unjustified grid.

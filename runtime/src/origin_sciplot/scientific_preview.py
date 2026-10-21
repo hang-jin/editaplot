@@ -2276,9 +2276,41 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         raise ScientificPreviewError(code, str(exc)) from exc
 
     spec = preparation.plot_spec
+    if spec.plot_kind == "signal_stack":
+        figure, axis = _new_figure(preparation)
+        _style_axis(axis)
+        plan, layout = spec.signal_stack_plan, spec.signal_stack_layout
+        if plan is None or layout is None:
+            raise ScientificPreviewError("signal_plan_missing", "The frozen signal layout is missing.")
+        style = _preview_style(figure)
+        origin_style = spec.display_plan.figure_style
+        colors = interpolate_hex_colors("#24485A", "#207E80", len(plan.channel_order))
+        offsets = dict(plan.offsets)
+        for (label, rows), color in zip(plan.channel_rows, colors, strict=True):
+            values = frame.iloc[list(rows)]
+            axis.plot(values[plan.time_column], values[plan.value_column] + offsets[label],
+                      color=color, linewidth=style.plot_line_pt)
+        axis.set_xlim(*layout.x_range)
+        axis.set_ylim(*layout.y_range)
+        axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
+        axis.set_yticks([])
+        axis.set_xlabel(spec.x_title, fontsize=style.axis_title_pt, fontweight="bold")
+        figure.text(layout.y_title_x_percent / 100, 1 - layout.y_title_y_percent / 100,
+                    spec.y_title, rotation=90, va="center", ha="center",
+                    fontsize=style.axis_title_pt, fontweight="bold")
+        for name, right, center_y in layout.channel_labels:
+            figure.text(right / 100, 1 - center_y / 100, name, ha="right", va="center",
+                        fontsize=style.legend_pt, color="#263D46")
+        physical_scale = PREVIEW_WIDTH_IN / (origin_style.page_width_cm / 2.54)
+        axis.plot([layout.reference_x] * 2, [layout.reference_y_from, layout.reference_y_to],
+                  color="#52616B", linewidth=1.4 * physical_scale, clip_on=False)
+        figure.text(layout.reference_text_x_percent / 100, 1 - layout.reference_text_y_percent / 100,
+                    layout.reference_text, ha="center", va="center", fontsize=style.legend_pt,
+                    color="#263D46")
+        _apply_font_contract(figure)
+        return figure
     if spec.plot_kind == "time_frequency":
         from matplotlib.colors import ListedColormap
-        from matplotlib.ticker import MultipleLocator
 
         figure, axis = _new_figure(preparation)
         _style_axis(axis)

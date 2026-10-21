@@ -3,7 +3,7 @@
 This module does not parse acquisition files, filter, align, resample, center,
 normalize, or derive any signal. Source observations stay in the caller's table;
 the plan contains zero-based positional row references and explicit offsets.
-It is not a registered plotting route or a claim of native Origin validation.
+Native rendering, registration and host validation are handled by the template layer.
 """
 
 from __future__ import annotations

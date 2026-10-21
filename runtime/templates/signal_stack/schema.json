@@ -1,0 +1,8 @@
+{
+  "template_id":"signal_stack", "workflow":"scientific_table", "layout":"processed_long",
+  "required_roles":["x","series","category"], "optional_roles":[],
+  "standard_columns":{"x":"Time (s)","series":"Amplitude (uV)","category":"Channel"},
+  "min_columns":3, "min_rows":2, "supported_extensions":[".csv",".txt",".xls",".xlsx"],
+  "source_data_modified":false, "automatic_signal_processing":false,
+  "display_transform":"channel_offset_only"
+}
