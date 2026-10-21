@@ -9,6 +9,7 @@ single physical size inherited from one teaching task.
 from __future__ import annotations
 
 import math
+import unicodedata
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 
@@ -304,6 +305,49 @@ def signed_effect_colors(values: Iterable[float]) -> tuple[str, ...]:
             index = min(100, round(value / positive_scale * 100))
             colors.append(warm_ramp[index])
     return tuple(colors)
+
+
+def resolve_time_frequency_style(x_title: str, y_title: str, value_title: str) -> AdaptiveOriginStyle:
+    """Allocate physical text space without shrinking titles or changing supplied labels."""
+    from matplotlib.font_manager import FontProperties
+    from matplotlib.textpath import TextToPath
+
+    def span_cm(text: str, size: float, *, bold: bool) -> float:
+        properties = FontProperties(family=["Arial", "DejaVu Sans"], size=size,
+                                    weight="bold" if bold else "normal")
+        wide = sum(unicodedata.east_asian_width(char) in {"W", "F"} for char in text)
+        regular_text = "".join(char for char in text if unicodedata.east_asian_width(char) not in {"W", "F"})
+        width = TextToPath().get_text_width_height_descent(regular_text, properties, ismath=False)[0]
+        # Arial has no CJK glyphs. Reserve their full physical em instead of
+        # measuring missing-glyph boxes or emitting font warnings to beginners.
+        width += wide * 1.05 * size
+        return float(width) * 2.54 / 72 * 1.12
+
+    plot_width = max(18.0, span_cm(x_title, 20.0, bold=True) + 1.0)
+    plot_height = max(13.0, span_cm(y_title, 20.0, bold=True) + 1.0,
+                      span_cm(value_title, 17.0, bold=False) + 1.0)
+    width, height = plot_width + 10.0, plot_height + 5.0
+    return AdaptiveOriginStyle(
+        profile_name="research-time-frequency", page_width_cm=width, page_height_cm=height,
+        layer_left_percent=3.5 / width * 100, layer_top_percent=1.5 / height * 100,
+        layer_width_percent=plot_width / width * 100, layer_height_percent=plot_height / height * 100,
+        frame_line_width_pt=1.1, x_title_upshift_page_percent=0.0,
+    )
+
+
+def time_frequency_scale_region(style: AdaptiveOriginStyle) -> dict[str, float]:
+    """Shared physical colorbar gutter and title anchors for preview and Origin."""
+    return {
+        "left_percent": (
+            style.layer_left_percent + style.layer_width_percent + 0.7 / style.page_width_cm * 100
+        ),
+        "top_percent": style.layer_top_percent,
+        "width_percent": 3.36 / style.page_width_cm * 100,
+        "height_percent": style.layer_height_percent,
+        "bar_width_percent": 0.7 / style.page_width_cm * 100,
+        "title_x_percent": (style.page_width_cm - 1.12) / style.page_width_cm * 100,
+        "title_y_percent": style.layer_top_percent + style.layer_height_percent / 2,
+    }
 
 
 def resolve_adaptive_style(

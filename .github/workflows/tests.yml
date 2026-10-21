@@ -48,6 +48,7 @@ jobs:
           runtime/src/origin_sciplot/time_frequency.py
           runtime/src/origin_sciplot/circular_network_layout.py
           runtime/src/origin_sciplot/heatmap_layout.py
+          runtime/src/origin_sciplot/scientific_visual.py
           runtime/src/origin_sciplot/main_window.py
           runtime/src/origin_sciplot/output_manager.py
           runtime/src/origin_sciplot/project_paths.py

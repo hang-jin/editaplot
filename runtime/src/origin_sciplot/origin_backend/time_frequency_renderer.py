@@ -9,6 +9,7 @@ from typing import Any
 
 import pandas as pd
 
+from ..scientific_visual import time_frequency_scale_region
 from ..scientific_workflow import ScientificPreparation
 from ..time_frequency import build_time_frequency_plan
 from .research_grid_renderer import build_physical_grid_layer, position_grid_colorbar
@@ -63,18 +64,18 @@ def build_time_frequency_graph(
         layer.set_int(f"{axis}.label.table", 0)
         layer.set_int(f"{axis}.label.type", 1)
     evidence._style_evidence_axes(op, layer, preparation, x_numeric=True, y_numeric=True)
+    region = time_frequency_scale_region(style)
     scale = position_grid_colorbar(
         op, graph, layer,
-        region=SimpleNamespace(
-            left_percent=79.2857142857, top_percent=style.layer_top_percent,
-            width_percent=12.0, height_percent=style.layer_height_percent,
-        ),
+        region=SimpleNamespace(**{key: region[key] for key in (
+            "left_percent", "top_percent", "width_percent", "height_percent"
+        )}),
         font_family=style.font_family, label_size_pt=15.0,
     )
     labels, title_geometry, text_state = evidence._style_titles(op, graph, layer, preparation)
     _, value_state = evidence._add_shap_page_label(
         op, graph, layer, name="PhysicalGridValueTitle", text=spec.series[0].label,
-        center_x_percent=96.0, center_y_percent=style.layer_top_percent + style.layer_height_percent / 2,
+        center_x_percent=region["title_x_percent"], center_y_percent=region["title_y_percent"],
         size_pt=17.0, font_family=style.font_family, bold=False, rotation_deg=90,
     )
     axes = spec.axis_plan

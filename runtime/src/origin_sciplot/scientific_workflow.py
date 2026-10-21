@@ -29,7 +29,7 @@ from .data_loader import DataLoadError, LoadedTable, load_table
 from .flim_phasor import PhasorPlan, build_phasor_plan
 from .heatmap_layout import heatmap_cell_labels_enabled
 from .palette_catalog import get_palette
-from .scientific_visual import AdaptiveOriginStyle, resolve_adaptive_style
+from .scientific_visual import AdaptiveOriginStyle, resolve_adaptive_style, resolve_time_frequency_style
 from .shap_composite import (
     SHAP_COMPOSITE_PROFILES,
     ShapCompositeError,
@@ -6015,7 +6015,7 @@ def _automatic_time_frequency_mapping(loaded: LoadedTable) -> _AutoMapping:
     }
     assignments = {}
     for column in loaded.columns:
-        name = re.split(r"[\(\[（]", column, maxsplit=1)[0]
+        name = re.split(r"[\(\[（［]", column, maxsplit=1)[0]
         assignments[column] = next(
             (role for role, names in aliases.items() if _canonical(name) in names), "ignored"
         )
@@ -6035,8 +6035,8 @@ def _build_time_frequency_spec(
     columns = tuple(_require_one(assignments, role) for role in ("x", "frequency_axis", "series"))
     units = []
     for column in columns:
-        title = unicodedata.normalize("NFKC", column)
-        match = re.search(r"(?:\(([^()]+)\)|\[([^\[\]]+)\])\s*$", title)
+        title = column
+        match = re.search(r"(?:\(([^()]+)\)|\[([^\[\]]+)\]|（([^（）]+)）|［([^［］]+)］)\s*$", title)
         unit = next((part.strip() for part in match.groups() if part), "") if match else ""
         if not unit or len(title) > 80:
             raise ScientificWorkflowError(
@@ -6053,12 +6053,7 @@ def _build_time_frequency_spec(
         raise ScientificWorkflowError("time_frequency_data_invalid", str(error)) from error
     # Physical data area and independent scale gutter; cells are never squeezed
     # into categorical coordinates or annotated individually to fit a dense grid.
-    style = AdaptiveOriginStyle(
-        profile_name="research-time-frequency", page_width_cm=28.0, page_height_cm=18.0,
-        layer_left_percent=12.5, layer_top_percent=8.3333333333,
-        layer_width_percent=64.2857142857, layer_height_percent=72.2222222222,
-        frame_line_width_pt=1.1, x_title_upshift_page_percent=0.0,
-    )
+    style = resolve_time_frequency_style(*columns)
     return ScientificPlotSpec(
         plot_kind="time_frequency", plot_mode="sequential", x_column=columns[0],
         y_column=columns[1], category_column=None,
@@ -6279,7 +6274,12 @@ def prepare_scientific(
         plot_mode = automatic.plot_mode
     else:
         assignments, plot_mode = _validate_assignment_shape(loaded, template_id, column_mapping)
-    frame = _coerced_selected_frame(loaded, assignments)
+    # Physical-cell validation must see Excel's original bool/date types.
+    # The source-bound reload still creates a numeric working copy for COM.
+    frame = (
+        loaded.copy_frame() if template_id == "time_frequency"
+        else _coerced_selected_frame(loaded, assignments)
+    )
     source_profile = detect_xrd_source_profile(loaded) if template_id == "xrd" else None
     spec, build_warnings = _build_plot_spec(
         template_id,

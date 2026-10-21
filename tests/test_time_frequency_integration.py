@@ -200,3 +200,65 @@ def test_public_plan_requires_semantic_confirmation_then_allows_verified_route(s
     )
     assert result["can_render"] is True
     assert result["data_understanding"]["status"] == "confirmed"
+
+
+@pytest.mark.parametrize("column", ["Time (s)", "Frequency (Hz)", "Power (dB)"])
+def test_boolean_excel_cells_are_not_coerced_into_scientific_measurements(tmp_path, column):
+    frame = pd.DataFrame({
+        "Time (s)": [0.0, 1.0, 0.0, 1.0],
+        "Frequency (Hz)": [10.0, 10.0, 20.0, 20.0],
+        "Power (dB)": [2.0, 4.0, 3.0, 8.0],
+    })
+    frame[column] = [False, True, False, True] if column == "Time (s)" else (
+        [False, False, True, True] if column == "Frequency (Hz)" else [False, True, True, False]
+    )
+    path = tmp_path / "boolean_measurements.xlsx"
+    frame.to_excel(path, index=False)
+    original = path.read_bytes()
+    with pytest.raises(ScientificWorkflowError, match="bool|real|numeric"):
+        prepare_scientific(path, "time_frequency")
+    assert path.read_bytes() == original
+
+
+def test_excel_datetimes_are_not_epoch_time_measurements(tmp_path):
+    path = tmp_path / "datetime_measurements.xlsx"
+    pd.DataFrame({
+        "Time (s)": [pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-02")] * 2,
+        "Frequency (Hz)": [10, 10, 20, 20], "Power (dB)": [2, 4, 3, 8],
+    }).to_excel(path, index=False)
+    with pytest.raises(ScientificWorkflowError):
+        prepare_scientific(path, "time_frequency")
+
+
+def test_descriptive_value_title_expands_physical_layout_without_shrinking_fonts(tmp_path):
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from origin_sciplot.scientific_preview import _build_scientific_preview_figure
+
+    title = "Integrated oscillatory power spectral density per recording channel (µV²/Hz)"
+    path = tmp_path / "long_title.csv"
+    pd.DataFrame({"Time (s)": [0, 1, 0, 1], "Frequency (Hz)": [10, 10, 20, 20],
+                  title: [2, 4, 3, 8]}).to_csv(path, index=False)
+    prepared = prepare_scientific(path, "time_frequency", column_mapping=ScientificColumnMapping(
+        (("Time (s)", "x"), ("Frequency (Hz)", "frequency_axis"), (title, "series"))
+    ))
+    style = prepared.plot_spec.display_plan.figure_style
+    assert style.page_height_cm > 18.0
+    assert style.axis_title_size_pt == 20.0
+    assert style.tick_label_size_pt == 17.0
+    figure = _build_scientific_preview_figure(prepared)
+    canvas = FigureCanvasAgg(figure)
+    canvas.draw()
+    bbox = figure.axes[1].yaxis.label.get_window_extent(canvas.get_renderer())
+    assert bbox.y0 >= 0
+    assert bbox.y1 <= figure.bbox.y1
+    assert bbox.x1 <= figure.bbox.x1
+    figure.clear()
+
+
+@pytest.mark.parametrize("value_header", ["Power (µV²/Hz)", "功率（μV²/Hz）", "功率［μV²/Hz］"])
+def test_frozen_unit_metadata_preserves_original_scientific_symbols(tmp_path, value_header):
+    path = tmp_path / "units.csv"
+    pd.DataFrame({"Time (s)": [0, 1, 0, 1], "Frequency (Hz)": [10, 10, 20, 20],
+                  value_header: [2, 4, 3, 8]}).to_csv(path, index=False)
+    plan = prepare_scientific(path, "time_frequency").plot_spec.time_frequency_plan
+    assert plan.value_unit == ("µV²/Hz" if value_header.startswith("Power") else "μV²/Hz")

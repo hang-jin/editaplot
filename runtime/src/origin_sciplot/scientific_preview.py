@@ -34,6 +34,7 @@ from .scientific_visual import (
     palette_colors,
     series_palette_colors,
     signed_effect_colors,
+    time_frequency_scale_region,
 )
 from .scientific_workflow import (
     ScientificPreparation,
@@ -2300,12 +2301,15 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
         axis.yaxis.set_major_locator(MultipleLocator(spec.axis_plan.y_step))
         origin_style = spec.display_plan.figure_style
+        region = time_frequency_scale_region(origin_style)
         color_axis = figure.add_axes([
-            0.792857142857, 1 - (origin_style.layer_top_percent + origin_style.layer_height_percent) / 100,
-            0.025, origin_style.layer_height_percent / 100,
+            region["left_percent"] / 100,
+            1 - (region["top_percent"] + region["height_percent"]) / 100,
+            region["bar_width_percent"] / 100, region["height_percent"] / 100,
         ])
         bar = figure.colorbar(mesh, cax=color_axis, ticks=np.linspace(*plan.color_limits, 6))
-        bar.ax.tick_params(labelsize=preview.tick_label_pt)
+        physical_scale = PREVIEW_WIDTH_IN / (origin_style.page_width_cm / 2.54)
+        bar.ax.tick_params(labelsize=15.0 * physical_scale)
         bar.set_label(spec.series[0].label, fontsize=preview.legend_pt)
         _apply_font_contract(figure)
         return figure
