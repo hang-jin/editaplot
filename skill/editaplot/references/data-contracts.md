@@ -10,7 +10,7 @@
 
 Keep the original file read-only.
 
-These contracts cover the 42 registered public plotting routes. The data contract is independent
+These contracts cover the 43 registered public plotting routes. The data contract is independent
 of the installed Origin version. After semantic confirmation and plan creation, run the isolated
 `origin-smoke` before formal rendering. Rendering starts a dedicated EditaPlot-owned Origin
 instance and then checks the selected template against the detected host. Target Origin/OriginPro
@@ -23,6 +23,21 @@ place the RenderPlan, OPJU, PNG, PDF, TIF, readback, validation, and provenance 
 destination only after an explicit user request.
 
 ## Recognized layouts
+
+### Precomputed time–frequency field
+
+Use one row per supplied time×frequency cell, e.g. `Time (s),Frequency (Hz),Power (dB)`.
+Chinese headers and explicitly declared alternative units are accepted through column mapping;
+units in parentheses/brackets are required and remain verbatim. Provide at least two distinct,
+uniformly spaced coordinates per axis and the complete grid. Both ascending and descending
+directions are retained. Duplicates, gaps, nonuniform spacing and nonfinite cells are rejected,
+not repaired. Extra columns must be classified and confirmed before planning.
+
+`time_frequency` draws the upstream values exactly on numeric physical axes with a detached
+101-level sequential color scale. Half-cell edges describe display boundaries, not observations.
+It performs no signal transform, interpolation, normalization, baseline/dB conversion or event
+inference; negative dB does not introduce a zero-reference or diverging color claim. Raw EEG
+voltage tables are not time-frequency input. Keep source data immutable.
 
 ### Numeric XY wide table
 

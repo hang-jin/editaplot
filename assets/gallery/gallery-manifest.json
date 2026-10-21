@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "asset_policy": "programmatically verified and explicitly manually reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
-  "case_count": 51,
-  "display_case_count": 42,
+  "case_count": 52,
+  "display_case_count": 43,
   "cases": [
     {
       "id": "bar-error-groups",
@@ -339,6 +339,14 @@
       "display_in_gallery": true,
       "sha256": "8508b81ee323d61dc40b5df6452201742986c668a49d0e8f35cf25a61ebc206e",
       "size_bytes": 38598
+    },
+    {
+      "id": "time-frequency",
+      "title_zh": "时间–频率物理矩阵",
+      "title_en": "precomputed time frequency matrix",
+      "display_in_gallery": true,
+      "sha256": "8dd06e3bd284eb7d0e4feed5bc59788260b3c07fea59b3ea105463b400fa6840",
+      "size_bytes": 67662
     },
     {
       "id": "trajectory3d",

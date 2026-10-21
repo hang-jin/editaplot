@@ -32,6 +32,7 @@ _PRIMARY_ROLES = frozenset(
         "z_imag",
         "magnitude",
         "phase",
+        "frequency_axis",
         "source",
         "target",
         "value",
@@ -103,6 +104,7 @@ def _element_kind(plot_kind: str, series_role: str) -> str:
     return {
         "scatter": "symbol",
         "flim_phasor": "symbol",
+        "time_frequency": "heatmap_cell",
         "bar_error": "bar",
         "horizontal_bar": "bar",
         "stacked_bar": "stacked_bar",
@@ -296,6 +298,14 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
         str(column)
         for column in getattr(spec, "phase_tick_columns", ())
     )
+
+    if plot_kind == "time_frequency":
+        value_column = spec.time_frequency_plan.value_column
+        elements.append(FigureElement(
+            element_id="time_frequency_colorbar", element_kind="colorbar",
+            data_item_ids=(item_ids[value_column],), required=True,
+            axis="supplied_values", legend_label=value_column,
+        ))
 
     if plot_kind == "flim_phasor":
         phasor = spec.phasor_plan

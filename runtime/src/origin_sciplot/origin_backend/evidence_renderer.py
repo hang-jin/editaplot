@@ -80,6 +80,7 @@ _SUPPORTED_KINDS = frozenset(
         "shap_summary",
         "grouped_box",
         "flim_phasor",
+        "time_frequency",
     }
 )
 
@@ -3678,7 +3679,11 @@ def _build_origin_graph(
     preparation: ScientificPreparation,
 ) -> tuple[Any, dict[str, Any]]:
     kind = preparation.plot_spec.plot_kind
-    if kind == "flim_phasor":
+    if kind == "time_frequency":
+        from .time_frequency_renderer import build_time_frequency_graph
+
+        graph, state = build_time_frequency_graph(op, frame, preparation)
+    elif kind == "flim_phasor":
         from .flim_phasor_renderer import build_flim_phasor_graph
 
         plan = preparation.plot_spec.phasor_plan

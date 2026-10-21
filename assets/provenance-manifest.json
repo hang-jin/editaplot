@@ -3,7 +3,7 @@
   "release_policy": "synthetic teaching data and original/generated assets only",
   "inventory_generator": {
     "path": "tools/build_asset_provenance.py",
-    "sha256": "8c3ed8323cc270fba177c4c34e0176d45e7282fe2b69bd2c0c161814af4cd5b7"
+    "sha256": "933c5ea50d88cda9c854252e13217a8190784e9aea107595619de6b10146f905"
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
@@ -15,10 +15,10 @@
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
-    "reviewed_on": "2026-10-19",
+    "reviewed_on": "2026-10-21",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, payment-identifier intent, and redistribution boundary"
   },
-  "asset_count": 239,
+  "asset_count": 243,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
@@ -861,6 +861,26 @@
       }
     },
     {
+      "path": "assets/gallery/time-frequency.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 67662,
+      "sha256": "8dd06e3bd284eb7d0e4feed5bc59788260b3c07fea59b3ea105463b400fa6840",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
       "path": "assets/gallery/trajectory3d.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 383974,
@@ -1508,6 +1528,14 @@
       "kind": "synthetic_public_example",
       "size_bytes": 168,
       "sha256": "c40a9bdd963e97fbeedaed2ae8ad9cc5c1e3b8274334d558501b82aa03aa9d13",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/time_frequency.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 306419,
+      "sha256": "ef90a3d657b980efcae789276d785d231e2a802e1cc3f9e2e0d9d4eaa2dd1865",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -2213,6 +2241,22 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 168,
       "sha256": "c40a9bdd963e97fbeedaed2ae8ad9cc5c1e3b8274334d558501b82aa03aa9d13",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/time_frequency/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 35,
+      "sha256": "4cb89a997429482c43be891bd5df9323701a6b420e9ed45612f3b69e802fcbc7",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/time_frequency/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 306419,
+      "sha256": "ef90a3d657b980efcae789276d785d231e2a802e1cc3f9e2e0d9d4eaa2dd1865",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

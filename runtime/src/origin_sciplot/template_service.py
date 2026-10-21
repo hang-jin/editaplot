@@ -402,6 +402,13 @@ class ScientificTemplateService:
                 ("Target", spec.target_column or "—"),
                 ("Value", spec.series[0].source_column),
             )
+        elif spec.plot_kind == "time_frequency":
+            plan = spec.time_frequency_plan
+            roles = (("时间 / X", plan.time_column), ("频率 / Y", plan.frequency_column),
+                     ("原值 / 色标", plan.value_column))
+            facts = (*facts, ("物理网格", f"{len(plan.grid.y)} × {len(plan.grid.x)}；全部{preparation.row_count}格"),
+                     ("计算边界", "只绘制上游时频值；不做FFT、小波、基线或dB转换"),
+                     ("颜色语义", "原值连续高低；不是自动推断的正负变化"))
         elif spec.plot_kind == "flim_phasor":
             plan = spec.phasor_plan
             roles = (("G / 已提供相量坐标", plan.g_column), ("S / 已提供相量坐标", plan.s_column),

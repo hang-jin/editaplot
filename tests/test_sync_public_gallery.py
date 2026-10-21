@@ -21,7 +21,7 @@ def test_gallery_displays_exactly_one_representative_per_public_route() -> None:
     displayed = [case for case in CASES if case.display_in_gallery]
     all_routes = {case.template_id for case in CASES}
 
-    assert len(all_routes) == 42
+    assert len(all_routes) == 43
     assert Counter(case.template_id for case in displayed) == Counter(
         {template_id: 1 for template_id in all_routes}
     )
@@ -39,7 +39,7 @@ def test_gallery_displays_exactly_one_representative_per_public_route() -> None:
 
 
 def test_gallery_deduplication_retains_all_assets_and_shap_palette_modes() -> None:
-    assert len(CASES) == 51
+    assert len(CASES) == 52
     for case in CASES:
         assert (ROOT / "examples" / "gallery" / case.data_file).is_file()
         assert (ROOT / "assets" / "gallery" / f"{case.id}.png").is_file()

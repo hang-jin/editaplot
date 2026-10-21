@@ -37,6 +37,7 @@ from .shap_composite import (
     build_shap_composite_plan,
 )
 from .shap_dashboard import DASHBOARD_MODES, ShapDashboardPlan, build_dashboard_plan
+from .time_frequency import TimeFrequencyPlan, build_time_frequency_plan
 from .xrd_semantics import (
     GSAS_II_PUBLICATION_CSV,
     XrdSemanticError,
@@ -77,6 +78,7 @@ ScientificTemplateId = Literal[
     "shap_summary",
     "shap_dashboard",
     "flim_phasor",
+    "time_frequency",
     "grouped_box",
     "dsc",
     "nmr",
@@ -125,6 +127,7 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "shap_summary",
         "shap_dashboard",
         "flim_phasor",
+        "time_frequency",
         "grouped_box",
         "dsc",
         "nmr",
@@ -278,6 +281,8 @@ class ScientificPlotSpec:
     shap_plan: ShapCompositePlan | None = None
     shap_dashboard: ShapDashboardPlan | None = None
     phasor_plan: PhasorPlan | None = None
+    time_frequency_plan: TimeFrequencyPlan | None = None
+    color_scale_hex: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -310,6 +315,10 @@ def _plot_digest_payload(spec: ScientificPlotSpec) -> dict:
         payload.pop("shap_dashboard")
     if spec.phasor_plan is None:
         payload.pop("phasor_plan")
+    if spec.time_frequency_plan is None:
+        payload.pop("time_frequency_plan")
+    if not spec.color_scale_hex:
+        payload.pop("color_scale_hex")
     return payload
 
 
@@ -1142,6 +1151,7 @@ _ROLE_LABELS: dict[str, str] = {
     "z_real": "Z real / 阻抗实部",
     "z_imag": "Z imaginary / 阻抗虚部",
     "frequency": "Frequency / 频率",
+    "frequency_axis": "Frequency axis / 频率坐标",
     "magnitude": "|Z| / 阻抗模",
     "phase": "Phase / 相位",
     "source": "Source / 起点",
@@ -1244,6 +1254,9 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
             "ignored",
         )
         unique = set(keys) - {"ignored"}
+    elif template_id == "time_frequency":
+        keys = ("x", "frequency_axis", "series", "ignored")
+        unique = {"x", "frequency_axis", "series"}
     elif template_id == "flim_phasor":
         keys = ("x", "series", "category", "ignored")
         unique = {"x", "series", "category"}
@@ -1316,6 +1329,8 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
 
 
 def mapping_context_options(template_id: str) -> tuple[tuple[str, str], ...]:
+    if template_id == "time_frequency":
+        return (("sequential", "已提供数值的连续高低（不进行基线或dB计算）"),)
     if template_id == "shap_dashboard":
         return (("dashboard_blue_red", "蓝白酒红"), ("dashboard_viridis", "紫绿金"),
                 ("dashboard_red_blue", "红黄蓝"))
@@ -3092,6 +3107,13 @@ def _validate_assignment_shape(
         )
     if template_id == "eis" and mode not in {"nyquist", "bode"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select Nyquist or Bode for EIS.")
+    if template_id == "time_frequency":
+        if mode == "default":
+            mode = "sequential"
+        if mode != "sequential":
+            raise ScientificWorkflowError(
+                "mapping_plot_mode", "This route supports sequential mode only; no color reference is inferred."
+            )
     if template_id == "diagnostic_curve" and mode not in {"roc", "pr"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select ROC or Precision-Recall mode.")
     if template_id == "pl" and mode not in {"steady_state", "trpl"}:
@@ -3180,6 +3202,7 @@ def _coerced_selected_frame(
         "z_real",
         "z_imag",
         "frequency",
+        "frequency_axis",
         "magnitude",
         "phase",
         "value",
@@ -5984,6 +6007,73 @@ def _eis_axis_title(symbol: str, source_column: str) -> str:
     return f"{symbol} ({formatted})" if unit else symbol
 
 
+def _automatic_time_frequency_mapping(loaded: LoadedTable) -> _AutoMapping:
+    aliases = {
+        "x": {"time", "时间", "时刻"},
+        "frequency_axis": {"frequency", "freq", "频率"},
+        "series": {"power", "psd", "value", "amplitude", "功率", "功率谱密度", "数值", "幅值"},
+    }
+    assignments = {}
+    for column in loaded.columns:
+        name = re.split(r"[\(\[（]", column, maxsplit=1)[0]
+        assignments[column] = next(
+            (role for role, names in aliases.items() if _canonical(name) in names), "ignored"
+        )
+    reasons = []
+    if any(list(assignments.values()).count(role) != 1 for role in aliases):
+        reasons.append("time_frequency_explicit_columns_required")
+    if "ignored" in assignments.values():
+        reasons.append("time_frequency_extra_columns_require_confirmation")
+    return _AutoMapping(assignments, "sequential", 0.75 if reasons else 0.98, tuple(reasons), ())
+
+
+def _build_time_frequency_spec(
+    frame: pd.DataFrame, assignments: dict[str, str]
+) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    from .shap_dashboard import DASHBOARD_PALETTES, color_ramp
+
+    columns = tuple(_require_one(assignments, role) for role in ("x", "frequency_axis", "series"))
+    units = []
+    for column in columns:
+        title = unicodedata.normalize("NFKC", column)
+        match = re.search(r"(?:\(([^()]+)\)|\[([^\[\]]+)\])\s*$", title)
+        unit = next((part.strip() for part in match.groups() if part), "") if match else ""
+        if not unit or len(title) > 80:
+            raise ScientificWorkflowError(
+                "time_frequency_unit_required",
+                f"{column}: supply an explicit unit in the column header, e.g. Time (s), Frequency (Hz), Power (dB).",
+            )
+        units.append(unit)
+    try:
+        plan = build_time_frequency_plan(
+            frame, time_column=columns[0], frequency_column=columns[1], value_column=columns[2],
+            time_unit=units[0], frequency_unit=units[1], value_unit=units[2], color_semantics="sequential",
+        )
+    except ValueError as error:
+        raise ScientificWorkflowError("time_frequency_data_invalid", str(error)) from error
+    # Physical data area and independent scale gutter; cells are never squeezed
+    # into categorical coordinates or annotated individually to fit a dense grid.
+    style = AdaptiveOriginStyle(
+        profile_name="research-time-frequency", page_width_cm=28.0, page_height_cm=18.0,
+        layer_left_percent=12.5, layer_top_percent=8.3333333333,
+        layer_width_percent=64.2857142857, layer_height_percent=72.2222222222,
+        frame_line_width_pt=1.1, x_title_upshift_page_percent=0.0,
+    )
+    return ScientificPlotSpec(
+        plot_kind="time_frequency", plot_mode="sequential", x_column=columns[0],
+        y_column=columns[1], category_column=None,
+        series=(ScientificSeries(columns[2], columns[2]),), x_title=columns[0], y_title=columns[1],
+        y2_title=None, x_scale="linear", y_scale="linear", display_transform="identity",
+        display_plan=ScientificDisplayPlan(4.0, 0.8, 0.7, figure_style=style),
+        axis_plan=ScientificAxisPlan(
+            *plan.x_range, _nice_number(abs(plan.x_range[1] - plan.x_range[0]) / 7, round_value=True),
+            *plan.y_range, _nice_number(abs(plan.y_range[1] - plan.y_range[0]) / 5, round_value=True),
+        ),
+        time_frequency_plan=plan, color_rule="sequential_viridis_101",
+        color_scale_hex=color_ramp(DASHBOARD_PALETTES["viridis"]),
+    ), ("supplied_time_frequency_only_no_signal_processing",)
+
+
 def _automatic_phasor_mapping(loaded: LoadedTable) -> _AutoMapping:
     aliases = {
         "x": {"g", "phasorg", "相量g", "g坐标", "相量实部"},
@@ -6057,6 +6147,8 @@ def _build_plot_spec(
     *,
     source_profile: str | None = None,
 ) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    if template_id == "time_frequency":
+        return _build_time_frequency_spec(frame, assignments)
     if template_id == "flim_phasor":
         return _build_phasor_spec(frame, assignments)
     if template_id == "xrd":
@@ -6108,6 +6200,8 @@ def _build_plot_spec(
 
 
 def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
+    if template_id == "time_frequency":
+        return _automatic_time_frequency_mapping(loaded)
     if template_id == "flim_phasor":
         return _automatic_phasor_mapping(loaded)
     if template_id == "xrd":

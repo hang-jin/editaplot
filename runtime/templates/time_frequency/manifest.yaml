@@ -1,0 +1,34 @@
+id: time_frequency
+name: 时间–频率物理矩阵
+category: research/neurophysiology
+version: 0.1.0
+description: 原样展示上游时频值、真实时间频率坐标与独立连续色标，不计算频谱
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 152
+family: research_imaging
+blank_template: data_template.csv
+examples:
+  - id: synthetic-time-frequency
+    name_zh: 81×121 完整时频教学矩阵
+    file: example_standard.csv
+    description_zh: 自拟合成教学数据，不是实际EEG的FFT或小波计算结果。
+data_guide:
+  headline_zh: 上传含单位的 Time、Frequency、Power（或 Value）三列完整规则网格。
+  required_columns: [Time (s), Frequency (Hz), Power (dB)]
+  optional_columns: []
+  accepted_layouts: [长表，每行一个时间×频率单元]
+  aliases: [时间, 频率, 功率, 数值]
+  notes_zh:
+    - 时间、频率、数值的单位必须在列名括号或方括号中明确；中文列名支持人工映射。
+    - 不做FFT、STFT、小波、滤波、重采样、dB转换或基线处理。
+    - 保留全部单元和两个坐标的原有方向；不等距、缺格、重复坐标或非有限值停止并说明。
+    - 色阶只表达所给值的高低，负dB不会被自动解释为相对基线的下降。
+    - 半格边缘仅定义可视单元边界，不是增加新的观测。额外列需要逐一确认保留用途。

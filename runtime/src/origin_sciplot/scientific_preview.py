@@ -2275,6 +2275,40 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         raise ScientificPreviewError(code, str(exc)) from exc
 
     spec = preparation.plot_spec
+    if spec.plot_kind == "time_frequency":
+        from matplotlib.colors import ListedColormap
+        from matplotlib.ticker import MultipleLocator
+
+        figure, axis = _new_figure(preparation)
+        _style_axis(axis)
+        plan = spec.time_frequency_plan
+        if plan is None:
+            raise ScientificPreviewError("time_frequency_plan_missing", "The physical cell plan is missing.")
+        values = np.asarray(plan.grid.values)
+        edges = plan.grid.cell_edges
+        x = np.linspace(edges[0], edges[1], values.shape[1] + 1)
+        y = np.linspace(edges[2], edges[3], values.shape[0] + 1)
+        mesh = axis.pcolormesh(
+            x, y, values, cmap=ListedColormap(spec.color_scale_hex),
+            vmin=plan.color_limits[0], vmax=plan.color_limits[1], shading="flat", rasterized=True,
+        )
+        axis.set_xlim(*plan.x_range)
+        axis.set_ylim(*plan.y_range)
+        preview = _preview_style(figure)
+        axis.set_xlabel(spec.x_title, fontsize=preview.axis_title_pt, fontweight="bold")
+        axis.set_ylabel(spec.y_title, fontsize=preview.axis_title_pt, fontweight="bold")
+        axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
+        axis.yaxis.set_major_locator(MultipleLocator(spec.axis_plan.y_step))
+        origin_style = spec.display_plan.figure_style
+        color_axis = figure.add_axes([
+            0.792857142857, 1 - (origin_style.layer_top_percent + origin_style.layer_height_percent) / 100,
+            0.025, origin_style.layer_height_percent / 100,
+        ])
+        bar = figure.colorbar(mesh, cax=color_axis, ticks=np.linspace(*plan.color_limits, 6))
+        bar.ax.tick_params(labelsize=preview.tick_label_pt)
+        bar.set_label(spec.series[0].label, fontsize=preview.legend_pt)
+        _apply_font_contract(figure)
+        return figure
     if spec.plot_kind == "flim_phasor":
         figure, axis = _new_figure(preparation)
         _style_axis(axis)

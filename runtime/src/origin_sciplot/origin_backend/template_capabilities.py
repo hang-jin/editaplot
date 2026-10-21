@@ -205,6 +205,9 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
     "sankey": _profile("sankey", OriginCapability.SANKEY),
     "scatter": _profile("scatter"),
     "flim_phasor": _profile("flim_phasor"),
+    "time_frequency": _profile(
+        "time_frequency", OriginCapability.MATRIX_HEATMAP, OriginCapability.DATASET_COLOR_SCALE,
+    ),
     "shap_summary": _profile(
         "shap_summary",
         OriginCapability.CATEGORICAL_AXIS,

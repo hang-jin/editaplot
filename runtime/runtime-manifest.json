@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 441,
+  "file_count": 450,
   "files": [
     {
       "path": "LICENSE",
@@ -110,8 +110,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
-      "size_bytes": 149149,
-      "sha256": "cd53f67761207156398d112ba33459e02c906d8a373b6f4a2fecc8745d56ac87"
+      "size_bytes": 149357,
+      "sha256": "7646d462cb51b39fb723d079712099084545b3227d040cbefaa1b7e6cc3dad37"
     },
     {
       "path": "src/origin_sciplot/origin_backend/execution_context.py",
@@ -175,8 +175,13 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/template_capabilities.py",
-      "size_bytes": 15617,
-      "sha256": "3fc4d13c7c2afa5dafcc9fd0917c419d028d5560a98856b462fbb550ce25f3dc"
+      "size_bytes": 15753,
+      "sha256": "9efb753de122ae877717815b2aaf682ae867c7674475e94a1151746e6eca94f1"
+    },
+    {
+      "path": "src/origin_sciplot/origin_backend/time_frequency_renderer.py",
+      "size_bytes": 6115,
+      "sha256": "6408c01ac69977e497279a00c9b412198c77a0f408f39c14034d4841d1505a52"
     },
     {
       "path": "src/origin_sciplot/origin_backend/trajectory3d_renderer.py",
@@ -210,8 +215,8 @@
     },
     {
       "path": "src/origin_sciplot/reference_adaptation.py",
-      "size_bytes": 29619,
-      "sha256": "c099e22c39354aa31e5363e33b911d7dc46c93629eed0f1c1a7d673a98626f28"
+      "size_bytes": 29711,
+      "sha256": "ac94358daed06b053788b375cbdad6d64cd8d25ea7789dddd2d10cf3dcbab10d"
     },
     {
       "path": "src/origin_sciplot/reference_figure.py",
@@ -240,8 +245,8 @@
     },
     {
       "path": "src/origin_sciplot/scientific_preview.py",
-      "size_bytes": 91377,
-      "sha256": "382609b66eb024f543a4c66107d37f2f8bc16377dde534897e30bf4a059dde1a"
+      "size_bytes": 93204,
+      "sha256": "c3eedc2db641322a6170e86235368b2b9ef85cb0e107f0f6dc01ae93f733843b"
     },
     {
       "path": "src/origin_sciplot/scientific_visual.py",
@@ -250,13 +255,13 @@
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 229746,
-      "sha256": "1cf8bf680a9f86711e94c1a424d8fb39c24349fa62be5147f2a017086c73f35c"
+      "size_bytes": 234569,
+      "sha256": "d69be6e9e753c327c86e5217e40ca461a8a100003756c2bd8f22caf61ad371c4"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
-      "size_bytes": 30488,
-      "sha256": "b52b2b48a88ad6a8f64b0a04a0373bc4e08ed5660d0565569097f0cb5f4818c6"
+      "size_bytes": 30912,
+      "sha256": "32ff3bd67e297b2a90117dd7af912a870f6a816473092c2f0401b8f676152ca3"
     },
     {
       "path": "src/origin_sciplot/semantic_contract.py",
@@ -295,8 +300,8 @@
     },
     {
       "path": "src/origin_sciplot/template_service.py",
-      "size_bytes": 25754,
-      "sha256": "a3b972f6af38f255aede9ded932018cf8b9e3e80b0a99b9c2e258814aa97bfe4"
+      "size_bytes": 26334,
+      "sha256": "394ec34478b581663f76a3e287d11c7e488d44864edd0d70a52216c184fcdbfc"
     },
     {
       "path": "src/origin_sciplot/time_frequency.py",
@@ -1767,6 +1772,46 @@
       "path": "templates/stacked_bar/visual_contract.md",
       "size_bytes": 443,
       "sha256": "669b0a705afe9e301aef5fb417133daa9e1baecde6b7a79a0d15a0be1ffed1ea"
+    },
+    {
+      "path": "templates/time_frequency/data_contract.md",
+      "size_bytes": 947,
+      "sha256": "be150b59de60b1c4527e7f15173e1ce5014bec6a192b6474aaf5aad1ad598650"
+    },
+    {
+      "path": "templates/time_frequency/data_template.csv",
+      "size_bytes": 35,
+      "sha256": "4cb89a997429482c43be891bd5df9323701a6b420e9ed45612f3b69e802fcbc7"
+    },
+    {
+      "path": "templates/time_frequency/example_standard.csv",
+      "size_bytes": 306419,
+      "sha256": "ef90a3d657b980efcae789276d785d231e2a802e1cc3f9e2e0d9d4eaa2dd1865"
+    },
+    {
+      "path": "templates/time_frequency/manifest.yaml",
+      "size_bytes": 1556,
+      "sha256": "c54d05d2427264e94ce0b1fd8ec1bf8406cf9c224296d9707ba6a011d26b4e28"
+    },
+    {
+      "path": "templates/time_frequency/runner.py",
+      "size_bytes": 390,
+      "sha256": "b2f880d0f4748a588c77e3e0fbc5e03f99d256f850f35ef12878fa13f1f84e76"
+    },
+    {
+      "path": "templates/time_frequency/schema.json",
+      "size_bytes": 520,
+      "sha256": "b3153cefdd0665f069612d7adcf65573feb0556fb3982958ddae37071ec1a00b"
+    },
+    {
+      "path": "templates/time_frequency/service.py",
+      "size_bytes": 223,
+      "sha256": "bd8a2189719b46a6f108e5f2c863dee5124e847783158c98f9fed145c15e94af"
+    },
+    {
+      "path": "templates/time_frequency/visual_contract.md",
+      "size_bytes": 1077,
+      "sha256": "514122859ad31d081e3bd3aa3cb904d061537f19b73f93ddf7966f910b6c0f19"
     },
     {
       "path": "templates/trajectory3d/data_contract.md",

@@ -56,6 +56,7 @@ jobs:
           runtime/src/origin_sciplot/origin_backend/execution_context.py
           runtime/src/origin_sciplot/origin_backend/flim_phasor_renderer.py
           runtime/src/origin_sciplot/origin_backend/research_grid_renderer.py
+          runtime/src/origin_sciplot/origin_backend/time_frequency_renderer.py
           runtime/src/origin_sciplot/origin_backend/signal_stack_renderer.py
           runtime/src/origin_sciplot/origin_backend/job_queue.py
           runtime/src/origin_sciplot/origin_backend/shap_dashboard_renderer.py
@@ -72,6 +73,7 @@ jobs:
           runtime/templates/density_ridgeline3d/runner.py
           runtime/templates/density_ridgeline3d/service.py
           runtime/templates/flim_phasor
+          runtime/templates/time_frequency
           runtime/templates/xps_adaptive/runner.py
           runtime/templates/xps_c1s_fit/runner.py
           tests

@@ -35,6 +35,12 @@ class ShowcaseCase:
 
 CASES = (
     ShowcaseCase(
+        "time-frequency", "time_frequency", "time_frequency.csv",
+        "Synthetic supplied time-frequency values show two illustrative regions without signal processing.",
+        "time-frequency distribution", "precomputed time frequency matrix",
+        title_zh="时间–频率物理矩阵",
+    ),
+    ShowcaseCase(
         "flim-phasor", "flim_phasor", "flim_phasor.csv",
         "Synthetic upstream G-S coordinates show three distributions relative to a mathematical reference semicircle.",
         "distribution geometry", "FLIM phasor distribution",

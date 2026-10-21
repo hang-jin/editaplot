@@ -221,6 +221,14 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
 
 ## Apply the publication-informed contract
 
+For supplied time–frequency tables, choose `time_frequency` only when time, frequency and value
+columns explicitly state their units and form a complete uniform grid. Preserve both coordinate
+directions and every cell; use the numeric physical-axis route, not categorical `heatmap`.
+The route shows sequential value magnitude with a detached scale; it performs no FFT/STFT/wavelet,
+filtering, interpolation, baseline or dB conversion. A raw EEG voltage table needs upstream
+processing, not an invented frequency column. Read `references/data-contracts.md` for the input
+and unit contract; confirm any extra columns instead of silently drawing them.
+
 - Make every chart defend one explicit conclusion or evidence role.
 - Use a white background, Arial, restrained color families, clear hierarchy, and no rainbow palette,
   decorative 3D, or unjustified grid.
