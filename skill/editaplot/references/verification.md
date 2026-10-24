@@ -52,6 +52,11 @@ prove that every template is available. Apply the selected template's capability
   dataset-backed label binding. Confirm Y-axis typography independently; do not infer it from X.
 - Confirm legends, direct labels, notes, heatmap cell text, and colorbar labels have their own
   point-size and font readback whenever those objects exist.
+- For ordinary heatmaps, verify the page row labels against frozen source indices/text after export:
+  no duplicate automatic Y labels; literal text mode (`link=0`), correct font/size, attachment and rotation; no clipping,
+  vertical overlap or invasion of the data frame. Read actual bounding boxes and the positive
+  physical frame gap, not only a label count. For renderer regression, repeat these checks after
+  independently reopening the saved OPJU and verify every matrix value and row/column order.
 - Treat missing readback as a rendering failure even if exports exist.
 - For Rietveld figures, confirm Observed/Calculated/optional Background/Difference source bindings,
   that Publication `Diff` uses identity display values, and that every phase-tick plot reads its X

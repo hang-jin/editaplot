@@ -51,6 +51,121 @@ class HeatmapLayoutPlan:
     y_tick_length_pt: float
     cell_label_size_pt: float
     colorbar_label_size_pt: float
+    y_label_gap_cm: float = 0.20
+
+
+@dataclass(frozen=True)
+class HeatmapRowLabelAnchor:
+    """A source row's right-aligned label position in page percentages."""
+
+    source_index: int
+    text: str
+    right_percent: float
+    center_y_percent: float
+
+
+def _finite_geometry_value(value: float, name: str) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"Heatmap row label {name} must be finite.") from exc
+    if not math.isfinite(number):
+        raise ValueError(f"Heatmap row label {name} must be finite.")
+    return number
+
+
+def resolve_heatmap_row_label_anchors(
+    layout: HeatmapLayoutPlan,
+    *,
+    page_width_cm: float,
+    layer_left_percent: float,
+    layer_top_percent: float,
+    layer_height_percent: float,
+) -> tuple[HeatmapRowLabelAnchor, ...]:
+    """Place visible labels beside their original rows, top to bottom."""
+
+    page_width = _finite_geometry_value(page_width_cm, "page width")
+    layer_left = _finite_geometry_value(layer_left_percent, "layer left")
+    layer_top = _finite_geometry_value(layer_top_percent, "layer top")
+    layer_height = _finite_geometry_value(layer_height_percent, "layer height")
+    gap_cm = _finite_geometry_value(layout.y_label_gap_cm, "planned gap")
+    if page_width <= 0 or layer_height <= 0 or gap_cm <= 0:
+        raise ValueError("Heatmap row label page width, layer height, and planned gap must be positive.")
+    if not 0 < layer_left < 100 or layer_top < 0 or layer_top + layer_height > 100:
+        raise ValueError("Heatmap row label layer geometry must be within the page.")
+    right = layer_left - gap_cm / page_width * 100.0
+    if right <= 0:
+        raise ValueError("Heatmap row labels have insufficient left page margin for their planned gap.")
+
+    if not isinstance(layout.rows, int) or isinstance(layout.rows, bool) or layout.rows <= 0:
+        raise ValueError("Heatmap row label source row count must be a positive integer.")
+    if len(layout.y_display_labels) != layout.rows or not layout.y_visible_indices:
+        raise ValueError("Heatmap row label indices and display text must match the source rows.")
+    previous_index = -1
+    for index in layout.y_visible_indices:
+        if (
+            not isinstance(index, int)
+            or isinstance(index, bool)
+            or not previous_index < index < layout.rows
+        ):
+            raise ValueError("Heatmap row label source indices must be unique, ordered, and in range.")
+        previous_index = index
+    visible = set(layout.y_visible_indices)
+    for index, text in enumerate(layout.y_display_labels):
+        if not isinstance(text, str) or (not text.strip() if index in visible else text != ""):
+            raise ValueError("Heatmap row label visible indices and display text are inconsistent.")
+
+    return tuple(
+        HeatmapRowLabelAnchor(
+            source_index=index,
+            text=layout.y_display_labels[index],
+            right_percent=right,
+            center_y_percent=layer_top + (index + 0.5) / layout.rows * layer_height,
+        )
+        for index in layout.y_visible_indices
+    )
+
+
+def verify_heatmap_row_label_geometry(
+    anchor: HeatmapRowLabelAnchor,
+    *,
+    left_percent: float,
+    top_percent: float,
+    width_percent: float,
+    height_percent: float,
+    page_width_cm: float,
+    layer_left_percent: float,
+    y_label_gap_cm: float,
+) -> dict[str, float]:
+    """Verify a measured label bounding box against its page-space contract."""
+
+    left = _finite_geometry_value(left_percent, "left")
+    top = _finite_geometry_value(top_percent, "top")
+    width = _finite_geometry_value(width_percent, "width")
+    height = _finite_geometry_value(height_percent, "height")
+    page_width = _finite_geometry_value(page_width_cm, "page width")
+    layer_left = _finite_geometry_value(layer_left_percent, "layer left")
+    gap_cm = _finite_geometry_value(y_label_gap_cm, "planned gap")
+    planned_right = _finite_geometry_value(anchor.right_percent, "planned right")
+    planned_center = _finite_geometry_value(anchor.center_y_percent, "planned center")
+    if width <= 0 or height <= 0 or page_width <= 0 or gap_cm <= 0:
+        raise ValueError("Heatmap row label bounding box, page width, and planned gap must be positive.")
+    right = left + width
+    center = top + height / 2.0
+    if left < 0 or top < 0 or right > 100 or top + height > 100:
+        raise ValueError("Heatmap row label bounding box must be within the page.")
+    if not 0 < layer_left < 100 or not 0 < planned_right < 100 or not 0 <= planned_center <= 100:
+        raise ValueError("Heatmap row label planned geometry must be within the page.")
+    if right > layer_left:
+        raise ValueError("Heatmap row label bounding box intrudes into the heatmap frame.")
+    if abs(right - planned_right) > 0.03 + 1e-9:
+        raise ValueError("Heatmap row label right edge drift exceeds 0.03 percentage points.")
+    if abs(center - planned_center) > 0.03 + 1e-9:
+        raise ValueError("Heatmap row label center drift exceeds 0.03 percentage points.")
+    actual_gap_cm = (layer_left - right) / 100.0 * page_width
+    if actual_gap_cm < gap_cm - 0.01 - 1e-9:
+        raise ValueError("Heatmap row label physical gap is smaller than its planned minimum.")
+    return {"gap_cm": actual_gap_cm, "right_percent": right, "center_y_percent": center}
 
 
 def heatmap_cell_labels_enabled(rows: int, columns: int) -> bool:
@@ -167,7 +282,10 @@ __all__ = [
     "DENSE_X_LABEL_BUDGET",
     "HeatmapColorbarGeometry",
     "HeatmapLayoutPlan",
+    "HeatmapRowLabelAnchor",
     "heatmap_cell_labels_enabled",
     "resolve_heatmap_colorbar_geometry",
     "resolve_heatmap_layout",
+    "resolve_heatmap_row_label_anchors",
+    "verify_heatmap_row_label_geometry",
 ]

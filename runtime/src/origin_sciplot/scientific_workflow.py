@@ -29,7 +29,7 @@ from .data_loader import DataLoadError, LoadedTable, load_table
 from .event_raster import EventRasterPlan, build_event_raster_plan, validate_event_time_title
 from .event_raster_layout import EventRasterLayout, build_event_raster_layout
 from .flim_phasor import PhasorPlan, build_phasor_plan
-from .heatmap_layout import heatmap_cell_labels_enabled
+from .heatmap_layout import HeatmapLayoutPlan, heatmap_cell_labels_enabled, resolve_heatmap_layout
 from .palette_catalog import get_palette
 from .scientific_visual import (
     AdaptiveOriginStyle, resolve_adaptive_style, resolve_signal_stack_style, resolve_time_frequency_style,
@@ -297,6 +297,7 @@ class ScientificPlotSpec:
     event_raster_plan: EventRasterPlan | None = None
     event_raster_layout: EventRasterLayout | None = None
     color_scale_hex: tuple[str, ...] = ()
+    heatmap_layout: HeatmapLayoutPlan | None = None
 
 
 @dataclass(frozen=True)
@@ -341,6 +342,8 @@ def _plot_digest_payload(spec: ScientificPlotSpec) -> dict:
         payload.pop("event_raster_layout")
     if not spec.color_scale_hex:
         payload.pop("color_scale_hex")
+    if spec.heatmap_layout is None:
+        payload.pop("heatmap_layout")
     return payload
 
 
@@ -4408,6 +4411,15 @@ def _build_error_spec(
         ),
         axis_plan=axis_plan,
         aggregate_error_column=aggregate_error_column,
+        heatmap_layout=(
+            resolve_heatmap_layout(
+                x_labels=[item.label for item in series],
+                y_labels=categories,
+                tick_label_size_pt=style.tick_label_size_pt,
+                major_tick_length_pt=style.major_tick_length_pt,
+            )
+            if template_id == "heatmap" else None
+        ),
     )
     return spec, tuple(dict.fromkeys(warnings))
 

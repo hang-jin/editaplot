@@ -3,7 +3,7 @@
   "release_policy": "synthetic teaching data and original/generated assets only",
   "inventory_generator": {
     "path": "tools/build_asset_provenance.py",
-    "sha256": "ddcb309b96dcbdad78cec4f8d1f655c2f893d6d3033e853d589cd4b2ba5b7ec5"
+    "sha256": "d823dddaf1016564d0ada55b6fd43524965b0ab4685c6c6f39b85f644ca9aa08"
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
@@ -15,7 +15,7 @@
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
-    "reviewed_on": "2026-10-24",
+    "reviewed_on": "2026-10-25",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, payment-identifier intent, and redistribution boundary"
   },
   "asset_count": 251,
@@ -263,8 +263,8 @@
     {
       "path": "assets/gallery/heatmap-dense-30x30.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 66283,
-      "sha256": "5496ff5f39f03f5452a87d59937b6949fdac0a89044183afb704b6133ba2f1a2",
+      "size_bytes": 64245,
+      "sha256": "85ab4caddc7599f31cbf87e8fc5a196b623124500985dcaba2f83442de44c24a",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {

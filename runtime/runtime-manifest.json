@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 472,
+  "file_count": 473,
   "files": [
     {
       "path": "LICENSE",
@@ -75,8 +75,8 @@
     },
     {
       "path": "src/origin_sciplot/heatmap_layout.py",
-      "size_bytes": 6017,
-      "sha256": "3065b9c0146e85a7d1451894cf20c014670925c0ca334e5d03ac268ad68debbb"
+      "size_bytes": 11523,
+      "sha256": "6a97983f280a10935da9826aecbf38181358f113b4f218f8a21595652e3e9f64"
     },
     {
       "path": "src/origin_sciplot/logging_utils.py",
@@ -105,8 +105,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/categorical_renderer.py",
-      "size_bytes": 66701,
-      "sha256": "98bc84a98b42adb8e131e0c50df0fd329c81cdef62c64fd68fcd29b1360baee4"
+      "size_bytes": 67823,
+      "sha256": "1c8d0be0b303241141fb51f44195731309d660cce63cf8e517feefb46fa8deb5"
     },
     {
       "path": "src/origin_sciplot/origin_backend/density_ridgeline3d_renderer.py",
@@ -137,6 +137,11 @@
       "path": "src/origin_sciplot/origin_backend/flim_phasor_renderer.py",
       "size_bytes": 12459,
       "sha256": "5c85f9575db1604c5ac4b999b47db02d7aa53d093170241b31cd24e99609f5a0"
+    },
+    {
+      "path": "src/origin_sciplot/origin_backend/heatmap_labels.py",
+      "size_bytes": 5883,
+      "sha256": "f1a37e659bcd257fc6216b1dc19fd870bc5524e740c9da3782e4b8312eb2dbbc"
     },
     {
       "path": "src/origin_sciplot/origin_backend/job_queue.py",
@@ -265,8 +270,8 @@
     },
     {
       "path": "src/origin_sciplot/scientific_preview.py",
-      "size_bytes": 97558,
-      "sha256": "ca11351fbe14b70a7668bae7cfa6052e607a02f82791687bbe6609e97890086b"
+      "size_bytes": 98467,
+      "sha256": "5e896cc29b2de0f3bf88af98318efcce56db9f353c0bf0153a3a0ff585a55757"
     },
     {
       "path": "src/origin_sciplot/scientific_visual.py",
@@ -275,8 +280,8 @@
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 244727,
-      "sha256": "6bed45b0971de998d38ff84498fa51593f0dd08e745fdb2e9923abae8f2ffdc4"
+      "size_bytes": 245253,
+      "sha256": "104341e7f5da1bf8527cb8d8d4bb6a220b6f15ed113a611f36abe7043b5daa70"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
@@ -1145,8 +1150,8 @@
     },
     {
       "path": "templates/heatmap/visual_contract.md",
-      "size_bytes": 496,
-      "sha256": "c0c0a032f6d4b382552091acea073cfe6ba7259f69dbd05a3116a7ba2a5c90ee"
+      "size_bytes": 1688,
+      "sha256": "bebf5867ce60b473c971250e64134c949ee120ca43d7a86623e44432f878515c"
     },
     {
       "path": "templates/histogram/data_contract.md",

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-25 — clearer homepage and measured heatmap row labels
+
+- Reorganize the Chinese-first README and English mirror around real Origin examples, three
+  beginner steps, template navigation, scoped permissions and detailed guides. Align published
+  counts to 45 routes, 54 retained assets and 45 representative examples.
+- Freeze ordinary heatmap row text, source-row centers and a default 0.20 cm frame clearance.
+  Use borderless editable page labels, verify measured bounds after export, and share anchors
+  with the preview. Source values, matrix order, X labels, color scales and confusion-matrix
+  behavior are unchanged; unrelated approved plan digests remain valid.
+- Validate 30×30, 40×40, small, Chinese and long-label cases on Origin 2024b with editable OPJU,
+  PNG/PDF/TIF, data/axis/font/geometry readback, visual review and independent project reopening.
+  Update only the 30×30 public representative; keep earlier evidence and other variants.
+
 ## Unreleased — research-figure upgrade and community regression fixes
 
 - Add `flim_phasor` for upstream G/S coordinates: native hollow scatter, an explicitly

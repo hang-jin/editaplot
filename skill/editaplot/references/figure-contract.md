@@ -57,6 +57,10 @@ Reviewer risk:
 - Put a percent-composition legend in a reserved external page column when it cannot fit the data
   field. Grouped-box legends are borderless editable labels, not the framed system-template legend.
 - Heatmaps reserve a detached right margin for the colorbar and verify both colorbar and cell-label fonts.
+- Ordinary categorical heatmaps freeze sparse row text and source-row positions. Their visible Y labels
+  are separate, borderless editable Origin page objects, not missing axes: the numeric Y scale and
+  complete matrix remain intact. Right-align measured text with the frozen 0.20 cm default frame gap;
+  never shrink type or edit PNG pixels to hide a collision. Confusion matrices keep their own axis contract.
 
 For XPS, cosmetic requests never change the source table, column roles, high-to-low binding-energy
 direction, component identity, or verified fill construction. Exact colors, widths, transparency,

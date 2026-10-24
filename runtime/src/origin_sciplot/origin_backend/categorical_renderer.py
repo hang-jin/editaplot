@@ -32,6 +32,7 @@ from origin_sciplot.template_registry import TemplateManifest
 
 from .base_style_contract import page_size_inches, pt_to_origin_width_units
 from .export_utils import export_graph
+from .heatmap_labels import add_heatmap_row_labels, verify_heatmap_row_labels
 from .safe_errors import OriginDrawError
 from .scientific_renderer import (
     OriginSeriesPlan,
@@ -1189,7 +1190,7 @@ def _build_heatmap_graph(
         copy=True,
     )
     rows, columns = values.shape
-    layout = resolve_heatmap_layout(
+    layout = spec.heatmap_layout or resolve_heatmap_layout(
         x_labels=series_labels,
         y_labels=categories,
         tick_label_size_pt=style.tick_label_size_pt,
@@ -1197,6 +1198,10 @@ def _build_heatmap_graph(
     )
     if preparation.template_id == "confusion_matrix" and columns <= 4:
         layout = replace(layout, x_rotation_deg=0.0)
+    if preparation.template_id == "heatmap" and (
+        spec.heatmap_layout is None or (layout.rows, layout.columns) != (rows, columns)
+    ):
+        raise OriginDrawError("Heatmap row-label layout is missing or differs from the frozen source shape.")
     matrix = op.new_sheet("m", "HEATMAP Matrix")
     if matrix is None:
         raise OriginDrawError("Origin could not create the Heatmap matrix sheet.")
@@ -1424,6 +1429,9 @@ def _build_heatmap_graph(
     graph.activate()
     if not op.lt_exec(f"doc -e G {{%B.font=font({style.font_family});}};doc -uw;"):
         raise OriginDrawError("Origin could not apply the Heatmap page font contract.")
+    row_label_state = None
+    if preparation.template_id == "heatmap":
+        row_label_state = add_heatmap_row_labels(op, graph, layer, layout=layout, style=style, geometry=geometry)
     return graph, {
         **geometry,
         "origin_axis_state": {
@@ -1438,6 +1446,7 @@ def _build_heatmap_graph(
             "cell_labels": cell_label_state,
             "color_scale": color_scale_state,
             "axis_titles": title_state,
+            **({"row_labels": row_label_state} if row_label_state is not None else {}),
         },
         "origin_plot_state": {
             "template": template,
@@ -1509,6 +1518,13 @@ def run_categorical_template(
             output.result_pdf,
             output.result_tif,
         )
+        if resolved.template_id == "heatmap":
+            # Export/save can refresh axis-owned objects: verify the actual final state again.
+            style = _figure_style(resolved)
+            geometry = verify_page_and_layer(graph, graph[0], origin=op, style=style)
+            verify_report["origin_text_state"]["row_labels_after_export"] = verify_heatmap_row_labels(
+                op, graph[0], layout=resolved.plot_spec.heatmap_layout, style=style, geometry=geometry,
+            )
         verify_report["exports"] = exports
         write_json(output.origin_verify_report, verify_report)
         write_json(

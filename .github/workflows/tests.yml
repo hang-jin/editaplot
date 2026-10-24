@@ -62,6 +62,7 @@ jobs:
           runtime/src/origin_sciplot/origin_backend/density_ridgeline3d_renderer.py
           runtime/src/origin_sciplot/origin_backend/execution_context.py
           runtime/src/origin_sciplot/origin_backend/flim_phasor_renderer.py
+          runtime/src/origin_sciplot/origin_backend/heatmap_labels.py
           runtime/src/origin_sciplot/origin_backend/event_raster_renderer.py
           runtime/src/origin_sciplot/origin_backend/research_grid_renderer.py
           runtime/src/origin_sciplot/origin_backend/time_frequency_renderer.py

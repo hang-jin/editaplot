@@ -27,6 +27,7 @@ from .circular_network_layout import (
 from .heatmap_layout import (
     resolve_heatmap_colorbar_geometry,
     resolve_heatmap_layout,
+    resolve_heatmap_row_label_anchors,
 )
 from .event_raster import event_rows_by_condition
 from .scientific_visual import (
@@ -2020,18 +2021,18 @@ def _draw_heatmap(figure: Figure, frame: Any, preparation: ScientificPreparation
     categories = [str(item) for item in frame[spec.category_column].tolist()]
     series_labels = [series.label for series in spec.series]
     values = np.column_stack([series_values(frame, series) for series in spec.series])
-    layout = resolve_heatmap_layout(
+    layout = spec.heatmap_layout or resolve_heatmap_layout(
         x_labels=series_labels,
         y_labels=categories,
         tick_label_size_pt=origin_style.tick_label_size_pt,
         major_tick_length_pt=origin_style.major_tick_length_pt,
     )
     left = origin_style.layer_left_percent / 100.0
-    bottom = max(
-        0.08,
-        1.0 - (origin_style.layer_top_percent + origin_style.layer_height_percent) / 100.0,
-    )
-    width = min(origin_style.layer_width_percent / 100.0, 0.76)
+    bottom = 1.0 - (origin_style.layer_top_percent + origin_style.layer_height_percent) / 100.0
+    width = origin_style.layer_width_percent / 100.0
+    if preparation.template_id != "heatmap":
+        bottom = max(0.08, bottom)
+        width = min(width, 0.76)
     height = origin_style.layer_height_percent / 100.0
     axis = figure.add_axes([left, bottom, width, height], facecolor="white")
     finite = values[np.isfinite(values)]
@@ -2055,6 +2056,25 @@ def _draw_heatmap(figure: Figure, frame: Any, preparation: ScientificPreparation
         )
     axis.set_xticks(np.arange(len(series_labels)), layout.x_display_labels)
     axis.set_yticks(np.arange(len(categories)), layout.y_display_labels)
+    if preparation.template_id == "heatmap":
+        axis.tick_params(axis="y", labelleft=False)
+        for anchor in resolve_heatmap_row_label_anchors(
+            layout,
+            page_width_cm=origin_style.page_width_cm,
+            layer_left_percent=origin_style.layer_left_percent,
+            layer_top_percent=origin_style.layer_top_percent,
+            layer_height_percent=origin_style.layer_height_percent,
+        ):
+            figure.text(
+                anchor.right_percent / 100.0,
+                1.0 - anchor.center_y_percent / 100.0,
+                anchor.text,
+                ha="right",
+                va="center",
+                fontsize=style.tick_label_pt,
+                color="#000000",
+                gid="heatmap-row-label",
+            )
     preview_scale = style.tick_label_pt / origin_style.tick_label_size_pt
     axis.tick_params(
         axis="both",

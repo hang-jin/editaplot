@@ -105,8 +105,8 @@
       "title_zh": "30×30 高密度热力图",
       "title_en": "dense 30 by 30 heatmap matrix",
       "display_in_gallery": true,
-      "sha256": "5496ff5f39f03f5452a87d59937b6949fdac0a89044183afb704b6133ba2f1a2",
-      "size_bytes": 66283
+      "sha256": "85ab4caddc7599f31cbf87e8fc5a196b623124500985dcaba2f83442de44c24a",
+      "size_bytes": 64245
     },
     {
       "id": "heatmap-dense-40x40",
