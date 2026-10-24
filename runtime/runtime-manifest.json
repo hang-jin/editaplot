@@ -270,8 +270,8 @@
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 244610,
-      "sha256": "6dc3709e90862a1efa1c208284e71c29eb9b6f222c9d6da87b0f2b110573ce01"
+      "size_bytes": 244727,
+      "sha256": "6bed45b0971de998d38ff84498fa51593f0dd08e745fdb2e9923abae8f2ffdc4"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
@@ -310,8 +310,8 @@
     },
     {
       "path": "src/origin_sciplot/spatial_profile.py",
-      "size_bytes": 4119,
-      "sha256": "c3357180b00166be5f993ce89926e74244e1a4b0e7c2b3a3f47ec81843fcc080"
+      "size_bytes": 5479,
+      "sha256": "4d93cc9e3a2e44b6c2a47e2aae9d1a0663694a58e25e2e3139837ac0e5d24fbf"
     },
     {
       "path": "src/origin_sciplot/spectral_density.py",

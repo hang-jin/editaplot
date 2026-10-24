@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from numbers import Integral, Real
 
 import numpy as np
@@ -54,6 +55,28 @@ def _profile_position(coordinates: tuple[float, ...], value: object, label: str)
     return matches[0]
 
 
+def _reject_rounded_integer_coordinates(frame: pd.DataFrame, columns: tuple[str, str]) -> None:
+    """Do not let float conversion invent a coordinate absent from integer source data."""
+    for column in columns:
+        if sum(name == column for name in frame.columns) != 1:
+            continue  # The grid validator reports missing/duplicate columns.
+        for value in frame[column]:
+            exact = None
+            if isinstance(value, Integral) and not isinstance(value, (bool, np.bool_)):
+                exact = Decimal(int(value))
+            elif isinstance(value, (str, Decimal)):
+                try:
+                    decimal = Decimal(value)
+                except InvalidOperation:
+                    continue  # The grid validator reports nonnumeric coordinates.
+                if decimal.is_finite() and decimal == decimal.to_integral_value():
+                    exact = decimal
+            if exact is not None:
+                converted = float(exact)
+                if not math.isfinite(converted) or Decimal.from_float(converted) != exact:
+                    raise ValueError("Integer source coordinates lose precision in the physical grid.")
+
+
 def build_spatial_profile_plan(
     frame: pd.DataFrame,
     *,
@@ -79,11 +102,13 @@ def build_spatial_profile_plan(
     for unit in (x_unit, y_unit, value_unit):
         if not isinstance(unit, str) or not unit.strip():
             raise ValueError("X, Y and value units must be explicitly declared.")
+    _reject_rounded_integer_coordinates(frame, (x_column, y_column))
     grid = physical_grid(frame, *columns)
     xi = _profile_position(grid.x, profile_x, "profile_x")
     yi = _profile_position(grid.y, profile_y, "profile_y")
     profiles = OrthogonalProfiles(
-        x_at=grid.x[xi], y_at=grid.y[yi],
+        x_at=grid.x[xi],
+        y_at=grid.y[yi],
         horizontal_values=grid.values[yi],
         vertical_values=tuple(row[xi] for row in grid.values),
         horizontal_source_rows=grid.source_rows[yi],
@@ -93,8 +118,15 @@ def build_spatial_profile_plan(
     if not all(math.isfinite(end - begin) and begin != end for begin, end in (edges[:2], edges[2:])):
         raise ValueError("Spatial coordinates cannot produce finite display bounds.")
     return SpatialProfilePlan(
-        x_column=x_column, y_column=y_column, value_column=value_column,
-        x_unit=x_unit, y_unit=y_unit, value_unit=value_unit,
-        grid=grid, profiles=profiles, x_range=edges[:2], y_range=edges[2:],
+        x_column=x_column,
+        y_column=y_column,
+        value_column=value_column,
+        x_unit=x_unit,
+        y_unit=y_unit,
+        value_unit=value_unit,
+        grid=grid,
+        profiles=profiles,
+        x_range=edges[:2],
+        y_range=edges[2:],
         retained_columns=tuple(str(column) for column in frame.columns if column not in columns),
     )

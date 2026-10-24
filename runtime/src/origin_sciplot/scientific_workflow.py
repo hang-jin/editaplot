@@ -6438,13 +6438,14 @@ def prepare_scientific(
     if template_id not in SUPPORTED_SCIENTIFIC_TEMPLATE_IDS:
         raise ScientificWorkflowError("template_unknown", f"Unknown scientific template: {template_id}")
     loaded = _load(path)
-    automatic = _automatic_mapping(loaded, template_id)
+    automatic = _automatic_mapping(loaded, template_id) if column_mapping is None else None
     mapping_confirmed = column_mapping is not None
     if column_mapping is None:
         assignments = automatic.assignments
         plot_mode = automatic.plot_mode
     else:
         assignments, plot_mode = _validate_assignment_shape(loaded, template_id, column_mapping)
+        assignments = {column: assignments[column] for column in loaded.columns}
     # Physical-cell validation must see Excel's original bool/date types.
     # The source-bound reload still creates a numeric working copy for COM.
     frame = (
