@@ -10,8 +10,8 @@ Python 3.11 has no live-verification claim; the older 3.10 record remains histor
 Other environments still require local capability checks. Origin 2020b and earlier, macOS,
 Linux, WSL, Wine/CrossOver, Parallels, and other VMs are unsupported.
 
-I currently publish 42 Origin plotting routes and retain 51 fully reviewed PNGs as verification
-assets. The public page displays one representative per template, for 42 images. The other nine
+I currently publish 45 Origin plotting routes and retain 54 native-export PNGs in the asset
+inventory. The public page displays one representative per template, for 45 images. The other nine
 palette or mode examples retain their images, sample data, and plotting capabilities: all three
 SHAP palettes, steady-state PL, and PR curves remain selectable, for example. The 3D dual-density route accepts only upstream
 supplied density profiles and one Z=0 baseline focal locator per group; it does not run KDE or infer
