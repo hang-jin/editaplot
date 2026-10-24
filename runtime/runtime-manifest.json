@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 469,
+  "file_count": 471,
   "files": [
     {
       "path": "LICENSE",
@@ -224,6 +224,11 @@
       "sha256": "67841ff1f454e51cc22b9aa10f28230421d0dc0eace054c833a97a58eb381d67"
     },
     {
+      "path": "src/origin_sciplot/ratiometric_response.py",
+      "size_bytes": 7521,
+      "sha256": "d3835dec4347c95c9b56ea75093edf7df6d0afa8f19af2f7d30a3b0cf5f07d1a"
+    },
+    {
       "path": "src/origin_sciplot/reference_adaptation.py",
       "size_bytes": 29871,
       "sha256": "5d48e471c9da9143db55ff8f4359db3c97c975778968a998c48433a01a6db069"
@@ -302,6 +307,11 @@
       "path": "src/origin_sciplot/signal_stack_layout.py",
       "size_bytes": 3019,
       "sha256": "6e4fb914889d30baae0c45f8e80d409e6ba35d2edb671603b0980d5d05d8672e"
+    },
+    {
+      "path": "src/origin_sciplot/spatial_profile.py",
+      "size_bytes": 4119,
+      "sha256": "c3357180b00166be5f993ce89926e74244e1a4b0e7c2b3a3f47ec81843fcc080"
     },
     {
       "path": "src/origin_sciplot/spectral_density.py",

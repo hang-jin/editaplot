@@ -44,6 +44,8 @@ jobs:
           runtime/src/origin_sciplot/event_response.py
           runtime/src/origin_sciplot/flim_phasor.py
           runtime/src/origin_sciplot/research_grid.py
+          runtime/src/origin_sciplot/spatial_profile.py
+          runtime/src/origin_sciplot/ratiometric_response.py
           runtime/src/origin_sciplot/signal_stack.py
           runtime/src/origin_sciplot/signal_stack_layout.py
           runtime/src/origin_sciplot/spectral_density.py
