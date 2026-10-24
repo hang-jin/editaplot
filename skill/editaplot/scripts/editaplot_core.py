@@ -90,6 +90,7 @@ VERIFIED_TEMPLATE_IDS = frozenset(
         "flim_phasor",
         "time_frequency",
         "signal_stack",
+        "event_raster",
         "grouped_box",
         "pl",
         "dsc",
@@ -926,6 +927,7 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "signal_stack": (
         "multichannel", "signal stack", "eeg traces", "fluorescence traces", "多通道", "脑电波形", "荧光轨迹",
     ),
+    "event_raster": ("event raster", "spike raster", "trial events", "事件栅格", "试次事件", "已提供事件"),
     "shap_summary": (
         "shapsummary",
         "shapbeeswarm",

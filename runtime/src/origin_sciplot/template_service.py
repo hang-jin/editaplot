@@ -402,6 +402,13 @@ class ScientificTemplateService:
                 ("Target", spec.target_column or "—"),
                 ("Value", spec.series[0].source_column),
             )
+        elif spec.plot_kind == "event_raster":
+            plan = spec.event_raster_plan
+            roles = (("Time / 事件时间", plan.event_time_column), ("Trial / 试次", plan.trial_column),
+                     ("Condition / 条件", plan.condition_column))
+            facts = (*facts, ("事件数", str(len(plan.event_rows))), ("试次数", str(len(plan.trial_order))),
+                     ("空试次", f"{len(plan.empty_trial_ids)}；保留空白泳道，不替换成时间0事件"),
+                     ("计算边界", "仅源顺序显示编号；不检测事件、排序效果或计算PSTH"))
         elif spec.plot_kind == "signal_stack":
             plan = spec.signal_stack_plan
             roles = (("Time / 时间", plan.time_column), ("Channel / 通道", plan.channel_column),

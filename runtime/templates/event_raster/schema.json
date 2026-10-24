@@ -1,0 +1,8 @@
+{
+  "template_id": "event_raster", "workflow": "scientific_table", "layout": "supplied_event_long",
+  "required_roles": ["x", "category", "series_id"], "optional_roles": [],
+  "standard_columns": {"x": "Time (s)", "category": "Trial", "series_id": "Condition"},
+  "min_columns": 3, "min_rows": 1, "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"],
+  "source_data_modified": false, "automatic_signal_processing": false,
+  "display_transform": "source_order_trial_ordinal"
+}

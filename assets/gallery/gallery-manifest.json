@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "asset_policy": "programmatically verified and explicitly manually reviewed Origin PNG from synthetic teaching data only; local logs, plans, OPJU, PDF and TIF excluded",
-  "case_count": 53,
-  "display_case_count": 44,
+  "case_count": 54,
+  "display_case_count": 45,
   "cases": [
     {
       "id": "bar-error-groups",
@@ -67,6 +67,14 @@
       "display_in_gallery": true,
       "sha256": "702f7636e2d082304e6735838ea02a4b35bbef9391bd8ee3d7f5491ed3f228bc",
       "size_bytes": 36946
+    },
+    {
+      "id": "event-raster",
+      "title_zh": "已提供事件与试次栅格",
+      "title_en": "supplied event raster with empty trial inventory",
+      "display_in_gallery": true,
+      "sha256": "2fcac68272c1a12dc24e790f2c7e82a038ca8e68a841d597d173b9fa98ddee5e",
+      "size_bytes": 69410
     },
     {
       "id": "flim-phasor",

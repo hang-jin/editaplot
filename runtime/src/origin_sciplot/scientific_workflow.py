@@ -26,6 +26,8 @@ from .circular_network_layout import (
     resolve_circular_network_layout,
 )
 from .data_loader import DataLoadError, LoadedTable, load_table
+from .event_raster import EventRasterPlan, build_event_raster_plan, validate_event_time_title
+from .event_raster_layout import EventRasterLayout, build_event_raster_layout
 from .flim_phasor import PhasorPlan, build_phasor_plan
 from .heatmap_layout import heatmap_cell_labels_enabled
 from .palette_catalog import get_palette
@@ -84,6 +86,7 @@ ScientificTemplateId = Literal[
     "flim_phasor",
     "time_frequency",
     "signal_stack",
+    "event_raster",
     "grouped_box",
     "dsc",
     "nmr",
@@ -134,6 +137,7 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "flim_phasor",
         "time_frequency",
         "signal_stack",
+        "event_raster",
         "grouped_box",
         "dsc",
         "nmr",
@@ -290,6 +294,8 @@ class ScientificPlotSpec:
     time_frequency_plan: TimeFrequencyPlan | None = None
     signal_stack_plan: SignalStackPlan | None = None
     signal_stack_layout: SignalStackLayout | None = None
+    event_raster_plan: EventRasterPlan | None = None
+    event_raster_layout: EventRasterLayout | None = None
     color_scale_hex: tuple[str, ...] = ()
 
 
@@ -329,6 +335,10 @@ def _plot_digest_payload(spec: ScientificPlotSpec) -> dict:
         payload.pop("signal_stack_plan")
     if spec.signal_stack_layout is None:
         payload.pop("signal_stack_layout")
+    if spec.event_raster_plan is None:
+        payload.pop("event_raster_plan")
+    if spec.event_raster_layout is None:
+        payload.pop("event_raster_layout")
     if not spec.color_scale_hex:
         payload.pop("color_scale_hex")
     return payload
@@ -383,6 +393,11 @@ def apply_scientific_text_overrides(
     spec = preparation.plot_spec
     resolved_x_title = normalized(x_title, "X axis title", spec.x_title)
     resolved_y_title = normalized(y_title, "Y axis title", spec.y_title)
+    if preparation.template_id == "event_raster":
+        try:
+            validate_event_time_title(resolved_x_title, spec.event_raster_plan.time_unit)
+        except ValueError as error:
+            raise ScientificWorkflowError("event_time_unit_changed", str(error)) from error
     if preparation.template_id == "trajectory3d":
         if _alias_score(resolved_x_title, _TRAJECTORY3D_X_ALIASES) == 0:
             raise ScientificWorkflowError(
@@ -414,6 +429,12 @@ def apply_scientific_text_overrides(
     )
     if overridden == spec:
         return preparation
+    if preparation.template_id == "event_raster":
+        layout = build_event_raster_layout(spec.event_raster_plan, resolved_x_title, resolved_y_title,
+                                          palette_name=spec.display_plan.figure_style.palette_name)
+        overridden = replace(overridden, event_raster_layout=layout,
+                             display_plan=replace(spec.display_plan, figure_style=layout.style,
+                                                  marker_size_pt=layout.marker_size_pt))
     if preparation.template_id in {"time_frequency", "signal_stack"}:
         if preparation.template_id == "time_frequency":
             measured = resolve_time_frequency_style(resolved_x_title, resolved_y_title, spec.series[0].label)
@@ -441,6 +462,7 @@ def apply_scientific_text_overrides(
 
 
 _PALETTE_OVERRIDE_MODE_BY_TEMPLATE: dict[str, str] = {
+    "event_raster": "qualitative",
     "eis": "qualitative",
     "cv": "qualitative",
     "lsv": "qualitative",
@@ -524,6 +546,10 @@ def apply_scientific_palette_override(
     overridden_style = replace(style, palette_name=requested)
     overridden_display = replace(spec.display_plan, figure_style=overridden_style)
     overridden_spec = replace(spec, display_plan=overridden_display)
+    if preparation.template_id == "event_raster":
+        layout = build_event_raster_layout(spec.event_raster_plan, spec.x_title, spec.y_title,
+                                          palette_name=requested)
+        overridden_spec = replace(overridden_spec, event_raster_layout=layout)
     return replace(
         preparation,
         plot_spec=overridden_spec,
@@ -1288,6 +1314,9 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
     elif template_id == "time_frequency":
         keys = ("x", "frequency_axis", "series", "ignored")
         unique = {"x", "frequency_axis", "series"}
+    elif template_id == "event_raster":
+        keys = ("x", "category", "series_id", "ignored")
+        unique = {"x", "category", "series_id"}
     elif template_id in {"flim_phasor", "signal_stack"}:
         keys = ("x", "series", "category", "ignored")
         unique = {"x", "series", "category"}
@@ -1360,6 +1389,8 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
 
 
 def mapping_context_options(template_id: str) -> tuple[tuple[str, str], ...]:
+    if template_id == "event_raster":
+        return (("events_only", "已提供事件；保留空试次，不检测事件或计算PSTH"),)
     if template_id == "signal_stack":
         return (("common_amplitude", "共同幅度单位；仅纵向显示偏移"),)
     if template_id == "time_frequency":
@@ -3152,6 +3183,11 @@ def _validate_assignment_shape(
             mode = "common_amplitude"
         if mode != "common_amplitude":
             raise ScientificWorkflowError("mapping_plot_mode", "Select common_amplitude mode; no normalization is performed.")
+    if template_id == "event_raster":
+        if mode == "default":
+            mode = "events_only"
+        if mode != "events_only":
+            raise ScientificWorkflowError("mapping_plot_mode", "Select events_only mode; event detection and PSTH are not performed.")
     if template_id == "diagnostic_curve" and mode not in {"roc", "pr"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select ROC or Precision-Recall mode.")
     if template_id == "pl" and mode not in {"steady_state", "trpl"}:
@@ -6072,6 +6108,46 @@ def _automatic_signal_mapping(loaded: LoadedTable) -> _AutoMapping:
     return _AutoMapping(assignments, "common_amplitude", 0.75 if reasons else 0.98, tuple(reasons), ())
 
 
+def _automatic_event_raster_mapping(loaded: LoadedTable) -> _AutoMapping:
+    aliases = {
+        "x": {"time", "eventtime", "时间", "事件时间", "时刻"},
+        "category": {"trial", "trialid", "unit", "unitid", "试次", "试次编号", "单元"},
+        "series_id": {"condition", "group", "条件", "组别", "分组"},
+    }
+    assignments = {}
+    for column in loaded.columns:
+        name = re.split(r"[\(\[（［]", column, maxsplit=1)[0]
+        assignments[column] = next((role for role, names in aliases.items() if _canonical(name) in names), "ignored")
+    reasons = []
+    if any(list(assignments.values()).count(role) != 1 for role in aliases):
+        reasons.append("event_raster_explicit_time_trial_condition_required")
+    if "ignored" in assignments.values():
+        reasons.append("event_raster_extra_columns_require_confirmation")
+    return _AutoMapping(assignments, "events_only", 0.75 if reasons else 0.98, tuple(reasons), ())
+
+
+def _build_event_raster_spec(frame: pd.DataFrame, assignments: dict[str, str]):
+    time, trial, condition = (_require_one(assignments, role) for role in ("x", "category", "series_id"))
+    try:
+        plan = build_event_raster_plan(frame, event_time_column=time, trial_column=trial,
+                                      condition_column=condition, time_unit=_explicit_header_unit(time))
+    except ValueError as error:
+        raise ScientificWorkflowError("event_raster_data_invalid", str(error)) from error
+    y_title = f"{trial} (source order)"
+    layout = build_event_raster_layout(plan, time, y_title)
+    return ScientificPlotSpec(
+        plot_kind="event_raster", plot_mode="events_only", x_column=time, category_column=trial,
+        series=tuple(ScientificSeries(time, label, group=label) for label in plan.condition_order),
+        x_title=time, y_title=y_title, y2_title=None, x_scale="linear", y_scale="linear",
+        display_transform="source_order_trial_ordinal",
+        display_plan=ScientificDisplayPlan(layout.marker_size_pt, 0.8, 0.7, figure_style=layout.style),
+        axis_plan=ScientificAxisPlan(*layout.x_range,
+                                    _nice_number((plan.x_range[1] - plan.x_range[0]) / 6, round_value=True),
+                                    *layout.y_range, layout.y_step),
+        event_raster_plan=plan, event_raster_layout=layout,
+    ), ("supplied_events_only_no_detection_or_psth",)
+
+
 def _build_signal_stack_spec(frame: pd.DataFrame, assignments: dict[str, str]):
     time_column, value_column, channel_column = (_require_one(assignments, role) for role in ("x", "series", "category"))
     try:
@@ -6229,6 +6305,8 @@ def _build_plot_spec(
     *,
     source_profile: str | None = None,
 ) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    if template_id == "event_raster":
+        return _build_event_raster_spec(frame, assignments)
     if template_id == "signal_stack":
         return _build_signal_stack_spec(frame, assignments)
     if template_id == "time_frequency":
@@ -6284,6 +6362,8 @@ def _build_plot_spec(
 
 
 def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
+    if template_id == "event_raster":
+        return _automatic_event_raster_mapping(loaded)
     if template_id == "signal_stack":
         return _automatic_signal_mapping(loaded)
     if template_id == "time_frequency":
@@ -6368,7 +6448,7 @@ def prepare_scientific(
     # Physical-cell validation must see Excel's original bool/date types.
     # The source-bound reload still creates a numeric working copy for COM.
     frame = (
-        loaded.copy_frame() if template_id in {"time_frequency", "signal_stack", "flim_phasor"}
+        loaded.copy_frame() if template_id in {"time_frequency", "signal_stack", "flim_phasor", "event_raster"}
         else _coerced_selected_frame(loaded, assignments)
     )
     source_profile = detect_xrd_source_profile(loaded) if template_id == "xrd" else None

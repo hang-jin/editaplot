@@ -37,6 +37,7 @@ ALLOWED_DERIVED_OPERATIONS = frozenset(
         "deterministic_binned_symmetric_offset",
         "phasor_reference_semicircle",
         "signal_amplitude_ruler",
+        "source_order_trial_ordinal",
     }
 )
 
@@ -448,6 +449,23 @@ class DerivedDataItem:
                     or parameters["reference_kind"] != "display_unit_length_not_statistical_estimate"
                     or parameters["rule"] != "nice_125_global_span_quarter"):
                 raise SemanticContractError("semantic_signal_ruler_invalid", "The amplitude ruler requires an explicit display-unit length and rule.")
+        if self.operation_id == "source_order_trial_ordinal":
+            parameters = dict(self.parameters)
+            counts = ("trial_count", "event_count", "inventory_row_count", "empty_trial_count")
+            expected_keys = {*counts, "order_rule", "index_origin", "inventory_semantics"}
+            valid = (
+                set(parameters) == expected_keys and len(self.input_item_ids) == 3
+                and parameters.get("order_rule") == "first_source_appearance"
+                and type(parameters.get("index_origin")) is int and parameters["index_origin"] == 1
+                and parameters.get("inventory_semantics") == "blank_time_declares_trial_not_event"
+                and all(type(parameters.get(key)) is int for key in counts)
+            )
+            if valid:
+                valid = (1 <= parameters["trial_count"] <= 200 and parameters["event_count"] >= 1
+                         and 0 <= parameters["empty_trial_count"] <= parameters["inventory_row_count"]
+                         <= parameters["trial_count"])
+            if not valid:
+                raise SemanticContractError("semantic_trial_ordinal_invalid", "Trial ordinals must preserve source order and blank inventory without creating events.")
 
     def to_dict(self) -> dict[str, object]:
         return {

@@ -1,6 +1,6 @@
 # Origin 2024b figures generated and reviewed on a live installation
 
-I selected 44 public examples from 53 retained verification assets.
+I selected 45 public examples from 54 retained verification assets.
 Use the question and minimum-table guide below to choose a direction before adapting a route
 to your own data. Historical verification images do not occupy duplicate gallery slots;
 the heatmap section displays only the live Origin-rendered 30×30 dense case.
@@ -30,6 +30,7 @@ or clinical claim. The public source tree retains only sanitized PNGs.
 <img src="../assets/gallery/density-ridgeline3d.png" alt="3D dual-density ridgeline with supplied baseline focal locators" width="31%" />
 <img src="../assets/gallery/dsc-multi.png" alt="DSC multi-sample heat flow comparison" width="31%" />
 <img src="../assets/gallery/eis-nyquist.png" alt="EIS Nyquist impedance" width="31%" />
+<img src="../assets/gallery/event-raster.png" alt="supplied event raster with empty trial inventory" width="31%" />
 <img src="../assets/gallery/flim-phasor.png" alt="FLIM phasor distribution" width="31%" />
 <img src="../assets/gallery/forest-intervals.png" alt="forest effect confidence interval" width="31%" />
 <img src="../assets/gallery/ftir-temperature-series.png" alt="FTIR temperature series comparison" width="31%" />

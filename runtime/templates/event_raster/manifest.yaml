@@ -1,0 +1,28 @@
+id: event_raster
+name: 已提供事件与试次栅格
+category: research/signals
+version: 0.1.0
+description: 按源顺序显示已提供事件，保留显式空试次，不做事件检测或PSTH计算
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 154
+family: research_imaging
+blank_template: data_template.csv
+data_guide:
+  headline_zh: 上传Time、Trial、Condition长表；时间单位写在列名括号里，空Time可显式声明无事件试次。
+  required_columns: [Time (s), Trial, Condition]
+  optional_columns: []
+  accepted_layouts: [每行一个已提供事件，或一个空Time的试次清单项]
+  aliases: [时间, 事件时间, 试次, 试次编号, 条件, 组别]
+  notes_zh:
+    - 按首次出现顺序从上到下保留1–200个试次，每试次仅属于一个条件，最多8个条件。
+    - 空Time不是0事件时间；该试次保留空白泳道，原始表不修改。
+    - 仅将Trial映射到显示序号；不检测spike、不排序效果、不计算PSTH或发放率。
+    - 密集图只稀疏显示文字，不删除试次或事件；条件说明在图外且无框。

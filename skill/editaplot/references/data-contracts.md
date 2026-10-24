@@ -10,7 +10,7 @@
 
 Keep the original file read-only.
 
-These contracts cover the 44 registered public plotting routes. The data contract is independent
+These contracts cover the 45 registered public plotting routes. The data contract is independent
 of the installed Origin version. After semantic confirmation and plan creation, run the isolated
 `origin-smoke` before formal rendering. Rendering starts a dedicated EditaPlot-owned Origin
 instance and then checks the selected template against the detected host. Target Origin/OriginPro
@@ -23,6 +23,18 @@ place the RenderPlan, OPJU, PNG, PDF, TIF, readback, validation, and provenance 
 destination only after an explicit user request.
 
 ## Recognized layouts
+
+### Supplied event-time raster table
+
+Use `Time (s),Trial,Condition` with an explicit time unit. Keep 1–200 source-first trials and
+1–8 conditions; each trial belongs to one condition and the table contains at least one event.
+Blank Time declares trial inventory: retain the empty lane and condition, never replace it with
+an event at zero. Reject duplicate trial/time events and duplicate inventory rows. Confirm the
+ordinal display helper; it is not a measurement or ranking. Sparse labels do not remove events
+or lanes. Numeric-looking text IDs keep leading zeros. `SourceRow` means the 1-based parsed data
+row, excluding headers and fully empty rows removed by the loader. No detection, PSTH/rate,
+scientific sorting or raw-device decoding is performed. Custom time titles must end with the
+same explicit unit in parentheses/brackets; changing wording does not convert time values.
 
 ### Multichannel signal table
 

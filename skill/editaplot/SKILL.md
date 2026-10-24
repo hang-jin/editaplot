@@ -187,6 +187,11 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
 - For FLIM, use `flim_phasor` for upstream G/S coordinates with optional groups. Keep every point,
   including points outside the reference semicircle. Confirm the mathematical semicircle helper;
   preserve equal physical G/S scales. Do not infer lifetimes, fit decays, unmix or cluster.
+- For supplied event times, use `event_raster` with explicit Time/unit, Trial and Condition. Confirm
+  source-order trial ordinals; blank Time entries declare inventory, not events at zero. Preserve
+  every event and empty lane, and retain zero-event conditions in the borderless outside legend.
+  Never detect events, calculate PSTH/rates or reorder trials by response. Read the event-table
+  section of `references/data-contracts.md`; only condition-compatible palettes may replace the default.
 - For SHAP, accept only externally precomputed per-sample contributions. Never train a model or
   invoke SHAP. Mean |SHAP| and optional group percentages may only summarize those supplied rows
   with the allow-listed formulas recorded in the semantic proposal and explicitly approved; never

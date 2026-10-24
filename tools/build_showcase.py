@@ -35,6 +35,12 @@ class ShowcaseCase:
 
 CASES = (
     ShowcaseCase(
+        "event-raster", "event_raster", "event_raster.csv",
+        "Synthetic supplied event times retain every event and explicitly declared empty trial in source order.",
+        "event timing", "supplied event raster with empty trial inventory",
+        title_zh="已提供事件与试次栅格",
+    ),
+    ShowcaseCase(
         "signal-stack", "signal_stack", "signal_stack.csv",
         "Synthetic channels retain all observations and common amplitude units with explicit display offsets.",
         "signal comparison", "multichannel processed signal traces",

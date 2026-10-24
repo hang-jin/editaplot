@@ -82,6 +82,7 @@ _SUPPORTED_KINDS = frozenset(
         "flim_phasor",
         "time_frequency",
         "signal_stack",
+        "event_raster",
     }
 )
 
@@ -3688,7 +3689,11 @@ def _build_origin_graph(
     preparation: ScientificPreparation,
 ) -> tuple[Any, dict[str, Any]]:
     kind = preparation.plot_spec.plot_kind
-    if kind == "signal_stack":
+    if kind == "event_raster":
+        from .event_raster_renderer import build_event_raster_graph
+
+        graph, state = build_event_raster_graph(op, frame, preparation)
+    elif kind == "signal_stack":
         from .signal_stack_renderer import build_signal_stack_graph
 
         plan = preparation.plot_spec.signal_stack_plan
@@ -3769,6 +3774,18 @@ def run_evidence_template(
             output.result_tif,
         )
         verify_report["exports"] = exports
+        if resolved.plot_spec.plot_kind == "event_raster":
+            from .event_raster_renderer import _verify_event_y_title
+
+            layer = graph[0]
+            anchor = _verify_event_y_title(
+                layer.label("EventYTitle"), resolved.plot_spec.event_raster_layout,
+                op.lt_float("page.width"), op.lt_float("page.height"),
+                expected_text=resolved.plot_spec.y_title,
+            )
+            if layer.label("yl").get_int("show") != 0:
+                raise OriginDrawError("Origin restored an automatic Y title during export.")
+            verify_report["origin_event_raster_readback"]["post_export_y_title_anchor"] = anchor
         write_json(output.origin_verify_report, verify_report)
         write_json(
             output.environment_report,

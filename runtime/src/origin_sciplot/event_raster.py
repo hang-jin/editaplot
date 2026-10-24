@@ -8,6 +8,7 @@ detect spikes, calculate PSTHs or rates, or change the source DataFrame.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 
 import numpy as np
@@ -29,6 +30,24 @@ class EventRasterPlan:
     row_trial_positions: tuple[tuple[int, int], ...]
     x_range: tuple[float, float]
     y_range: tuple[float, float]
+
+
+def event_rows_by_condition(plan: EventRasterPlan) -> tuple[tuple[str, tuple[int, ...]], ...]:
+    """Group source row references in one pass; keep empty conditions and event order."""
+    trial_conditions = dict(plan.trial_conditions)
+    row_y = dict(plan.row_trial_positions)
+    groups: dict[str, list[int]] = {condition: [] for condition in plan.condition_order}
+    for row in plan.event_rows:
+        groups[trial_conditions[plan.trial_order[row_y[row] - 1]]].append(row)
+    return tuple((condition, tuple(rows)) for condition, rows in groups.items())
+
+
+def validate_event_time_title(title: str, time_unit: str) -> None:
+    """Compare the declared trailing unit, never an incidental letter elsewhere."""
+    match = re.search(r"(?:\(([^()]*)\)|\[([^\[\]]*)\]|（([^（）]*)）|［([^［］]*)］)\s*$", title)
+    declared = next((value.strip() for value in match.groups() if value is not None), None) if match else None
+    if declared != time_unit:
+        raise ValueError("The event X title must end with its supplied time unit in parentheses or brackets.")
 
 
 def _label(value: object, column: str, originals: dict[str, object]) -> str:

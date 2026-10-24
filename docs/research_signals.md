@@ -1,6 +1,6 @@
 # 我怎样用 EditaPlot 展示荧光与脑电相关数据
 
-这部分我正在逐步扩充。现在已能使用荧光寿命相量、时间–频率物理矩阵和多通道信号三条独立路线；
+这部分我正在逐步扩充。现在已能使用荧光寿命相量、时间–频率物理矩阵、多通道信号和事件栅格四条独立路线；
 其余研究信号模板还在开发、验证中，我不会把候选清单写成已经完成的功能。
 
 ## 时间–频率图：先有时频表，再来画图
@@ -55,15 +55,48 @@
 中的多通道时间轴与幅度表达方式，使用独立拟定的示例。模板不会进行设备文件解码、滤波、
 去伪迹、重参考、插值或事件检测。
 
+## 事件栅格：有事件画事件，没事件也别“失踪”
+
+我的[事件教学表](../examples/gallery/event_raster.csv)包含40个明确试次、433个合成事件和4行空时间清单，
+共437行。这些时间都是我拟定的演示值，不是检测出的神经放电，也不代表真实条件效应。
+
+| Time (s) | Trial | Condition |
+|---|---|---|
+| -0.1 | Trial 01 | A |
+| 0.2 | Trial 01 | A |
+| 留空 | Trial 02 | B |
+
+第三行的意思是“Trial 02 确实存在，但没有提供事件”，不是“在0秒发生了一次事件”。
+我会保留它的空白泳道，也保留完全没有事件的条件说明。没有列在表里的试次，我不会替你猜。
+
+> 使用EditaPlot绘制这个已经整理好的事件表。Time单位为s，Trial是试次编号，Condition是条件。保留全部事件和首次出现的试次顺序；空Time只表示试次存在，不补0。先让我确认显示编号和绘图元素，不检测spike、不计算PSTH或发放率。
+
+我支持1–200个试次和1–8个条件，每试次只能属于一个条件；整张表至少有一个事件。
+试次从上到下按原顺序排列。试次多时只稀疏显示名字，不删除泳道或事件；长名字会增加留白，
+不会压缩字号。条件名放在图外且不加边框，可选择与条件数兼容的配色。
+“01”这类编号请保留为文本；Excel里已经丢掉的前导零，软件不会凭空还原。
+
+我用原生可编辑短竖标绘图。Origin里的 `SourceTime、TrialOrdinal、SourceRow` 是显示与追踪辅助列，
+不会写回原CSV。`SourceRow` 指解析后数据表从1开始的行号，不含表头或读取器排除的完全空行。
+如果需要改横轴文字，请在末尾保留原单位，例如 `Latency (s)` 或 `事件时间［s］`；改成(ms)并不会转换数据，
+因此会被拦截。原始EEG或设备波形请先在上游检测事件，再提供这张表。
+
+我参考了[同一项Nature Neuroscience研究](https://www.nature.com/articles/s41593-023-01260-4)
+中按试次表达事件时间的思路，独立拟定数据与Origin实现，不复制论文图像或实验结果。
+
 ## English summary
 
-I provide three verified research-signal routes here: supplied FLIM G/S coordinates with explicit
-groups, complete uniform time–frequency cells, and multichannel waveform tables. Units are explicit. The examples are
-my own synthetic teaching data, not reproduced measurements or algorithm results. The latter
-uses native editable matrix marks, numeric physical axes and a detached sequential color scale.
+I provide four research-signal routes here: supplied FLIM G/S coordinates with explicit groups,
+complete uniform time–frequency cells, multichannel waveform tables, and supplied-event rasters.
+Units are explicit. The examples are my own synthetic teaching data, not reproduced measurements
+or algorithm results. The time–frequency route uses native editable matrix marks, numeric physical
+axes and a detached sequential color scale.
 It preserves every cell and either source-coordinate direction. It does not compute FFT, STFT,
 wavelets, interpolation, baseline correction or dB conversion. Raw EEG needs upstream processing.
 The signal stack preserves every sample and channel name, uses approved additive display offsets,
 and places a common unit ruler beside the true time range. It performs no filtering, alignment,
-centering or normalization. All three routes retain source data and require real OPJU/PNG/PDF/TIF,
+centering or normalization. The event raster preserves every supplied event and source-first trial,
+including explicitly inventoried empty lanes. It does not detect spikes, derive PSTH/rates or rank
+trials by their response. Compatible condition palettes are frozen consistently across marks and
+outside-frame labels. All four routes retain source data and require real OPJU/PNG/PDF/TIF,
 object readback and visual QA.

@@ -206,6 +206,7 @@ TEMPLATE_CAPABILITY_PROFILES: dict[str, TemplateCapabilityProfile] = {
     "scatter": _profile("scatter"),
     "flim_phasor": _profile("flim_phasor"),
     "signal_stack": _profile("signal_stack", OriginCapability.GRAPH_OBJECT_ARROW),
+    "event_raster": _profile("event_raster"),
     "time_frequency": _profile(
         "time_frequency", OriginCapability.MATRIX_HEATMAP, OriginCapability.DATASET_COLOR_SCALE,
     ),

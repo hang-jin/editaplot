@@ -299,6 +299,34 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
         for column in getattr(spec, "phase_tick_columns", ())
     )
 
+    if plot_kind == "event_raster":
+        raster = spec.event_raster_plan
+        ordinal_id = "derived_trial_ordinal"
+        derived_items.append(DerivedDataItem(
+            item_id=ordinal_id, semantic_role="display_trial_position_not_measurement",
+            disposition=DataDisposition.RENDER_PRIMARY, operation_id="source_order_trial_ordinal",
+            input_item_ids=(item_ids[raster.event_time_column], item_ids[raster.trial_column],
+                            item_ids[raster.condition_column]), confidence=1.0,
+            parameters=(("order_rule", "first_source_appearance"), ("index_origin", 1),
+                        ("trial_count", len(raster.trial_order)), ("event_count", len(raster.event_rows)),
+                        ("inventory_row_count", len(raster.inventory_rows)),
+                        ("empty_trial_count", len(raster.empty_trial_ids)),
+                        ("inventory_semantics", "blank_time_declares_trial_not_event")),
+        ))
+        row_y, trial_conditions = dict(raster.row_trial_positions), dict(raster.trial_conditions)
+        conditions_with_events = {trial_conditions[raster.trial_order[row_y[row] - 1]] for row in raster.event_rows}
+        for index, condition in enumerate(raster.condition_order):
+            if condition in conditions_with_events:
+                elements.append(FigureElement(
+                    element_id=f"event_condition_{index:02d}", element_kind="scatter",
+                    data_item_ids=(item_ids[raster.event_time_column], ordinal_id, item_ids[raster.condition_column]),
+                    required=True, axis="supplied_event_time_and_source_trial_order", legend_label=condition,
+                ))
+            elements.append(FigureElement(
+                element_id=f"event_condition_legend_{index:02d}", element_kind="legend",
+                data_item_ids=(item_ids[raster.condition_column],), required=True, legend_label=condition,
+            ))
+
     if plot_kind == "signal_stack":
         signal = spec.signal_stack_plan
         for index, (label, offset) in enumerate(signal.offsets):
@@ -619,7 +647,7 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
 
     scientific_series = (
         ()
-        if plot_kind in {"circular_network", "density_ridgeline3d", "shap_summary", "signal_stack"}
+        if plot_kind in {"circular_network", "density_ridgeline3d", "shap_summary", "signal_stack", "event_raster"}
         else spec.series
     )
     for index, series in enumerate(scientific_series):

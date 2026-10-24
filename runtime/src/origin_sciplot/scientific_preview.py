@@ -28,6 +28,7 @@ from .heatmap_layout import (
     resolve_heatmap_colorbar_geometry,
     resolve_heatmap_layout,
 )
+from .event_raster import event_rows_by_condition
 from .scientific_visual import (
     AdaptiveOriginStyle,
     interpolate_hex_colors,
@@ -2279,6 +2280,37 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         raise ScientificPreviewError(code, str(exc)) from exc
 
     spec = preparation.plot_spec
+    if spec.plot_kind == "event_raster":
+        figure, axis = _new_figure(preparation, frozen_geometry=True)
+        _style_axis(axis)
+        plan, layout = spec.event_raster_plan, spec.event_raster_layout
+        if plan is None or layout is None:
+            raise ScientificPreviewError("event_raster_plan_missing", "The frozen event/trial layout is missing.")
+        style = _preview_style(figure)
+        row_y = dict(plan.row_trial_positions)
+        colors = dict(layout.condition_colors)
+        for condition, source_rows in event_rows_by_condition(plan):
+            rows = list(source_rows)
+            if rows:
+                axis.plot(frame.iloc[rows][plan.event_time_column], [row_y[row] for row in rows],
+                          linestyle="None", marker="|", markersize=style.marker_pt, color=colors[condition],
+                          markeredgewidth=style.marker_pt * layout.marker_edge_percent / 200)
+        axis.set_xlim(*layout.x_range)
+        axis.set_ylim(*layout.y_range)
+        axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
+        axis.xaxis.set_minor_locator(AutoMinorLocator(2))
+        axis.set_yticks([])
+        axis.set_xlabel(spec.x_title, fontsize=style.axis_title_pt, fontweight="bold")
+        figure.text(layout.y_title_x_percent / 100, 1 - layout.y_title_y_percent / 100,
+                    spec.y_title, rotation=90, va="center", ha="center", fontsize=style.axis_title_pt,
+                    fontweight="bold")
+        for text, _ordinal, right, y in layout.trial_labels:
+            figure.text(right / 100, 1 - y / 100, text, ha="right", va="center", fontsize=style.legend_pt)
+        for condition, left, y in layout.condition_labels:
+            figure.text(left / 100, 1 - y / 100, condition, ha="left", va="center",
+                        fontsize=style.legend_pt, color=colors[condition])
+        _apply_font_contract(figure)
+        return figure
     if spec.plot_kind == "signal_stack":
         figure, axis = _new_figure(preparation, frozen_geometry=True)
         _style_axis(axis)

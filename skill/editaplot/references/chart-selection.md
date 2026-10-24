@@ -10,7 +10,7 @@ is the current fully verified baseline.
 
 ## Verified V1 routes
 
-The registry exposes 44 public plotting routes. Some table rows group closely related candidates,
+The registry exposes 45 public plotting routes. Some table rows group closely related candidates,
 so the number of rows is not the route count.
 我已验证 `density_ridgeline3d` 的完整 Origin 路线；它仍只接受冻结的六角色表，并遵守下面的
 数据与焦点边界。
@@ -29,6 +29,7 @@ so the number of rows is not the route count.
 | FLIM phasor distribution | `flim_phasor` | supplied G + S + explicit Group; 1–8 groups | Equal physical G/S scale; mathematical semicircle only; preserve outside points; no lifetime inversion, fitting or unmixing |
 | Supplied time–frequency field | `time_frequency` | complete uniform Time + Frequency + Power/Value long table, units in headers | Numeric physical axes, all cells, detached scale; no signal analysis or interpolation; negative dB is not automatically a signed change |
 | Multichannel signal comparison | `signal_stack` | Time + Channel/ROI + Amplitude/Intensity long table with explicit units | Preserve all samples, channel order and common amplitude units; confirm display offsets and unit ruler; no filtering, alignment, centering or normalization |
+| Supplied event timing across trials | `event_raster` | Time/unit + Trial + Condition long table; blank Time may declare inventory | Keep every event/empty trial and source-first order; confirm ordinal display positions; no event detection, PSTH/rates or response-based sorting |
 | Trend with uncertainty | `line_error` | X + value/error pairs | Define SD/SE/SEM/custom |
 | Ordered progression without uncertainty | `trend` | ordered numeric X + one or more numeric series | Preserve source order; do not smooth |
 | Comparable multimetric profile | `radar` | metric labels + >=2 nonnegative series; >=3 metrics | Confirm scales are comparable; never auto-normalize |
