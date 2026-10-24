@@ -230,7 +230,7 @@ def _candidate_paths_from_registry() -> list[Path]:
         )
     )
     for root in roots:
-        for version in ("3.12", "3.11", "3.10"):
+        for version in ("3.12", "3.11"):
             for view in views:
                 try:
                     with winreg.OpenKey(
@@ -261,7 +261,7 @@ def _candidate_paths_from_standard_locations() -> list[Path]:
     for root in roots:
         bases = (root / "Programs" / "Python", root)
         for base in bases:
-            for directory in ("Python312", "Python311", "Python310"):
+            for directory in ("Python312", "Python311"):
                 candidates.append(base / directory / "python.exe")
     candidates.extend(_candidate_paths_from_registry())
     return candidates
@@ -332,7 +332,6 @@ def discover_python(engine_root: Path | None) -> dict[str, Any]:
                 [
                     ([launcher, "-3.12"], "py -3.12"),
                     ([launcher, "-3.11"], "py -3.11"),
-                    ([launcher, "-3.10"], "py -3.10"),
                 ],
                 source="windows_py_launcher",
                 attempts=attempts,
@@ -382,7 +381,7 @@ def discover_python(engine_root: Path | None) -> dict[str, Any]:
         "selected": selected,
         "attempts": attempts,
         "discovery_order": list(DISCOVERY_ORDER),
-        "required": "Windows with 64-bit CPython 3.10, 3.11, or 3.12",
+        "required": "Windows with 64-bit CPython 3.11 or 3.12 (3.12 preferred)",
         "host": host,
     }
 
@@ -399,7 +398,10 @@ def _copy_tree_without_deleting(source: Path, destination: Path) -> int:
     }
     for path in source.rglob("*"):
         relative = path.relative_to(source)
-        if any(part in generated_segments for part in relative.parts):
+        if any(
+            part in generated_segments or part.startswith(".editaplot-venv.")
+            for part in relative.parts
+        ):
             continue
         if relative.name == LOCAL_CONFIG_NAME or path.suffix.casefold() in {".pyc", ".pyo"}:
             continue
@@ -418,7 +420,7 @@ def _install_prefix(target: Path, kind: str) -> str:
 
 
 def _validated_install_sibling(target: Path, path: Path, kind: str) -> Path:
-    """Accept only an EditaPlot-owned staging/backup sibling of ``target``."""
+    """Accept only an owned build, backup, or retained sibling of ``target``."""
 
     parent = target.parent.resolve()
     candidate = path.expanduser()
@@ -426,7 +428,11 @@ def _validated_install_sibling(target: Path, path: Path, kind: str) -> Path:
         direct_sibling = candidate.parent.resolve() == parent
     except OSError:
         direct_sibling = False
-    if not direct_sibling or not candidate.name.startswith(_install_prefix(target, kind)):
+    if (
+        kind not in {"build", "backup", "retained"}
+        or not direct_sibling
+        or not candidate.name.startswith(_install_prefix(target, kind))
+    ):
         raise ValueError(f"unsafe EditaPlot {kind} path: {candidate}")
     if candidate.exists() and not candidate.is_symlink():
         try:
@@ -448,11 +454,15 @@ def _next_install_sibling(target: Path, kind: str) -> Path:
 
 
 def _remove_install_sibling(target: Path, path: Path, kind: str) -> None:
+    """Retire a prior staging/backup path without deleting any nested snapshots.
+
+    The historical helper name is retained for callers.  Atomic rename preserves
+    a symlink itself rather than traversing or modifying its target.
+    """
+
     candidate = _validated_install_sibling(target, path, kind)
-    if candidate.is_symlink() or candidate.is_file():
-        candidate.unlink(missing_ok=True)
-    elif candidate.is_dir():
-        shutil.rmtree(candidate)
+    if candidate.exists() or candidate.is_symlink():
+        os.replace(candidate, _next_install_sibling(target, "retained"))
 
 
 def _write_install_state(path: Path, *, target: Path, kind: str) -> None:
@@ -628,7 +638,7 @@ def _recover_install_swap(target: Path) -> str:
                 abandoned = _next_install_sibling(target, "build")
                 os.replace(target, abandoned)
                 _remove_install_sibling(target, abandoned, "build")
-                recovery = "removed_incomplete_fresh_skill"
+                recovery = "retained_incomplete_fresh_skill"
             else:
                 recovery = "cancelled_before_skill_swap"
         elif journal_backup is None:
@@ -801,26 +811,6 @@ def install_skill(argv: list[str], *, _lock_held: bool = False) -> int:
         )
         return 2
     target = target.resolve()
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if not _lock_held:
-        lock_path = target.parent / f".{target.name}.editaplot-setup.lock"
-        try:
-            with _exclusive_file_lock(lock_path, error_code="skill_setup_in_progress"):
-                return install_skill(["--target", str(target)], _lock_held=True)
-        except RuntimeError as exc:
-            _emit(
-                {
-                    "ok": False,
-                    "error": {
-                        "code": str(exc),
-                        "message": "Another EditaPlot setup is already using this target.",
-                        "target": str(target),
-                    },
-                },
-                stream=sys.stderr,
-            )
-            return 4
-    _recover_install_swap(target)
     source_root = SKILL_ROOT.resolve()
     same_as_source = target == source_root
     try:
@@ -884,6 +874,7 @@ def install_skill(argv: list[str], *, _lock_held: bool = False) -> int:
             stream=sys.stderr,
         )
         return 3
+    # Interpreter discovery is read-only and must precede even lock/directory writes.
     discovery = discover_python(engine_root)
     selected = discovery["selected"]
     if selected is None:
@@ -892,7 +883,8 @@ def install_skill(argv: list[str], *, _lock_held: bool = False) -> int:
                 "ok": False,
                 "error": {
                     "code": "compatible_python_not_found",
-                    "message": "Install 64-bit CPython 3.10-3.12, then run setup again.",
+                    "message": "Use an existing 64-bit CPython 3.11 or 3.12 (3.12 preferred), "
+                    "or set EDITAPLOT_PYTHON to it; no setup files were changed.",
                 },
                 "target": str(target),
                 "python_discovery": discovery,
@@ -900,7 +892,28 @@ def install_skill(argv: list[str], *, _lock_held: bool = False) -> int:
             stream=sys.stderr,
         )
         return 3
-
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not _lock_held:
+        lock_path = target.parent / f".{target.name}.editaplot-setup.lock"
+        try:
+            with _exclusive_file_lock(lock_path, error_code="skill_setup_in_progress"):
+                return install_skill(["--target", str(target)], _lock_held=True)
+        except RuntimeError as exc:
+            _emit(
+                {
+                    "ok": False,
+                    "error": {
+                        "code": str(exc),
+                        "message": "Another EditaPlot setup is already using this target.",
+                        "target": str(target),
+                    },
+                },
+                stream=sys.stderr,
+            )
+            return 4
+    _recover_install_swap(target)
+    target_nonempty = target.exists() and any(target.iterdir())
+    recognized_target = same_as_source or (target_nonempty and _is_recognized_editaplot_skill(target))
     local_config = {
         "schema_version": "1.0",
         "engine_home": str(engine_root),
@@ -938,12 +951,7 @@ def install_skill(argv: list[str], *, _lock_held: bool = False) -> int:
     environment = os.environ.copy()
     environment["EDITAPLOT_ENGINE_HOME"] = str(engine_root)
     environment["EDITAPLOT_BOOTSTRAP_SOURCE"] = str(selected["source"])
-    current_compatibility = python_compatibility()
-    repair_python = (
-        str(Path(sys.executable).resolve())
-        if current_compatibility["compatible"]
-        else str(selected["executable"])
-    )
+    repair_python = str(selected["executable"])
     backup: Path | None = None
     skill_swap_committed = same_as_source
     if same_as_source:
@@ -1004,7 +1012,7 @@ def install_skill(argv: list[str], *, _lock_held: bool = False) -> int:
                 "status": (
                     "setup_repair_failed_previous_skill_restored"
                     if target_nonempty
-                    else "setup_repair_failed_fresh_install_removed"
+                    else "setup_repair_failed_fresh_install_retained"
                 ),
                 "target": str(target),
                 "repair": repair_payload,
@@ -1162,7 +1170,7 @@ def main(argv: list[str] | None = None) -> int:
                     if discovery["host"]["compatible"]
                     else "unsupported_windows_host",
                     "message": (
-                        "Install 64-bit CPython 3.10-3.12, or set EDITAPLOT_PYTHON to it."
+                        "Use 64-bit CPython 3.11 or 3.12 (3.12 preferred), or set EDITAPLOT_PYTHON to it."
                         if discovery["host"]["compatible"]
                         else "EditaPlot requires Windows 10/11 x64 on AMD64/x86_64."
                     ),
@@ -1213,7 +1221,7 @@ def main(argv: list[str] | None = None) -> int:
                     "message": (
                         "EditaPlot could not start the selected Python executable. Re-run "
                         "editaplot.cmd --diagnose so the launcher can select an available "
-                        "64-bit CPython 3.10-3.12."
+                        "64-bit CPython 3.11 or 3.12 (3.12 preferred)."
                     ),
                     "os_error": type(exc).__name__,
                     "errno": exc.errno,

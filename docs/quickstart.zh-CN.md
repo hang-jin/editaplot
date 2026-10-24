@@ -2,9 +2,10 @@
 
 ## 30 秒版本
 
-前提：Windows 10/11 x64 实体电脑、64 位 CPython 3.10–3.12，以及本机已安装
-Origin/OriginPro 2021–2026b 范围内的版本。Origin 2024b（10.15）是当前唯一完整实机基线；
-其他目标版本会经过本机握手、真实 smoke 和模板能力检查后报告兼容状态。Origin 2020b 及更早版本、
+前提：Windows 10/11 x64 实体电脑、64 位 CPython 3.11 或 3.12（新安装推荐 3.12），以及本机已安装
+Origin/OriginPro 2021–2026b 范围内的版本。当前 CPython 3.12.14 + Pillow 13.0.0 + Origin 2024b
+（10.15.132）已通过 smoke、6 个代表性案例及独立工程重开检查，不代表全部路线或全部版本逐一实测；
+Python 3.11 尚无实机声明，旧 3.10 记录保留为历史证据。其他环境仍须经过本机能力检查。Origin 2020b 及更早版本、
 macOS、Linux、WSL、Wine/CrossOver、Parallels 与其他虚拟机不支持。
 
 我当前公开了 42 条 Origin 绘图路线，保留 51 张通过完整验证的 PNG 作为审计资产，其中
@@ -21,9 +22,14 @@ Z=0 基线焦点，不会自动运行 KDE、找峰或求交点。热力图页面
 
 不要只复制 `skill/editaplot`，那样没有绘图 runtime。会 Git 的用户可以 `git clone`；不会 Git
 或没有 GitHub 账号的用户可以下载 Source ZIP 并完整解压。完整步骤见[安装指南](installation.md)。
-我让启动器先复用已有的 64 位 CPython 3.10–3.12；若完全没有兼容 Python，Codex 必须先向你
+我让启动器先复用已有的 64 位 CPython 3.11/3.12；若完全没有兼容 Python，Codex 必须先向你
 说明这是系统级变更并征得明确同意，才可通过官方 winget 以用户范围安装 Python 3.12。
 EditaPlot 永不自动安装 Origin。
+
+安全依赖现锁定 Pillow 13.0.0，不再以 Python 3.10 运行。已有用户更新完整仓库后重跑 `setup`：
+新环境使用兼容解释器，旧环境保留在 `.editaplot-venv.retained-*`，不改全局 Python。
+缺少兼容解释器或安装失败时会停止，不会自动退回旧版 Pillow；备份也不会被自动选作运行环境。
+旧方案如提示 `analysis_changed`，请重新理解数据、确认并生成方案，不要手改 JSON。
 
 给 Codex 的最小权限是：读取完整仓库、数据和可选参考图；写入仓库、当前用户
 `$HOME\.codex\skills\editaplot` 及数据父文件夹；运行本地 `editaplot.cmd`、PowerShell、Python

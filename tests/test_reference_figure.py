@@ -5,11 +5,12 @@ import sys
 from pathlib import Path
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageFile
 
 RUNTIME_SRC = Path(__file__).resolve().parents[1] / "runtime" / "src"
 sys.path.insert(0, str(RUNTIME_SRC))
 
+from origin_sciplot import reference_figure  # noqa: E402
 from origin_sciplot.reference_figure import (  # noqa: E402
     ReferenceFigureError,
     ReferenceFigureSpec,
@@ -191,6 +192,55 @@ def test_inspect_reference_image_rejects_multiframe_tiff(tmp_path: Path) -> None
         inspect_reference_image(source)
 
     assert raised.value.code == "reference_multiframe_unsupported"
+
+
+@pytest.mark.parametrize("case", ["pixels", "frames", "apng", "mpo", "renamed_gif"])
+def test_reference_limits_reject_before_pixel_decoder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, case: str,
+) -> None:
+    source = tmp_path / "reference.png"
+    options = {}
+    if case in {"frames", "apng", "mpo"}:
+        frames = [Image.new("RGB", (4, 4), color) for color in ("red", "blue")]
+        image_format = {"frames": "TIFF", "apng": "PNG", "mpo": "MPO"}[case]
+        frames[0].save(source, save_all=True, append_images=frames[1:], format=image_format)
+        expected_code = "reference_media_unsupported" if case == "mpo" else "reference_multiframe_unsupported"
+    elif case == "renamed_gif":
+        Image.new("RGB", (4, 4), "red").save(source, format="GIF")
+        expected_code = "reference_image_invalid"
+    else:
+        _write_image(source, "PNG", size=(11, 10))
+        options = {"max_pixels": 100}
+        expected_code = "reference_pixel_limit_exceeded"
+
+    def forbidden_decode(*args: object, **kwargs: object) -> None:
+        pytest.fail("A rejected reference reached the pixel decoder")
+
+    monkeypatch.setattr(ImageFile.ImageFile, "load", forbidden_decode)
+    with pytest.raises(ReferenceFigureError) as raised:
+        inspect_reference_image(source, **options)
+    assert raised.value.code == expected_code
+
+
+def test_reference_content_not_filename_determines_accepted_format(tmp_path: Path) -> None:
+    source = _write_image(tmp_path / "reference.unrelated", "PNG")
+    assert inspect_reference_image(source).media_type == "image/png"
+
+
+@pytest.mark.parametrize("decoder_version", ["12.3.0", "13.0.0rc1", "unknown"])
+def test_reference_entrypoint_rejects_unverified_decoder_before_opening_input(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, decoder_version: str,
+) -> None:
+    source = _write_image(tmp_path / "safe.png", "PNG")
+    monkeypatch.setattr(reference_figure, "PILLOW_VERSION", decoder_version, raising=False)
+
+    def forbidden_open(*args: object, **kwargs: object) -> None:
+        pytest.fail("An unverified Pillow decoder was allowed to open reference content")
+
+    monkeypatch.setattr(Image, "open", forbidden_open)
+    with pytest.raises(ReferenceFigureError) as raised:
+        inspect_reference_image(source)
+    assert raised.value.code == "reference_decoder_update_required"
 
 
 def test_reference_spec_is_canonical_path_free_and_initially_blocked(tmp_path: Path) -> None:

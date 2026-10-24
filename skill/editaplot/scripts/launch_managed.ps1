@@ -15,7 +15,7 @@ try {
     $managedPython = Join-Path $engineRoot '.editaplot-venv\Scripts\python.exe'
     if (-not (Test-Path -LiteralPath $managedPython -PathType Leaf)) { exit 64 }
     if (-not (Test-Path -LiteralPath $env:EDITAPLOT_BOOTSTRAP -PathType Leaf)) { exit 64 }
-    $probe = "import platform,struct,sys;raise SystemExit(0 if platform.python_implementation()=='CPython' and struct.calcsize('P')*8==64 and sys.version_info[:2] in ((3,10),(3,11),(3,12)) else 1)"
+    $probe = "import platform,struct,sys;raise SystemExit(0 if platform.python_implementation()=='CPython' and struct.calcsize('P')*8==64 and sys.version_info[:2] in ((3,11),(3,12)) else 1)"
     & $managedPython -I -c $probe > $null 2> $null
     if ($LASTEXITCODE -ne 0) { exit 64 }
 } catch {

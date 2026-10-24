@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TypeAlias
 
+from .scientific_context import ScientificContextError, normalize_scientific_context
+
 JsonScalar: TypeAlias = str | int | float | bool | None
 
 SEMANTIC_PROPOSAL_VERSION = "1.0"
@@ -825,6 +827,7 @@ class SemanticProposal:
     ambiguities: tuple[SemanticAmbiguity, ...] = ()
     source_adapter_hint: str | None = None
     proposal_version: str = SEMANTIC_PROPOSAL_VERSION
+    scientific_context: tuple[tuple[str, JsonScalar], ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "source_columns", _normalise_strings(self.source_columns))
@@ -833,6 +836,18 @@ class SemanticProposal:
         object.__setattr__(self, "figure_elements", tuple(self.figure_elements))
         object.__setattr__(self, "ambiguities", tuple(self.ambiguities))
         object.__setattr__(self, "domain_confidence", float(self.domain_confidence))
+        try:
+            scientific_context = normalize_scientific_context(
+                self.domain_family, self.scientific_context, require_complete=False,
+            )
+        except ScientificContextError as exc:
+            raise _payload_error(
+                str(exc),
+                field="$.scientific_context",
+                scientific_context_code=exc.code,
+                scientific_context_details=exc.details,
+            ) from exc
+        object.__setattr__(self, "scientific_context", scientific_context)
 
     def validate(self) -> None:
         if self.proposal_version != SEMANTIC_PROPOSAL_VERSION:
@@ -920,7 +935,7 @@ class SemanticProposal:
         )
 
     def _payload(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "proposal_version": self.proposal_version,
             "source_sha256": self.source_sha256.lower(),
             "source_columns": list(self.source_columns),
@@ -935,6 +950,9 @@ class SemanticProposal:
             "figure_elements": [element.to_dict() for element in self.figure_elements],
             "ambiguities": [ambiguity.to_dict() for ambiguity in self.ambiguities],
         }
+        if self.scientific_context:
+            payload["scientific_context"] = dict(self.scientific_context)
+        return payload
 
     @property
     def proposal_hash(self) -> str:
@@ -1156,7 +1174,7 @@ _PROPOSAL_REQUIRED_FIELDS = frozenset(
         "ambiguities",
     }
 )
-_PROPOSAL_OPTIONAL_FIELDS = frozenset({"proposal_hash"})
+_PROPOSAL_OPTIONAL_FIELDS = frozenset({"proposal_hash", "scientific_context"})
 _DOMAIN_FIELDS = frozenset(
     {
         "family",
@@ -1172,7 +1190,7 @@ _CONTRACT_REQUIRED_FIELDS = _PROPOSAL_REQUIRED_FIELDS | frozenset(
         "confirmation",
     }
 )
-_CONTRACT_OPTIONAL_FIELDS = frozenset({"proposal_hash", "contract_hash"})
+_CONTRACT_OPTIONAL_FIELDS = _PROPOSAL_OPTIONAL_FIELDS | frozenset({"contract_hash"})
 _CONFIRMATION_FIELDS = frozenset(
     {
         "approved_derived_item_ids",
@@ -1248,6 +1266,12 @@ def _parse_semantic_proposal_fields(
         proposal_version=_strict_text(
             payload["proposal_version"],
             "$.proposal_version",
+        ),
+        scientific_context=(
+            tuple(_strict_string_key_object(
+                payload["scientific_context"], field="$.scientific_context",
+            ).items())
+            if "scientific_context" in payload else ()
         ),
     )
     proposal.validate()

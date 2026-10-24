@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 EXCLUDED_PARTS = {"__pycache__", ".pytest_cache", ".ruff_cache", ".editaplot-venv"}
-EXCLUDED_PREFIXES = (".editaplot-venv.build-", ".editaplot-venv.stale-")
+EXCLUDED_PREFIXES = (".editaplot-venv.build-", ".editaplot-venv.stale-", ".editaplot-venv.retained-")
 EXCLUDED_FILES = {".editaplot-environment.lock"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 

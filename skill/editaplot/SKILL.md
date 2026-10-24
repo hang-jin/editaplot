@@ -32,12 +32,18 @@ rendering, exporting, and readback.
 
 ## Start with the beginner path
 
-1. Reject unsupported platforms before installing anything. Support the CLI/dependency layer only
-   on physical Windows 10/11 x64 with 64-bit CPython 3.10–3.12. Target Origin/OriginPro 2021 and
+1. Reject unsupported platforms before installing anything. Support the secure CLI/dependency layer only
+   on physical Windows 10/11 x64 with 64-bit CPython 3.11 or 3.12; recommend 3.12 for new installs.
+   The locked Pillow version is 13.0.0; CPython 3.10 is no longer supported by this secure runtime.
+   Target Origin/OriginPro 2021 and
    later through external `originpro`; Origin 2020b and earlier are unsupported by this route.
-   The fully verified live baseline is CPython 3.10 + Origin 2024b / 10.15. Treat another 2021+
-   version as capability-gated, not automatically verified, until its smoke and complete artifacts
-   pass. State plainly that macOS (Intel/Apple Silicon), Linux, WSL,
+   Retain the complete CPython 3.10 + Origin 2024b / 10.15 record as historical evidence only.
+   The current CPython 3.12.14 + Pillow 13.0.0 + Origin 2024b / 10.15.132 live regression covers
+   six representative cases with smoke, complete artifacts, independent saved-project reopening,
+   data/axis/physical-geometry readback, and re-exported PNG pixel identity checks. It does not
+   verify every route or Origin version; Python 3.11 has no live-verification claim. Require the
+   current workflow's smoke and artifact gates, and keep other 2021+ hosts capability-gated.
+   State plainly that macOS (Intel/Apple Silicon), Linux, WSL,
    Wine/CrossOver, Parallels, and other VMs are unsupported in V1. `doctor` cannot reliably detect
    every VM, so ask the user to confirm a physical Windows host when that fact is unknown.
 2. Locate `editaplot.cmd` in the installed Skill directory; when working from a cloned repository,
@@ -46,7 +52,12 @@ rendering, exporting, and readback.
 3. Require the complete repository for first installation. Run repository-root
    `editaplot.cmd setup`; never instruct users to copy only `skill/editaplot`, because that omits
    the runtime. Read `references/runtime.md` for setup, discovery, and command details.
-4. Reuse an existing compatible Python. If none exists, explain in Chinese that installing Python
+4. Reuse an existing compatible Python. For an older managed environment, rerun repository-root
+   `setup` to select a compatible interpreter and rebuild only the project environment; retain the
+   old environment under `.editaplot-venv.retained-*`, never change global Python, and never select
+   retained backups as automatic runtime candidates. Missing compatible Python or failed dependency
+   preparation must stop the upgrade, not run an older vulnerable Pillow as a fallback. If no
+   compatible Python exists, explain in Chinese that installing Python
    is a system-level change. Run `winget show` first and explain the exact publisher, source, and
    agreements. Only explicit user confirmation permits a later non-interactive installation of
    `Python.Python.3.12` with user scope and x64 architecture. If winget is unavailable, provide the
@@ -73,7 +84,9 @@ rendering, exporting, and readback.
 9. Ask the user to confirm both a one-sentence scientific purpose and the concise element checklist.
    Freeze the exact `proposal_hash`, approved derived-item IDs, and resolved ambiguity choices in
    `--semantic-confirmation-json`. Never reuse a confirmation after the source, mapping, purpose, or
-   proposal hash changes. When confidence is low, candidate margins are small, roles or units are
+   proposal hash changes. If an older frozen plan reports `analysis_changed`, rerun `understand`,
+   obtain fresh confirmation, and regenerate the plan; never hand-edit its JSON to bypass the gate.
+   When confidence is low, candidate margins are small, roles or units are
    ambiguous, or a display transformation is proposed, ask only the additional focused questions
    needed.
 10. If the user supplies a reference figure, first run `reference-inspect`. Codex may then describe

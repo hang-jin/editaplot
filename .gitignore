@@ -8,9 +8,11 @@ __pycache__/
 .editaplot-venv/
 .editaplot-venv.build-*/
 .editaplot-venv.stale-*/
+.editaplot-venv.retained-*/
 .editaplot-environment.lock
 .*.editaplot-build-*/
 .*.editaplot-backup-*/
+.*.editaplot-retained-*/
 .*.editaplot-setup.lock
 .*.editaplot-transaction.json
 .build-venv/

@@ -5,10 +5,10 @@
   <p>
     <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-4c6ef5">
     <img alt="Platform: Windows 10/11 x64 only" src="https://img.shields.io/badge/platform-Windows%2010%2F11%20x64%20only-0078d4">
-    <img alt="Python 3.10–3.12" src="https://img.shields.io/badge/Python-3.10%E2%80%933.12-3776ab">
+    <img alt="Python 3.11–3.12" src="https://img.shields.io/badge/Python-3.11%E2%80%933.12-3776ab">
     <img alt="Codex Skill" src="https://img.shields.io/badge/Codex-Skill-7c3aed">
     <img alt="Origin 2021–2026b compatibility target" src="https://img.shields.io/badge/Origin-2021%E2%80%932026b%20target-2563eb">
-    <img alt="Fully verified with Origin 2024b" src="https://img.shields.io/badge/fully%20verified-2024b-0f766e">
+    <img alt="Live baseline: Origin 2024b with Python 3.12" src="https://img.shields.io/badge/live%20baseline-2024b%20%2B%20Python%203.12-0f766e">
     <a href="https://github.com/hang-jin/editaplot"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/hang-jin/editaplot?style=social"></a>
   </p>
   <p><a href="README.en.md">English</a> · 中文为主要说明语言</p>
@@ -168,7 +168,7 @@ SHAP 路线只读取你在上游已经计算好的逐样本长表，最少需要
 
 这一轮我加入了 **FLIM 荧光寿命相量图**：提供上游分析得到的 G、S 坐标，需要分组时再提供组名，就能绘制等比例点云与数学参考半圆。示例使用自拟教学数据；它展示已有相量结果，不负责从原始图像计算寿命。柱图也更新了配色、外置无框图例，以及填充色、边框色和物理边框粗细的独立检查。
 
-你仍可以选择三套 SHAP 配色、稳态或温度序列 PL、多样品 UV–Vis、正负效应条形图、PR 曲线及不同大小的热力图。DSC、NMR、FTIR/IR、XPS 多谱线对比、30×30 高密度热力图、复合 SHAP、多阶段环形网络与三维双密度基线焦点等路线都保留；当前完整实机基线是 Origin 2024b。
+你仍可以选择三套 SHAP 配色、稳态或温度序列 PL、多样品 UV–Vis、正负效应条形图、PR 曲线及不同大小的热力图。DSC、NMR、FTIR/IR、XPS 多谱线对比、30×30 高密度热力图、复合 SHAP、多阶段环形网络与三维双密度基线焦点等路线都保留；当前安全环境已完成 6 个代表性案例实机回归，范围见下方环境说明。
 
 ### 一次正常运行要多久
 
@@ -218,11 +218,15 @@ Origin 自动化阶段，其余任务自动等待。等待事件名为 `origin_j
 | 项目 | 你需要知道的事 |
 |---|---|
 | 系统 | 我目前完整验证的是 Windows 10/11 x64 实体电脑；Mac、Linux、WSL 与虚拟机版本暂未提供 |
-| Origin | 兼容目标为 Origin/OriginPro 2021–2026b；2024b（10.15）是当前唯一完整实机基线，其他目标版本会按本机握手、真实测试和模板能力报告 |
-| Python | 需要 64 位 Python 3.10–3.12；启动器会自动选择，你无需手动配置 |
+| Origin | 兼容目标为 Origin/OriginPro 2021–2026b；当前实机回归基线为 CPython 3.12.14 + Pillow 13.0.0 + Origin 2024b（10.15.132），其他环境仍按 smoke 和模板能力检查 |
+| Python | 安全运行时需要 64 位 CPython 3.11 或 3.12；新安装推荐 3.12，启动器会自动选择 |
 | 数据 | 你可以使用 CSV、TXT、XLS 或 XLSX，也可以保留中文列名与中文路径 |
 
 你不必先弄懂 Python 环境。我让根目录的 `editaplot.cmd` 先寻找电脑上已有的兼容 Python，再创建只属于本项目的环境。若完全找不到，启动器会返回明确的缺少 Python 诊断；此时 Codex 必须先用中文解释这项系统变更并等你同意，之后才可通过官方 winget 安装用户范围的 Python 3.12。没有 winget 时，我在安装指南中给出了 python.org 官方路径。这个过程不会安装或修改 Origin。Doctor 只做只读发现；正式绘图前的真实 smoke 才会自动启动专用 Origin 实例并验证连接。
+
+本次安全依赖锁定为 Pillow 13.0.0，不再支持以 CPython 3.10 运行。已有用户更新完整仓库后重跑 `setup` 即可迁移：启动器会另找兼容解释器并重建项目环境，旧环境和替换下来的 Skill 都保留为备份，不修改全局 Python。若没有兼容解释器或新依赖准备失败，会明确停止，不会自动退回旧版 Pillow。旧方案若提示 `analysis_changed`，请重新理解数据、确认并生成方案，不要手改 JSON。
+
+当前实机证据覆盖 XPS 拟合与对比、误差棒、时间频率矩阵、事件栅格和三维共 6 个代表性案例，已通过绘图导出、独立重开、数据/轴/物理几何与重导出 PNG 像素一致性检查；不代表全部路线或全部 Origin 版本已逐一实测。Python 3.11 尚无实机验证声明，旧 Python 3.10 记录保留为历史证据。
 
 ### Codex 需要哪些权限
 

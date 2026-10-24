@@ -11,12 +11,15 @@ Linux、WSL、Wine/CrossOver、Parallels 及其他虚拟机均不支持。当前
 
 你还需要：
 
-- 64 位 CPython 3.10、3.11 或 3.12；CLI/依赖覆盖这三个版本，真实 Origin 端到端基线为 CPython 3.10；
-- 本机已安装兼容目标范围内的 Origin/OriginPro 2021–2026b；2024b / 10.15 是当前唯一
-  完整实机基线，其他目标版本会按本机握手、真实 smoke 和模板能力报告兼容状态；
+- 64 位 CPython 3.11 或 3.12；新安装推荐 3.12，安全依赖锁定 Pillow 13.0.0，不再支持 Python 3.10；
+- 本机已安装兼容目标范围内的 Origin/OriginPro 2021–2026b；当前实机回归基线为 CPython 3.12.14 +
+  Pillow 13.0.0 + Origin 2024b / 10.15.132，其他环境仍须通过真实 smoke 和模板能力检查；
 - 完整的 EditaPlot 仓库，而不只是 `skill/editaplot` 子目录。
 
 Origin 2020b 及更早版本不在当前外部 `originpro` 路线的支持范围内。
+当前证据覆盖 XPS 拟合与对比、误差棒、时间频率矩阵、事件栅格及三维共 6 个代表性案例，
+包括独立工程重开、数据/轴/物理几何和重导出 PNG 像素一致性检查，不代表全部路线或全部版本逐一实测。
+Python 3.11 尚无实机验证声明，旧 CPython 3.10 + Origin 2024b 记录保留为历史证据。
 各版本怎样从“目标范围”进入“当前模板可用”状态，见
 [Origin 2021–2026b 兼容说明](origin-2021-2026-compatibility.md)。
 
@@ -90,12 +93,25 @@ GitHub 账号不是必需的。任选一种方式：
 以后下载新版或执行 `git pull` 后，再运行一次 `.\editaplot.cmd setup` 即可安全更新已安装 Skill
 和项目级依赖；不会覆盖其他非 EditaPlot 目录。
 
+### 已有 Python 3.10 环境怎样迁移？
+
+我不会把旧环境删掉，也不会修改全局 Python。更新完整仓库后重跑 `setup`，启动器会寻找
+64 位 CPython 3.11/3.12，用兼容解释器新建项目环境，并把旧环境保留在
+`.editaplot-venv.retained-*`。这些目录只是备份，不会被自动选为运行环境，也不会在后续修复中自动清理。
+如果没有兼容解释器，会先停下来提示，再按下方流程说明 Python 安装并征得你的同意。
+
+如果新依赖安装失败，迁移会停止并保留诊断；旧环境可能恢复到原位置，但不会自动运行旧版
+Pillow 来假装升级成功。完成迁移后先运行 `doctor`；正式绘图仍需真实 smoke、完整产物、对象反读
+和视觉检查。历史 Python 3.10 实机记录不能替代新环境验证。
+旧方案如提示 `analysis_changed`，请重新运行 `understand`、核对并确认新的理解，再生成方案，
+不要手改 RenderPlan JSON 绕过检查。
+
 也可以把下面这段直接交给 Codex，让它在得到你的确认后完成下载与项目级配置：
 
 ```text
 请从 https://github.com/hang-jin/editaplot 下载完整仓库到一个新文件夹。
 不要只复制 skill/editaplot 子目录。阅读 README.md 和 docs/installation.md，
-先复用已有的 64 位 CPython 3.10–3.12；若完全没有兼容版本，请先说明安装官方 Python 3.12
+先复用已有的 64 位 CPython 3.11/3.12；若完全没有兼容版本，请先说明安装官方 Python 3.12
 是系统级变更并等我明确同意。之后在仓库根目录运行 editaplot.cmd setup，Python 包只进入
 项目环境。不要安装或修改 Origin。完成后运行 editaplot.cmd doctor，并用中文告诉我
 是否可以分析、是否发现默认独立启动入口，以及最简洁的下一步。
@@ -197,7 +213,8 @@ runtime 和默认启动入口等静态前提已找到，后者只说明当前 Do
 .\editaplot.cmd doctor --repair
 ```
 
-修复只使用锁定的依赖清单和项目级环境。Python 版本不兼容、非 Windows、runtime 缺失、
+修复只使用锁定的依赖清单和项目级环境，不会降级 Pillow 或自动启用保留的旧环境。
+Python 版本不兼容、非 Windows、runtime 缺失、
 Origin Automation 入口未检测到或实际连接失败，都不能由 Python 依赖修复伪造成成功。
 
 ## 真实 smoke、正式绘图与输出目录
@@ -327,8 +344,9 @@ runtime，通常得到 `engine_not_found`。请保留完整仓库，并用根目
 
 ### 我装了 Python，为什么仍然不能运行？
 
-可能是命令行指向旧版 Python，或只安装了不受支持的 3.13。直接运行
-`.\editaplot.cmd --diagnose`；启动器会搜索 64 位 CPython 3.10–3.12，并优先复用兼容版本。
+可能是命令行指向旧版 Python 3.10，或只安装了当前不支持的其他版本。直接运行
+`.\editaplot.cmd --diagnose`；启动器会搜索 64 位 CPython 3.11/3.12，并优先复用兼容版本。
+旧版 3.10 可以继续留在电脑上，但不能承载本次安全依赖锁。
 
 ### Mac 能不能先用分析功能？
 
@@ -341,10 +359,13 @@ V1 不支持。为避免“分析能跑、Origin 绘图不能跑”的半成品�
 
 EditaPlot V1 supports **physical Windows 10/11 x64 computers only**. macOS (Intel or Apple
 Silicon), Linux, WSL, Wine/CrossOver, Parallels, and other VMs are unsupported. Use 64-bit
-CPython 3.10–3.12 and a local Origin/OriginPro application reachable through Automation.
-The compatibility target is Origin/OriginPro 2021–2026b; Origin 2024b (10.15) with CPython 3.10
-is the only current fully verified live baseline. Other target versions are reported after a local
-handshake, real smoke test, and template capability check. Doctor performs read-only discovery and never proves a live
+CPython 3.11 or 3.12 (3.12 recommended for new installations) and a local Origin/OriginPro application
+reachable through Automation. The secure lock uses Pillow 13.0.0; Python 3.10 is no longer supported.
+The compatibility target is Origin/OriginPro 2021–2026b. The current CPython 3.12.14 + Pillow 13.0.0 +
+Origin 2024b (10.15.132) baseline has passed smoke and six representative cases, including independent
+saved-project reopen, data/axes/physical geometry, and re-exported PNG pixel identity checks.
+This does not verify every route or version; Python 3.11 has no live-verification claim, and the
+older CPython 3.10 record remains historical evidence. Doctor performs read-only discovery and never proves a live
 connection. Users do not need to open Origin first: the smoke test starts an EditaPlot-owned,
 dedicated instance. Attaching to an existing window is an explicit advanced mode only.
 
@@ -370,6 +391,16 @@ and obtain explicit consent before running official winget to install `Python.Py
 scope. If winget is unavailable, it provides only the official python.org Windows installation
 instructions. Locked dependencies still go into `.editaplot-venv`; Origin is never installed or
 modified automatically.
+
+To migrate, update the complete repository and rerun `setup`. A compatible interpreter builds a
+new project environment without changing global Python. The previous environment is retained under
+`.editaplot-venv.retained-*`; retained directories are neither automatic runtime candidates nor
+automatically deleted by later repairs. If dependency installation fails, the upgrade stops and the
+previous environment may be restored to its original location, but the old vulnerable lock is not
+run as an automatic fallback. Missing compatible Python requires the explicit-consent installation
+flow above. Historical Python 3.10 verification does not transfer to the new environment.
+If an older plan reports `analysis_changed`, repeat `understand`, confirmation, and plan generation;
+never hand-edit plan JSON to bypass the check.
 
 The bundled runtime and Origin automation do not initiate a network upload of selected data.
 Files explicitly provided through Codex remain subject to the user's Codex account, organization,

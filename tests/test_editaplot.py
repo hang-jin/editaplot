@@ -1012,7 +1012,7 @@ def test_origin_session_ignores_broken_optional_package_metadata(
     assert closed == [True]
 
 
-@pytest.mark.parametrize("minor", [10, 11, 12])
+@pytest.mark.parametrize("minor", [11, 12])
 def test_python_compatibility_accepts_only_verified_cpython_minors(minor: int) -> None:
     result = python_compatibility(
         version=(3, minor, 7),
@@ -1021,13 +1021,14 @@ def test_python_compatibility_accepts_only_verified_cpython_minors(minor: int) -
     )
 
     assert result["compatible"] is True
-    assert result["required"] == "64-bit CPython >=3.10,<3.13"
+    assert result["required"] == "64-bit CPython >=3.11,<3.13"
 
 
 @pytest.mark.parametrize(
     ("version", "implementation", "bits", "reason"),
     [
         ((3, 9, 18), "CPython", 64, "python_too_old"),
+        ((3, 10, 16), "CPython", 64, "python_too_old"),
         ((3, 13, 1), "CPython", 64, "python_not_yet_verified"),
         ((3, 12, 7), "PyPy", 64, "cpython_required"),
         ((3, 12, 7), "CPython", 32, "64_bit_python_required"),
@@ -1186,7 +1187,7 @@ def test_bootstrap_selects_highest_general_python_across_discovery_groups(
     def fake_probe(command: list[str], *, source: str, detail: str) -> dict[str, object]:
         if source == "windows_py_launcher":
             minor = int(command[1].split(".")[1])
-            if minor != 10:
+            if minor != 11:
                 return {
                     "source": source,
                     "detail": detail,
@@ -1194,7 +1195,7 @@ def test_bootstrap_selects_highest_general_python_across_discovery_groups(
                     "compatible": False,
                     "reason": "probe_failed",
                 }
-            executable = "python-3.10.exe"
+            executable = "python-3.11.exe"
         else:
             minor = 12
             executable = str(standard_python)
@@ -1479,7 +1480,7 @@ def test_repair_uses_the_same_python_compatibility_gate(monkeypatch: pytest.Monk
         repair_environment(engine_home=ENGINE)
 
     assert raised.value.code == "python_version_unrepairable"
-    assert raised.value.details["compatibility"]["required"] == "64-bit CPython >=3.10,<3.13"
+    assert raised.value.details["compatibility"]["required"] == "64-bit CPython >=3.11,<3.13"
 
 
 def test_repair_keyboard_interrupt_restores_old_environment(
@@ -1546,6 +1547,7 @@ def test_repair_keyboard_interrupt_restores_old_environment(
     assert sentinel.read_bytes() == b"old-valid-bytes"
     assert not list(tmp_path.glob(f"{core.MANAGED_ENV_DIRECTORY}.build-*"))
     assert not list(tmp_path.glob(f"{core.MANAGED_ENV_DIRECTORY}.stale-*"))
+    assert list(tmp_path.glob(f"{core.MANAGED_ENV_DIRECTORY}.retained-*"))
 
 
 def test_managed_path_removal_rejects_paths_outside_engine_root(tmp_path: Path) -> None:
@@ -1573,7 +1575,7 @@ def test_doctor_repair_reports_origin_only_blocker_without_dependency_repair(
         "missing_python_dependencies": [],
         "automatic_repair": {
             "available": False,
-            "supported_python": "64-bit CPython >=3.10,<3.13",
+            "supported_python": "64-bit CPython >=3.11,<3.13",
         },
         "manual_blockers": ["origin_automation_application_not_detected"],
     }
@@ -1693,6 +1695,13 @@ def test_setup_crash_recovery_uses_skill_and_environment_lock_hash(
     _write_transaction_test_skill(target, lock=b"old-lock", label="old")
     staging = bootstrap._next_install_sibling(target, "build")
     _write_transaction_test_skill(staging, lock=b"new-lock", label="new")
+    for skill, filename, content in (
+        (target, "old-env.bin", b"old-env"),
+        (staging, "new-env.bin", b"new-env"),
+    ):
+        nested = skill / ".editaplot-venv.retained-snapshot" / filename
+        nested.parent.mkdir()
+        nested.write_bytes(content)
     bootstrap._write_install_state(staging, target=target, kind="build")
     backup = bootstrap._next_install_sibling(target, "backup")
     engine = tmp_path / "engine"
@@ -1722,6 +1731,9 @@ def test_setup_crash_recovery_uses_skill_and_environment_lock_hash(
         else "restored_previous_skill_after_environment_mismatch"
     )
     assert not backup.exists()
+    assert {path.name: path.read_bytes() for path in tmp_path.rglob("*-env.bin")} == {
+        "old-env.bin": b"old-env", "new-env.bin": b"new-env",
+    }
     assert not bootstrap._install_journal(target).exists()
 
 
@@ -1850,7 +1862,7 @@ def test_crashed_fresh_install_mismatch_then_repair_failure_leaves_no_skill(
     payload = json.loads(capsys.readouterr().err)
 
     assert returncode == 18
-    assert payload["status"] == "setup_repair_failed_fresh_install_removed"
+    assert payload["status"] == "setup_repair_failed_fresh_install_retained"
     assert not target.exists()
     assert not bootstrap._install_journal(target).exists()
 
@@ -1914,6 +1926,7 @@ def test_setup_updates_recognized_skill_then_repairs_and_rechecks(
     assert payload["ready_for_analysis"] is True
     assert payload["ready_for_render"] is False
     assert commands[0][2] == "repair-environment"
+    assert commands[0][0] == "selected-python.exe"
     assert "--repair" not in commands[0]
     assert "--repair" not in commands[1]
     assert commands[1][0] == "managed-python.exe"
@@ -2032,7 +2045,7 @@ def test_setup_zero_repair_with_old_environment_hash_rolls_back_immediately(
         assert recovery == "restored_previous_skill_after_environment_mismatch"
     else:
         assert not target.exists()
-        assert recovery == "removed_incomplete_fresh_skill"
+        assert recovery == "retained_incomplete_fresh_skill"
     assert not bootstrap._install_journal(target).exists()
 
 
@@ -2188,13 +2201,13 @@ def test_batch_launcher_probes_compatibility_before_bootstrap() -> None:
     launcher = (PRODUCT_ROOT / "editaplot.cmd").read_text(encoding="utf-8")
 
     assert "EDITAPLOT_PYTHON_PROBE" in launcher
-    assert "sys.version_info[:2] in ((3,10),(3,11),(3,12))" in launcher
+    assert "sys.version_info[:2] in ((3,11),(3,12))" in launcher
     assert '-c "import sys"' not in launcher
     assert "if not defined EDITAPLOT_PYTHON goto configured_runtime" in launcher
     assert "reg.exe query" in launcher
     assert "PythonCore\\%~1\\InstallPath" in launcher
     assert launcher.find(":registry_python") < launcher.find(":local_312")
-    assert launcher.rfind("goto managed_runtime") > launcher.find(":local_310")
+    assert launcher.rfind("goto managed_runtime") > launcher.find(":local_311")
 
 
 def test_bundled_runtime_is_self_contained_for_doctor_and_catalog() -> None:
@@ -2285,6 +2298,7 @@ def test_runtime_manifest_is_an_exact_hash_inventory() -> None:
                 (
                     f"{core.MANAGED_ENV_DIRECTORY}.build-",
                     f"{core.MANAGED_ENV_DIRECTORY}.stale-",
+                    f"{core.MANAGED_ENV_DIRECTORY}.retained-",
                 )
             )
             for part in relative.parts

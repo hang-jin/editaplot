@@ -169,7 +169,7 @@ def _prepare_doctor_dependencies(
             "compatible": True,
             "implementation": "CPython",
             "architecture_bits": 64,
-            "required": "64-bit CPython >=3.10,<3.13",
+            "required": "64-bit CPython >=3.11,<3.13",
             "reasons": [],
         },
     )

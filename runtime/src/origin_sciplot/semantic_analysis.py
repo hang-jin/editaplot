@@ -722,6 +722,7 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
         domain_mode=str(getattr(spec, "plot_mode", getattr(spec, "plot_kind", "default"))),
         domain_confidence=float(prepared.confidence),
         source_adapter_hint=f"editaplot_{prepared.template_id}",
+        scientific_context=getattr(payload, "scientific_context", ()),
         data_items=data_items,
         derived_items=tuple(derived_items),
         figure_elements=tuple(elements),

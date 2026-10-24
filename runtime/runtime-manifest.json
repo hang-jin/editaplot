@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 471,
+  "file_count": 472,
   "files": [
     {
       "path": "LICENSE",
@@ -16,17 +16,17 @@
     {
       "path": "pyproject.toml",
       "size_bytes": 1071,
-      "sha256": "c0c9173f0468f6ec3440cec9280a9a069aea09d1ed93dbf40653adb355dd0c78"
+      "sha256": "22ba07c7f1b65f7bc9726cf68f3a80a0058847171efe761e3991bd66677d1da1"
     },
     {
       "path": "requirements-runtime.lock",
       "size_bytes": 629,
-      "sha256": "c2f4198ce3e64634fca2dc5712f141bcf164b67a2c8d4fb1221388d9b8f9d4da"
+      "sha256": "487fcd291125e6460f8e59eef3c439475101feb0486d0df6d4fbd447f7f443eb"
     },
     {
       "path": "requirements-runtime.txt",
       "size_bytes": 278,
-      "sha256": "b8db9b07d8a7dc430b3b7b0f89dc5c5143965bc5810d64e8232770f33e69b7e3"
+      "sha256": "08ab7cfaeb3c0bfeac592b6b9e823abb20e7b7315b6a26d61b86b29dc5722289"
     },
     {
       "path": "src/origin_sciplot/__init__.py",
@@ -235,8 +235,8 @@
     },
     {
       "path": "src/origin_sciplot/reference_figure.py",
-      "size_bytes": 28421,
-      "sha256": "52e5af0fc3fe63bff717580302f3ea226575f6e8a09578e0742ac2f6deb1b542"
+      "size_bytes": 29351,
+      "sha256": "d1da8b2c0267055dea381c28bdbd8fd3265705395ba6e5463902363fc48ad19e"
     },
     {
       "path": "src/origin_sciplot/reference_style.py",
@@ -259,6 +259,11 @@
       "sha256": "93759d2a91fe2c69c0335d44aa38dbcb8cfc3b11835fed499692ff930c2fcc07"
     },
     {
+      "path": "src/origin_sciplot/scientific_context.py",
+      "size_bytes": 4862,
+      "sha256": "9173f78f6276cc4fdbff48d6d584125b714964fbd826927ef17b6e1a14c7461d"
+    },
+    {
       "path": "src/origin_sciplot/scientific_preview.py",
       "size_bytes": 97558,
       "sha256": "ca11351fbe14b70a7668bae7cfa6052e607a02f82791687bbe6609e97890086b"
@@ -275,13 +280,13 @@
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
-      "size_bytes": 34741,
-      "sha256": "fa1f3c2821e2217fbf7b025e6933ea4a205be7e67c10535c3a0cff96226391eb"
+      "size_bytes": 34812,
+      "sha256": "081b91127ae5dcae189126e591d58cdd0b281797f825c220199de23909ede1f4"
     },
     {
       "path": "src/origin_sciplot/semantic_contract.py",
-      "size_bytes": 48670,
-      "sha256": "3f5e5b020dee8ee99e18c066a944b9d905d5d2358d63fec6958a97333b5f0e5a"
+      "size_bytes": 49779,
+      "sha256": "a7a320e5e58da23889a095219a0af6cf07835dee01103eb4737e250b43040fbb"
     },
     {
       "path": "src/origin_sciplot/shap_composite.py",

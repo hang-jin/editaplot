@@ -20,6 +20,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 from PIL import Image, UnidentifiedImageError
+from PIL import __version__ as PILLOW_VERSION
 
 REFERENCE_FIGURE_SCHEMA_VERSION = "1.0"
 DEFAULT_MAX_REFERENCE_BYTES = 20 * 1024 * 1024
@@ -68,6 +69,34 @@ class ReferenceImageMetadata:
         }
 
 
+def _checked_reference_header(image: Image.Image, max_pixels: int) -> tuple[str, int, int, int]:
+    """Reject unsupported content and limits before verification or pixel loading."""
+    media_type = _MEDIA_TYPES.get(str(image.format or "").upper())
+    if media_type is None:
+        raise ReferenceFigureError(
+            "reference_media_unsupported",
+            "Only PNG, JPEG, and TIFF reference images are supported.",
+        )
+    width, height = image.size
+    if width <= 0 or height <= 0:
+        raise ReferenceFigureError(
+            "reference_dimensions_invalid",
+            "The reference image has invalid pixel dimensions.",
+        )
+    if width * height > max_pixels:
+        raise ReferenceFigureError(
+            "reference_pixel_limit_exceeded",
+            f"The reference image exceeds the {max_pixels}-pixel safety limit.",
+        )
+    frame_count = int(getattr(image, "n_frames", 1))
+    if frame_count != 1:
+        raise ReferenceFigureError(
+            "reference_multiframe_unsupported",
+            "Animated or multi-page reference images are not supported.",
+        )
+    return media_type, width, height, frame_count
+
+
 def inspect_reference_image(
     path: str | Path,
     *,
@@ -80,6 +109,15 @@ def inspect_reference_image(
     decodes that snapshot so a changed source file cannot make the reported
     hash disagree with the inspected pixels.
     """
+
+    # The CLI can be invoked directly from a compatible but stale base Python.
+    # Enforce the audited decoder at the shared sink, not only in setup/doctor.
+    if PILLOW_VERSION != "13.0.0":
+        raise ReferenceFigureError(
+            "reference_decoder_update_required",
+            "Reference images require the audited Pillow 13.0.0 runtime. "
+            "Run EditaPlot setup with 64-bit CPython 3.11 or 3.12 before reading images.",
+        )
 
     if isinstance(max_bytes, bool) or max_bytes <= 0:
         raise ValueError("max_bytes must be a positive integer")
@@ -121,13 +159,14 @@ def inspect_reference_image(
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
-            with Image.open(BytesIO(snapshot)) as image:
-                detected_format = str(image.format or "").upper()
-                width, height = image.size
-                frame_count = int(getattr(image, "n_frames", 1))
+            with Image.open(BytesIO(snapshot), formats=tuple(_MEDIA_TYPES)) as image:
+                media_type, width, height, frame_count = _checked_reference_header(image, max_pixels)
                 image.verify()
-            with Image.open(BytesIO(snapshot)) as image:
+            with Image.open(BytesIO(snapshot), formats=tuple(_MEDIA_TYPES)) as image:
+                _checked_reference_header(image, max_pixels)
                 image.load()
+    except ReferenceFigureError:
+        raise
     except (UnidentifiedImageError, Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
         raise ReferenceFigureError(
             "reference_image_invalid",
@@ -138,28 +177,6 @@ def inspect_reference_image(
             "reference_image_invalid",
             "The reference image is damaged or uses an unsupported encoding.",
         ) from exc
-
-    media_type = _MEDIA_TYPES.get(detected_format)
-    if media_type is None:
-        raise ReferenceFigureError(
-            "reference_media_unsupported",
-            "Only PNG, JPEG, and TIFF reference images are supported.",
-        )
-    if width <= 0 or height <= 0:
-        raise ReferenceFigureError(
-            "reference_dimensions_invalid",
-            "The reference image has invalid pixel dimensions.",
-        )
-    if width * height > max_pixels:
-        raise ReferenceFigureError(
-            "reference_pixel_limit_exceeded",
-            f"The reference image exceeds the {max_pixels}-pixel safety limit.",
-        )
-    if frame_count != 1:
-        raise ReferenceFigureError(
-            "reference_multiframe_unsupported",
-            "Animated or multi-page reference images are not supported.",
-        )
 
     return ReferenceImageMetadata(
         sha256=hashlib.sha256(snapshot).hexdigest(),

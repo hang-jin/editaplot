@@ -14,11 +14,17 @@
 
 ## Supported environment
 
-Support the CLI and locked dependency layer on physical Windows 10/11 x64 computers with 64-bit
-CPython 3.10, 3.11, or 3.12. Target Origin/OriginPro 2021 and later; Origin 2020b and earlier are
-unsupported by the current external `originpro` route. The fully verified live baseline is
-CPython 3.10 with Origin 2024b / 10.15. Other 2021+ versions are capability-gated, and
-Python 3.11/3.12 rendering needs the same full-artifact verification before it is claimed.
+Support the secure CLI and locked dependency layer on physical Windows 10/11 x64 computers with
+64-bit CPython 3.11 or 3.12; recommend 3.12 for new installations. The lock pins Pillow 13.0.0,
+and CPython 3.10 is no longer a supported secure runtime. Target Origin/OriginPro 2021 and later;
+Origin 2020b and earlier are unsupported by the current external `originpro` route. The complete
+CPython 3.10 with Origin 2024b / 10.15 record is historical evidence only. The current CPython
+3.12.14 + Pillow 13.0.0 + Origin 2024b / 10.15.132 regression covers six representative cases:
+XPS fit/comparison, error bars, time–frequency matrix, event raster, and 3D. Smoke, complete artifacts,
+independent saved-project reopening, data/axes/physical geometry, and re-exported PNG pixel identity
+checks passed. This does not verify every route or Origin version; Python 3.11 has no live claim.
+Each workflow still requires live smoke and complete artifact/visual gates; other 2021+ hosts remain
+capability-gated.
 Do not attempt setup on macOS (Intel or Apple Silicon), Linux, WSL, Wine/CrossOver, Parallels,
 or other virtual machines. A local Origin/OriginPro application must expose a working Automation
 entry when rendering is requested.
@@ -67,7 +73,8 @@ Do not ask a beginner to choose a Python executable or call `scripts/editaplot.p
 The launcher first honors an explicitly configured compatible interpreter, then reuses an existing
 valid EditaPlot managed environment. If neither is available, it probes Windows `py`, PATH, standard
 installation locations, and the Python registry entries together, then selects the highest compatible
-64-bit CPython from 3.10–3.12. It does not modify the selected base interpreter.
+64-bit CPython from 3.11–3.12. It does not modify the selected base interpreter. A Python 3.10
+managed environment is not a compatible candidate even when it satisfied an older dependency lock.
 
 An installed Skill reads setup's external runtime pointer before searching for global Python.
 Its small local PowerShell helper preserves Unicode paths and forwards arguments directly; the
@@ -109,6 +116,16 @@ Python, creates the project-local managed environment when required, installs on
 dependencies, and runs doctor again. The launcher itself does not install Python; the agent follows
 the explicit-consent process above if Python is absent. Environment setup never installs or modifies
 Origin. Users do not need to launch Origin before requesting a figure.
+
+For an older environment, update the complete repository and rerun `setup`. It must select a
+compatible interpreter rather than try to install Pillow 13.0.0 into Python 3.10. Successful
+migration retains the previous environment under `.editaplot-venv.retained-*`; later repairs do
+not purge these archives, and discovery/recovery never selects them automatically. A failed staged
+installation stops with diagnostics and may restore the previous environment to its original
+location, but it must not execute that older vulnerable dependency set as a fallback. If no
+compatible interpreter exists, stop before environment replacement and use the explicit-consent
+Python installation flow above. Never edit global packages, PATH, registry, Origin, or the current
+permission/Origin-job-queue policy as part of this migration.
 
 `--diagnose` reports launcher/Python discovery. Doctor separately reports Windows, engine, dependency,
 and local Origin Automation registration discovery. It is read-only and never launches Origin.
@@ -183,6 +200,8 @@ column mapping is required, pass the same `--mapping-json` to both `understand` 
 user to confirm the short checklist, then pass the exact hash-bound
 `confirmation_payload_template` back as `--semantic-confirmation-json`. A source or mapping change
 invalidates that confirmation.
+After an update, an older frozen plan can report `analysis_changed`. Rerun `understand`, obtain a
+fresh confirmation, and generate a new plan rather than hand-editing JSON to bypass the gate.
 
 ## Advanced commands
 

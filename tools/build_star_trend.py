@@ -18,7 +18,7 @@ import re
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Sequence
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -328,7 +328,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     snapshots = payload["snapshots"]
     if not args.render_only:
         count = fetch_star_count(repository, token=os.environ.get("GITHUB_TOKEN"))
-        utc_day = datetime.now(timezone.utc).date()
+        utc_day = datetime.now(UTC).date()
         snapshots = upsert_daily_snapshot(snapshots, utc_day, count)
     data_text = _serialize_payload(repository, snapshots)
     svg_text = render_svg(repository, snapshots)

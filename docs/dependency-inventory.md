@@ -1,15 +1,24 @@
-# Verified Python dependency inventory
+# Python dependency inventory
 
-This is the dependency snapshot used for the 2026-07-21 EditaPlot open-source release
-verification on Windows with Python 3.10. It records installed package metadata; it is not a claim
-that third-party projects endorse EditaPlot.
+The current secure lock targets physical Windows 10/11 x64 with 64-bit CPython 3.11/3.12 and
+Pillow 13.0.0; 3.12 is recommended for new installations. The table records locked versions, not
+a newly measured installation or a new Origin live-verification claim. The original installed
+metadata snapshot was collected for the 2026-07-21 Windows/Python 3.10 release with Pillow 12.3.0;
+that snapshot and its Origin 2024b evidence are historical, not the current secure-runtime policy.
+Third-party projects do not endorse EditaPlot merely by appearing here.
+
+The separately verified six-case CPython 3.12.14 / Origin 2024b regression is scoped in
+[Support](../SUPPORT.md); it does not turn this lock table into a fresh installed-metadata inventory
+or verify every route, Origin version, or Python 3.11 host.
 
 The current repository does not vendor these packages. `doctor --repair` installs exact direct
 versions into a project-local virtual environment and constrains transitive resolution with
-`requirements-runtime.lock`. A future update, offline bundle, or executable must regenerate this
-inventory from the exact artifacts being installed or redistributed.
+`requirements-runtime.lock`. Python 3.10 is no longer a supported secure runtime. Setup retains
+replaced project environments for recovery records but does not automatically run their old
+dependency sets. A release, offline bundle, or executable must verify the inventory and notices
+against the exact artifacts being installed or redistributed.
 
-| Package | Verified version | Relationship | Declared license family | Project |
+| Package | Locked version | Relationship | Declared license family | Project |
 |---|---:|---|---|---|
 | NumPy | 1.26.4 | direct | BSD-3-Clause | [numpy.org](https://numpy.org/) |
 | pandas | 2.3.3 | direct | BSD-3-Clause | [pandas.pydata.org](https://pandas.pydata.org/) |
@@ -19,7 +28,7 @@ inventory from the exact artifacts being installed or redistributed.
 | originpro | 1.1.15 | direct | BSD | [OriginLab](https://www.originlab.com/) |
 | openpyxl | 3.1.5 | direct | MIT | [documentation](https://openpyxl.readthedocs.io/) |
 | xlrd | 2.0.2 | direct | BSD | [python-excel](https://www.python-excel.org/) |
-| Pillow | 12.3.0 | direct | MIT-CMU | [documentation](https://pillow.readthedocs.io/) |
+| Pillow | 13.0.0 | direct | MIT-CMU | [documentation](https://pillow.readthedocs.io/) |
 | attrs | 26.1.0 | transitive | MIT | [attrs.org](https://www.attrs.org/) |
 | contourpy | 1.3.2 | transitive | BSD-3-Clause | [source](https://github.com/contourpy/contourpy) |
 | cycler | 0.12.1 | transitive | BSD-3-Clause | [project](https://matplotlib.org/cycler/) |
@@ -52,5 +61,5 @@ Official references: [Qt for Python licensing](https://doc.qt.io/qtforpython-6/)
 [Qt LGPL obligations](https://www.qt.io/development/open-source-lgpl-obligations).
 
 For authoritative terms, use the license file included in the exact installed wheel or source
-distribution. Package metadata was read from the verified environment rather than inferred from a
-logo, screenshot, or secondary catalog.
+distribution. The license-family record originates from installed package metadata rather than a
+logo, screenshot, or secondary catalog; it does not replace checking the new locked artifacts.
