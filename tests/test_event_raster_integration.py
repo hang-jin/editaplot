@@ -240,3 +240,51 @@ def test_public_raster_plan_requires_ordinal_approval_then_uses_verified_route(s
     result = build_plan(source, semantic_confirmation=confirmation, **arguments)
     assert result["can_render"] is True
     assert result["data_understanding"]["status"] == "confirmed"
+
+
+def test_public_manual_mapping_is_applied_before_automatic_role_failure(tmp_path):
+    from editaplot_core import build_plan, understand_data
+
+    source = tmp_path / "custom_headers.csv"
+    pd.DataFrame(
+        {"custom_t (s)": [0, 1, None], "custom_trial": ["01", "01", "02"], "custom_arm": ["A", "A", "B"]}
+    ).to_csv(source, index=False)
+    before = source.read_bytes()
+    mapping = {
+        "assignments": {"custom_t (s)": "x", "custom_trial": "category", "custom_arm": "series_id"},
+        "plot_mode": "events_only",
+    }
+    understanding = understand_data(
+        source, template_id="event_raster", mapping=mapping, engine_home=ROOT / "runtime"
+    )
+    confirmation = understanding["confirmation_gate"]["confirmation_payload_template"]
+    plan = build_plan(
+        source,
+        template_id="event_raster",
+        mapping=mapping,
+        engine_home=ROOT / "runtime",
+        claim="Supplied events retain custom column names and explicit empty trials.",
+        evidence_role="event timing",
+        semantic_confirmation=confirmation,
+    )
+    assert plan["can_render"] is True
+    assert source.read_bytes() == before
+
+
+def test_explicit_mapping_preserves_legacy_preparation_digest_for_standard_headers(source):
+    from origin_sciplot.template_registry import TemplateRegistry
+    from origin_sciplot.template_service import ScientificTemplateService
+
+    service = ScientificTemplateService(TemplateRegistry(ROOT / "runtime/templates").get("event_raster"))
+    automatic = service.prepare(source)
+    assignments = dict(automatic.payload.assignments)
+    legacy = service.confirm_mapping(automatic, assignments=assignments, energy_kind="events_only")
+    direct = service.prepare(
+        source,
+        column_mapping=ScientificColumnMapping(
+            assignments=tuple(assignments.items()),
+            plot_mode="events_only",
+        ),
+    )
+    assert direct.plan_digest == legacy.plan_digest
+    assert direct.payload.to_dict() == legacy.payload.to_dict()

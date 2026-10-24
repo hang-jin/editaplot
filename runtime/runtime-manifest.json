@@ -325,8 +325,8 @@
     },
     {
       "path": "src/origin_sciplot/template_service.py",
-      "size_bytes": 27464,
-      "sha256": "885acba3527019d60ba4318b85e2bd44992b13acdf175ca353070872ff0a748c"
+      "size_bytes": 27567,
+      "sha256": "47c95e55d2373aecdb5416b283319fec651fa3bc2e7c889c49b8e7866e75ec38"
     },
     {
       "path": "src/origin_sciplot/time_frequency.py",

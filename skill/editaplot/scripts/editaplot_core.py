@@ -1476,6 +1476,26 @@ def _beginner_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _prepare_with_mapping(service: Any, path: str | Path, mapping: dict[str, Any] | None) -> Any:
+    """Honor explicit scientific roles before automatic inference can fail."""
+    if mapping is None:
+        return service.prepare(path)
+    assignments = mapping.get("assignments")
+    if not isinstance(assignments, dict):
+        raise EditaPlotError("mapping_invalid", "Mapping JSON needs an assignments object.")
+    assignments = {str(key): str(value) for key, value in assignments.items()}
+    context = str(mapping.get("energy_kind") or mapping.get("plot_mode") or "")
+    from origin_sciplot.scientific_workflow import ScientificColumnMapping
+    from origin_sciplot.template_service import ScientificTemplateService
+
+    if isinstance(service, ScientificTemplateService):
+        return service.prepare(path, column_mapping=ScientificColumnMapping(
+            assignments=tuple(assignments.items()), plot_mode=context or None,
+        ))
+    prepared = service.prepare(path)
+    return service.confirm_mapping(prepared, assignments=assignments, energy_kind=context)
+
+
 def _prepare_template_for_understanding(
     path: str | Path,
     *,
@@ -1494,17 +1514,7 @@ def _prepare_template_for_understanding(
     registry = TemplateServiceRegistry()
     try:
         service = registry.get(template_id)
-        prepared = service.prepare(path)
-        if mapping is not None:
-            assignments = mapping.get("assignments")
-            if not isinstance(assignments, dict):
-                raise EditaPlotError("mapping_invalid", "Mapping JSON needs an assignments object.")
-            context = str(mapping.get("energy_kind") or mapping.get("plot_mode") or "")
-            prepared = service.confirm_mapping(
-                prepared,
-                assignments={str(key): str(value) for key, value in assignments.items()},
-                energy_kind=context,
-            )
+        prepared = _prepare_with_mapping(service, path, mapping)
     except TemplateServiceError as exc:
         raise EditaPlotError(exc.code, str(exc)) from exc
     return service, prepared, root
@@ -2119,17 +2129,7 @@ def build_plan(
     registry = TemplateServiceRegistry()
     try:
         service = registry.get(template_id)
-        prepared = service.prepare(path)
-        if mapping is not None:
-            assignments = mapping.get("assignments")
-            if not isinstance(assignments, dict):
-                raise EditaPlotError("mapping_invalid", "Mapping JSON needs an assignments object.")
-            context = str(mapping.get("energy_kind") or mapping.get("plot_mode") or "")
-            prepared = service.confirm_mapping(
-                prepared,
-                assignments={str(key): str(value) for key, value in assignments.items()},
-                energy_kind=context,
-            )
+        prepared = _prepare_with_mapping(service, path, mapping)
     except TemplateServiceError as exc:
         raise EditaPlotError(exc.code, str(exc)) from exc
 

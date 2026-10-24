@@ -512,9 +512,11 @@ class ScientificTemplateService:
             payload=preparation,
         )
 
-    def prepare(self, path: str | Path) -> PreparedTemplate:
+    def prepare(
+        self, path: str | Path, *, column_mapping: ScientificColumnMapping | None = None
+    ) -> PreparedTemplate:
         try:
-            return self._wrap(prepare_scientific(path, self.manifest.id))
+            return self._wrap(prepare_scientific(path, self.manifest.id, column_mapping=column_mapping))
         except ScientificWorkflowError as exc:
             raise TemplateServiceError(exc.code, str(exc)) from exc
 
