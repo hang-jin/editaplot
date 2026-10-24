@@ -39,6 +39,9 @@
   `USERNAME` or `USERPROFILE` values. `codex_sandbox` stops before COM with
   `origin_codex_sandbox_context`; `unknown` Windows identity also stops fail-closed with
   `origin_execution_context_unknown`.
+- Check both the token's account and `TokenIsAppContainer`. A restricted AppContainer may keep
+  the signed-in account name; it still needs the same exact-command approval handoff. If the
+  AppContainer flag cannot be read, report unknown instead of claiming desktop access.
 - For `origin_codex_sandbox_context`, Codex may submit a formal, narrowly scoped local-execution
   request for the same exact `origin-smoke` or `render` command. Rerun only if that exact request is
   approved, either by the user when prompted or by the configured Codex auto-reviewer. Approval is

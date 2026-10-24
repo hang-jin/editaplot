@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import math
+import random
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -214,17 +215,23 @@ def generate_xas() -> None:
 
 
 def generate_scatter() -> None:
+    """Create three reproducible synthetic groups with non-periodic variation."""
+    rng = random.Random(20260910)  # noqa: S311 -- teaching data, not security material
     rows = []
     for index in range(1, 241):
         x = index / 12.0
-        y_a = 1.8 + 0.62 * x + 1.05 * math.sin(index * 0.47)
-        y_b = 4.1 + 0.43 * x + 0.90 * math.cos(index * 0.39 + 0.4)
-        y_c = 2.9 + 0.53 * x + 0.82 * math.sin(index * 0.31 + 1.2)
+        # Independent draws provide within-group variation rather than three
+        # decorative sine waves. These are teaching observations, not measured
+        # results, and the generated CSV does not include a fitted relationship.
+        y_a = 1.8 + 0.62 * x + rng.gauss(0.0, 0.48 + 0.014 * x)
+        y_b = 4.1 + 0.43 * x + rng.gauss(0.0, 0.63 + 0.008 * x)
+        y_c = 2.9 + 0.53 * x + rng.gauss(0.0, 0.42 + 0.023 * x)
         rows.append((f"{x:.3f}", f"{y_a:.4f}", f"{y_b:.4f}", f"{y_c:.4f}"))
     _write("scatter_dense.csv", ["Independent variable", "Response A", "Response B", "Response C"], rows)
 
 
 def generate_line_error() -> None:
+    """Supply synthetic means and illustrative SDs, not measured replicates."""
     rows = []
     for index in range(13):
         time = index * 2
@@ -236,12 +243,12 @@ def generate_line_error() -> None:
                 f"{control:.4f}",
                 f"{0.07 + 0.006 * index:.4f}",
                 f"{treatment:.4f}",
-                f"{0.05 + 0.005 * index:.4f}",
+                f"{0.09 + 0.007 * index:.4f}",
             )
         )
     _write(
         "line_error.csv",
-        ["Time (h)", "Control", "Control_SD", "Treatment", "Treatment_SEM"],
+        ["Time (h)", "Control", "Control_SD", "Treatment", "Treatment_SD"],
         rows,
     )
 

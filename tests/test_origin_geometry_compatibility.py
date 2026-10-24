@@ -108,6 +108,10 @@ class FakeLayer:
 class FakeOrigin:
     def __init__(self, overrides: dict[str, float] | None = None) -> None:
         self.values = {
+            "page.width": SMOKE_STYLE.page_width_cm / 2.54 * 600,
+            "page.height": SMOKE_STYLE.page_height_cm / 2.54 * 600,
+            "page.resx": 600.0,
+            "page.resy": 600.0,
             "layer.unit": 1.0,
             "layer.left": 17.0,
             "layer.top": 6.0,
@@ -184,13 +188,46 @@ def test_verify_page_and_layer_rejects_non_finite_native_readback() -> None:
 
 
 def test_verify_page_and_layer_rejects_non_finite_page_readback() -> None:
-    with pytest.raises(RuntimeError, match="page.width_cm"):
+    with pytest.raises(RuntimeError, match="page.width"):
         verify_page_and_layer(
-            FakeGraph(width_inches=math.nan),
+            FakeGraph(),
             FakeLayer(),
-            origin=FakeOrigin(),
+            origin=FakeOrigin({"page.width": math.nan}),
             style=SMOKE_STYLE,
         )
+
+
+def test_native_page_dimensions_are_authoritative_when_com_width_is_stale() -> None:
+    geometry = verify_page_and_layer(
+        FakeGraph(width_inches=17.957 / 2.54), FakeLayer(),
+        origin=FakeOrigin(), style=SMOKE_STYLE,
+    )
+    assert geometry["width_cm"] == pytest.approx(18.0)
+    assert geometry["page_bridge_width_cm"] == pytest.approx(17.957)
+    assert geometry["page_bridge_geometry_consistent"] is False
+    assert geometry["page_geometry_readback_source"] == "labtalk_printer_dots"
+
+
+@pytest.mark.parametrize("resolution", [0.0, -600.0, math.nan, math.inf])
+def test_page_readback_never_guesses_a_printer_resolution(resolution: float) -> None:
+    with pytest.raises(RuntimeError, match="page.resx"):
+        verify_page_and_layer(FakeGraph(), FakeLayer(), origin=FakeOrigin({"page.resx": resolution}),
+                              style=SMOKE_STYLE)
+
+
+def test_real_native_size_mismatch_is_not_accepted_as_a_bridge_problem() -> None:
+    with pytest.raises(RuntimeError, match="page width"):
+        verify_page_and_layer(
+            FakeGraph(), FakeLayer(), origin=FakeOrigin({"page.width": 17.95 / 2.54 * 600}),
+            style=SMOKE_STYLE,
+        )
+
+
+def test_page_bridge_nan_is_only_diagnostic_when_native_units_are_complete() -> None:
+    geometry = verify_page_and_layer(FakeGraph(width_inches=math.nan), FakeLayer(),
+                                     origin=FakeOrigin(), style=SMOKE_STYLE)
+    assert geometry["page_bridge_width_cm"] is None
+    assert geometry["width_cm"] == pytest.approx(18.0)
 
 
 def test_verify_page_and_layer_rejects_failed_layer_x_command() -> None:

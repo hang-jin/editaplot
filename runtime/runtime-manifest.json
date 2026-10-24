@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 423,
+  "file_count": 471,
   "files": [
     {
       "path": "LICENSE",
@@ -54,6 +54,26 @@
       "sha256": "a1af3b5ce18766d3d792afc0d5fa2df0dd272302bd768b459f3708f7fc79efc1"
     },
     {
+      "path": "src/origin_sciplot/event_raster.py",
+      "size_bytes": 8007,
+      "sha256": "febcf0bf24d48d50a536ed49244d29f26333ccbefcdfc0d6bf8690c9112d54c9"
+    },
+    {
+      "path": "src/origin_sciplot/event_raster_layout.py",
+      "size_bytes": 4539,
+      "sha256": "9bdc581628589babdceaeabab4f7e5f85df2246320bfcac85ae323b3f691df5e"
+    },
+    {
+      "path": "src/origin_sciplot/event_response.py",
+      "size_bytes": 7011,
+      "sha256": "76a332afecdf746f4100ef2739c1220a6cfdd07c346feca90e59e1eaa071c81e"
+    },
+    {
+      "path": "src/origin_sciplot/flim_phasor.py",
+      "size_bytes": 5870,
+      "sha256": "064be821d9342459f06e72f0166b79e5d034250c35590da613c531442bcb905e"
+    },
+    {
       "path": "src/origin_sciplot/heatmap_layout.py",
       "size_bytes": 6017,
       "sha256": "3065b9c0146e85a7d1451894cf20c014670925c0ca334e5d03ac268ad68debbb"
@@ -85,8 +105,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/categorical_renderer.py",
-      "size_bytes": 63283,
-      "sha256": "23d7f56d1fcb1f5c6d38583d26d6a38cd0d9da9f747b98a60ef237bc6a248771"
+      "size_bytes": 66701,
+      "sha256": "98bc84a98b42adb8e131e0c50df0fd329c81cdef62c64fd68fcd29b1360baee4"
     },
     {
       "path": "src/origin_sciplot/origin_backend/density_ridgeline3d_renderer.py",
@@ -94,19 +114,29 @@
       "sha256": "3450c568dd6e46d3d827f0cbe07346e892310573e11c544d9d9b6e762eba5f70"
     },
     {
+      "path": "src/origin_sciplot/origin_backend/event_raster_renderer.py",
+      "size_bytes": 17561,
+      "sha256": "ea3f6d317c2285ed28ca87bcab5bb08e0f94cead77be5063b023d12c95c84a0c"
+    },
+    {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
-      "size_bytes": 141026,
-      "sha256": "461973d368ecc4b492889d73e5b44ac6ef67cbd990ecaf48b2b13763950b8382"
+      "size_bytes": 151013,
+      "sha256": "8eb1b6e3d68477ad7d2565caef77120f793c0d73fab6a1431099b603b27b6eae"
     },
     {
       "path": "src/origin_sciplot/origin_backend/execution_context.py",
-      "size_bytes": 5422,
-      "sha256": "cd025bbe592c9c61763301d5debd7b21ccea0aa2e6d0dc6f439018f97973456c"
+      "size_bytes": 7580,
+      "sha256": "ce195ea74023e49407f07dbc4c820a64ded8e087e3088874114099272c484849"
     },
     {
       "path": "src/origin_sciplot/origin_backend/export_utils.py",
       "size_bytes": 2040,
       "sha256": "7d4addf430b9c2deaa9b1a71a707f4477350d2e7d608ec60f0aab6498d1f073c"
+    },
+    {
+      "path": "src/origin_sciplot/origin_backend/flim_phasor_renderer.py",
+      "size_bytes": 12459,
+      "sha256": "5c85f9575db1604c5ac4b999b47db02d7aa53d093170241b31cd24e99609f5a0"
     },
     {
       "path": "src/origin_sciplot/origin_backend/job_queue.py",
@@ -119,14 +149,19 @@
       "sha256": "9b6bf313e8ad83678974770c3f0300736d9a191e0e408c51a4107b01887f1db5"
     },
     {
+      "path": "src/origin_sciplot/origin_backend/research_grid_renderer.py",
+      "size_bytes": 19763,
+      "sha256": "22fce9480d4488b15745af36e5b3f4b09ac3eeb8aa6a3770e21b80bca5a9ca88"
+    },
+    {
       "path": "src/origin_sciplot/origin_backend/safe_errors.py",
-      "size_bytes": 9697,
-      "sha256": "818d995d1ea2bf2dd1d6ecb5d0cd4a15bf75de22b77bc9eea69b4f752cce2aa1"
+      "size_bytes": 10600,
+      "sha256": "47c240c35d46c49c990c340e68bf52f3ffdce626024aa35565b6f093df3b8e75"
     },
     {
       "path": "src/origin_sciplot/origin_backend/scientific_renderer.py",
-      "size_bytes": 71215,
-      "sha256": "598eeb189898522e7ea474956eecf158333905f3b4ff7f098da510d33bc66f52"
+      "size_bytes": 74075,
+      "sha256": "4f0a9671d0c4ca793b6f8c9a512bcebf78cfa2d4a0bf001202fc05f637ad05cb"
     },
     {
       "path": "src/origin_sciplot/origin_backend/session.py",
@@ -139,14 +174,24 @@
       "sha256": "1f82f1ab5886aca1e95d66aa46a6844d4ed2fad51bdbefdab5efbf244e8f28ba"
     },
     {
+      "path": "src/origin_sciplot/origin_backend/signal_stack_renderer.py",
+      "size_bytes": 19982,
+      "sha256": "6692b19c90e7ff06ae2380160103bf3b694e766b4875d00ca0227afb3cf3cb89"
+    },
+    {
       "path": "src/origin_sciplot/origin_backend/smoke_test.py",
-      "size_bytes": 37117,
-      "sha256": "23d86225980f17b8b92038e63cc611c90cf9d7bd559c7ba991541898c733a3eb"
+      "size_bytes": 37779,
+      "sha256": "4f369edbbb49fc3aa7dadd6d9bf6a082237ae1ec6709d2442c6ca14f62434232"
     },
     {
       "path": "src/origin_sciplot/origin_backend/template_capabilities.py",
-      "size_bytes": 15573,
-      "sha256": "ed771e1a631345d01d58eb41573adc647bff8476d21b86a95d3d64f93cf9464e"
+      "size_bytes": 15882,
+      "sha256": "bf50fd03c83348a37ada8f55f463da92226f1f83f27ca046ea6b261201557fac"
+    },
+    {
+      "path": "src/origin_sciplot/origin_backend/time_frequency_renderer.py",
+      "size_bytes": 6172,
+      "sha256": "63b309a8e1760a74e30d3c9535fcebdbadabb01f9f54b59a41775d3f3d3db14d"
     },
     {
       "path": "src/origin_sciplot/origin_backend/trajectory3d_renderer.py",
@@ -155,8 +200,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/verify_utils.py",
-      "size_bytes": 15581,
-      "sha256": "164f3f0f26affe9d48e9f33dc4468fa37f13a922f1190df468e4aae0a0532c1a"
+      "size_bytes": 22098,
+      "sha256": "25191f1d2b455cf918d58dcdc24f303e5aef46029b89b4a057577557642c0843"
     },
     {
       "path": "src/origin_sciplot/origin_backend/version_risks.py",
@@ -179,9 +224,14 @@
       "sha256": "67841ff1f454e51cc22b9aa10f28230421d0dc0eace054c833a97a58eb381d67"
     },
     {
+      "path": "src/origin_sciplot/ratiometric_response.py",
+      "size_bytes": 7521,
+      "sha256": "d3835dec4347c95c9b56ea75093edf7df6d0afa8f19af2f7d30a3b0cf5f07d1a"
+    },
+    {
       "path": "src/origin_sciplot/reference_adaptation.py",
-      "size_bytes": 29548,
-      "sha256": "253c3dea388a434e3846caf20b7b4fdbc7d1cf82b72c1391e81808bca4810b6d"
+      "size_bytes": 29871,
+      "sha256": "5d48e471c9da9143db55ff8f4359db3c97c975778968a998c48433a01a6db069"
     },
     {
       "path": "src/origin_sciplot/reference_figure.py",
@@ -192,6 +242,11 @@
       "path": "src/origin_sciplot/reference_style.py",
       "size_bytes": 29053,
       "sha256": "9edba0ec5282a8b82f8cee81507231804be57f8f47572c6a996708ac702ee888"
+    },
+    {
+      "path": "src/origin_sciplot/research_grid.py",
+      "size_bytes": 5466,
+      "sha256": "81c33bc641e50eaa48fdefe8d1a475839fb5e6d92679004e8a8460026a55c820"
     },
     {
       "path": "src/origin_sciplot/resources/app_icon.png",
@@ -205,28 +260,28 @@
     },
     {
       "path": "src/origin_sciplot/scientific_preview.py",
-      "size_bytes": 88674,
-      "sha256": "40b5416c66b75cd2a0f93f4dbba71649fd72bb7e8e8814ef511ffd56e0b50c73"
+      "size_bytes": 97558,
+      "sha256": "ca11351fbe14b70a7668bae7cfa6052e607a02f82791687bbe6609e97890086b"
     },
     {
       "path": "src/origin_sciplot/scientific_visual.py",
-      "size_bytes": 21677,
-      "sha256": "374b25193869c8d766bfe41116ae77bf548f56c0d7959bf474ba81d907a347d1"
+      "size_bytes": 28385,
+      "sha256": "f056a3f8d89a83145fcd0c8be56ee0071d00760f882d918108ee4ec6290a6c35"
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 222782,
-      "sha256": "6c9da4b92df3998dc803f0fc4c6e6db8ae061e8ac8a5302549654c878740aecb"
+      "size_bytes": 244727,
+      "sha256": "6bed45b0971de998d38ff84498fa51593f0dd08e745fdb2e9923abae8f2ffdc4"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
-      "size_bytes": 29352,
-      "sha256": "78fe300c50185c65ed8bb7dabd01776c485605ee2d5e7138171fdd459d650679"
+      "size_bytes": 34741,
+      "sha256": "fa1f3c2821e2217fbf7b025e6933ea4a205be7e67c10535c3a0cff96226391eb"
     },
     {
       "path": "src/origin_sciplot/semantic_contract.py",
-      "size_bytes": 45656,
-      "sha256": "e8b58de8605ed37179620b126516f14ef70b1d57f52b416f786b482b15afe4b7"
+      "size_bytes": 48670,
+      "sha256": "3f5e5b020dee8ee99e18c066a944b9d905d5d2358d63fec6958a97333b5f0e5a"
     },
     {
       "path": "src/origin_sciplot/shap_composite.py",
@@ -244,14 +299,39 @@
       "sha256": "6f92fff6ba61d99c81a4fb58dcb5d8fa1a1d42ce2f598160ab4abd86fbe46b77"
     },
     {
+      "path": "src/origin_sciplot/signal_stack.py",
+      "size_bytes": 8328,
+      "sha256": "bfe8df4584f6d7c795bf06703cb0a10720e42e14bd0d017a6be2a61348df4925"
+    },
+    {
+      "path": "src/origin_sciplot/signal_stack_layout.py",
+      "size_bytes": 3019,
+      "sha256": "6e4fb914889d30baae0c45f8e80d409e6ba35d2edb671603b0980d5d05d8672e"
+    },
+    {
+      "path": "src/origin_sciplot/spatial_profile.py",
+      "size_bytes": 5479,
+      "sha256": "4d93cc9e3a2e44b6c2a47e2aae9d1a0663694a58e25e2e3139837ac0e5d24fbf"
+    },
+    {
+      "path": "src/origin_sciplot/spectral_density.py",
+      "size_bytes": 11114,
+      "sha256": "1c72ef26925bbedbf217875f2a56b4e7ce2d61a0b0b66a210ad3d05cc919d666"
+    },
+    {
       "path": "src/origin_sciplot/template_registry.py",
       "size_bytes": 7355,
       "sha256": "42b3ce971f5c5062e820ed519afa000c7a0a9a1a7e50334ebcb7633c1d30611a"
     },
     {
       "path": "src/origin_sciplot/template_service.py",
-      "size_bytes": 24447,
-      "sha256": "2e7b8846da331e8a0f10def03de47d49f047d3a1900f04aaab0e1ec522ddfb73"
+      "size_bytes": 27567,
+      "sha256": "47c95e55d2373aecdb5416b283319fec651fa3bc2e7c889c49b8e7866e75ec38"
+    },
+    {
+      "path": "src/origin_sciplot/time_frequency.py",
+      "size_bytes": 5514,
+      "sha256": "e3ba4eef1056f8542a7f23875757793c2e8b330b20b49d08e1abed94bb855f2b"
     },
     {
       "path": "src/origin_sciplot/validation/__init__.py",
@@ -824,6 +904,86 @@
       "sha256": "d0d0117ded2d69d79a917ce70e4ad547215a3eebe60efde50678f6207c38dd87"
     },
     {
+      "path": "templates/event_raster/data_contract.md",
+      "size_bytes": 4321,
+      "sha256": "16bcf07c8ce49abeb36e4a7b604c672cb7fe203256e84c4ffde8398d78a4b980"
+    },
+    {
+      "path": "templates/event_raster/data_template.csv",
+      "size_bytes": 25,
+      "sha256": "d032688665071529239cb41796fb1a9ca468971de19de54086e2ff63c0375445"
+    },
+    {
+      "path": "templates/event_raster/example_standard.csv",
+      "size_bytes": 20137,
+      "sha256": "84765362127a8570387f0fb1c4e18bf68a036811aa7474da8618ce348325c9ee"
+    },
+    {
+      "path": "templates/event_raster/manifest.yaml",
+      "size_bytes": 1276,
+      "sha256": "dd8699e732e12a38b99043697680747ac8796d8526a43178d3f50c1a5bbe0611"
+    },
+    {
+      "path": "templates/event_raster/runner.py",
+      "size_bytes": 385,
+      "sha256": "ce0d4632b71f174b748ecdf4110e688f3ac2f94d44afd92433bbc1ccc7b2bffb"
+    },
+    {
+      "path": "templates/event_raster/schema.json",
+      "size_bytes": 481,
+      "sha256": "e0287a7b85804bba374285b10adfe7d138108e1a91a58d3d7aeeb68029f01660"
+    },
+    {
+      "path": "templates/event_raster/service.py",
+      "size_bytes": 194,
+      "sha256": "7d0f2497bd3acbc0cd603ee1136c51a325ecd4b3989493d9549ff7b114685b5b"
+    },
+    {
+      "path": "templates/event_raster/visual_contract.md",
+      "size_bytes": 4029,
+      "sha256": "286a4a96181c244d0a94b34fa14d2d1e9c05d20c2ad5136604b2472bde9f365b"
+    },
+    {
+      "path": "templates/flim_phasor/data_contract.md",
+      "size_bytes": 2902,
+      "sha256": "36e37bbe005b3f4765003513798a6ea26faa73ef2262d2943be28e88276136fd"
+    },
+    {
+      "path": "templates/flim_phasor/data_template.csv",
+      "size_bytes": 10,
+      "sha256": "22cb7fd8c84320ec0754aa181276a5bb85be9f9aa82d611a5baa6696f731e273"
+    },
+    {
+      "path": "templates/flim_phasor/example_standard.csv",
+      "size_bytes": 19878,
+      "sha256": "7788ff1216be7015ceb4b591f751a8fcce867f6987dbb4a929d078bb1dc28827"
+    },
+    {
+      "path": "templates/flim_phasor/manifest.yaml",
+      "size_bytes": 1785,
+      "sha256": "38de6622a1b96896d38ca87f1d4c5afcae293e8f72799b899a797b29abcb01b5"
+    },
+    {
+      "path": "templates/flim_phasor/runner.py",
+      "size_bytes": 379,
+      "sha256": "22e02e37f3ea782947103c100583b06c0845344c572b47bc490f1243b42d8e8f"
+    },
+    {
+      "path": "templates/flim_phasor/schema.json",
+      "size_bytes": 450,
+      "sha256": "1564bc3b587ce53ef67634a4636a44395cf85b5ef08729defc37751a32376146"
+    },
+    {
+      "path": "templates/flim_phasor/service.py",
+      "size_bytes": 207,
+      "sha256": "6cc69cbcd9f0ce410e05c22b2515324b91b6d4ab25636d8427182622305ce5ad"
+    },
+    {
+      "path": "templates/flim_phasor/visual_contract.md",
+      "size_bytes": 2465,
+      "sha256": "a62dd74a59e0570418c9d48d62db48901a8b0095d4f775bc253b158ab7381c04"
+    },
+    {
       "path": "templates/forest/data_contract.md",
       "size_bytes": 321,
       "sha256": "638472886768926411e0cca79a56ea85e42b9863d621616b36d4f7a3f4716a82"
@@ -940,8 +1100,8 @@
     },
     {
       "path": "templates/grouped_box/visual_contract.md",
-      "size_bytes": 2393,
-      "sha256": "1a2658d0941f63863ea80399fc8c10041b68c5bf2a8d8a894d53312225d35e20"
+      "size_bytes": 2918,
+      "sha256": "2e18e550087d1aa501cdba14f7ba8c2fa24ce2e06e528614b47cdda20ac748f4"
     },
     {
       "path": "templates/heatmap/data_contract.md",
@@ -1070,23 +1230,23 @@
     },
     {
       "path": "templates/line_error/data_template.csv",
-      "size_bytes": 54,
-      "sha256": "449f148df978cdbcd62f2341392732ec4d489d40dec885ca68e38cda1ec8f157"
+      "size_bytes": 53,
+      "sha256": "4c6e01b39c57e541c11be1d47f7816c85a2e5fdcebc595b0f11555f013d41158"
     },
     {
       "path": "templates/line_error/example_chinese.csv",
       "size_bytes": 301,
-      "sha256": "701d54ada637b588b9fd7e0fc2e2ecddbc11e9122d9d3f983f0bf3867a285c3d"
+      "sha256": "4586fb758c145e848eda0045b80600aed0bc4c6d7dd1f53f72e35cafb2590b00"
     },
     {
       "path": "templates/line_error/example_standard.csv",
-      "size_bytes": 164,
-      "sha256": "b1ba08c614d119b9845c2d2c50cc50d8fb9b37e99dbece2d8e60533244bb35e1"
+      "size_bytes": 449,
+      "sha256": "78d5ac18cecb5eae10d757c1d43247ca5a67ba807f7dcbab1caaaca7a2a48fd1"
     },
     {
       "path": "templates/line_error/manifest.yaml",
-      "size_bytes": 1216,
-      "sha256": "5471025932a8f600c6fad6a4858dd851a13807ea80836872ed712f82f7305142"
+      "size_bytes": 1303,
+      "sha256": "d55eabfc8b5a236c66f8f76ed4126e97c8da8870efd3bc7a81bd3efc191377df"
     },
     {
       "path": "templates/line_error/runner.py",
@@ -1230,8 +1390,8 @@
     },
     {
       "path": "templates/percent_stacked_bar/data_contract.md",
-      "size_bytes": 215,
-      "sha256": "dfdadcdf48de489a99a85df4e9e270fb81401a5f3d3594b1cc2ef4952c44ebd4"
+      "size_bytes": 456,
+      "sha256": "9c4a4b47cd7609f6361a804f645dc7aa161bb45b953a6cadaddff0d0721b6d5c"
     },
     {
       "path": "templates/percent_stacked_bar/data_template.csv",
@@ -1530,13 +1690,13 @@
     },
     {
       "path": "templates/scatter/example_standard.csv",
-      "size_bytes": 105,
-      "sha256": "fa45a9f66762bc7ad28400e1f8ab2237dc4c07938ca95418c45365825a2865eb"
+      "size_bytes": 6893,
+      "sha256": "3abad36f79f70c31b552f77e900f5baa00c8baa1ae194a3027597f60fcec5b10"
     },
     {
       "path": "templates/scatter/manifest.yaml",
-      "size_bytes": 1276,
-      "sha256": "886a629034ead70d54d173ec608639a32a6bc74bec34dcec3b4eecedb1e23b7f"
+      "size_bytes": 1337,
+      "sha256": "ef236f189bc325f4caa6d18e00d8e70f319233538fcc71779dd15d9947e992bf"
     },
     {
       "path": "templates/scatter/runner.py",
@@ -1639,9 +1799,49 @@
       "sha256": "272c64fb9ab8ba6e89662d99ca40ff481f1f75749fd0d00716649fa096d66c31"
     },
     {
+      "path": "templates/signal_stack/data_contract.md",
+      "size_bytes": 944,
+      "sha256": "4129277d1aa567148a97e386282c1f13be758fe3e226fff448725aa01d8beeb6"
+    },
+    {
+      "path": "templates/signal_stack/data_template.csv",
+      "size_bytes": 32,
+      "sha256": "1b55a776000949b04c10fb0ed2a27f1a7856f2dd3b433dfe5eb9524e9c6e9f29"
+    },
+    {
+      "path": "templates/signal_stack/example_standard.csv",
+      "size_bytes": 292235,
+      "sha256": "610dcd347f5893ece3e27b23be1ab75c40f243bb6ecc39dd1589849df54d5fbb"
+    },
+    {
+      "path": "templates/signal_stack/manifest.yaml",
+      "size_bytes": 1569,
+      "sha256": "1c3058c866f48b8e012b6ab8c88025b6dc64ab72fa8069e35d7d0509008aa85d"
+    },
+    {
+      "path": "templates/signal_stack/runner.py",
+      "size_bytes": 385,
+      "sha256": "06df4fad1d7dafdda474e5b9ced78a5f95de407dd144b0abc9a96d27997606cc"
+    },
+    {
+      "path": "templates/signal_stack/schema.json",
+      "size_bytes": 448,
+      "sha256": "613ba2f379fe15d2e341cba8898504f01447f1c736e4ee6e249b581f596fa91f"
+    },
+    {
+      "path": "templates/signal_stack/service.py",
+      "size_bytes": 196,
+      "sha256": "6c036b9afaf60f1ea68b7b32c57dfd24de677af219c82440968df7b73721cb5f"
+    },
+    {
+      "path": "templates/signal_stack/visual_contract.md",
+      "size_bytes": 1067,
+      "sha256": "f6cd4b4de7b2b0cd2632a6357a03278d321b17b5fd5c9ccffa9ca6007523d132"
+    },
+    {
       "path": "templates/stacked_bar/data_contract.md",
-      "size_bytes": 160,
-      "sha256": "9509d82a11fe3d3e7d0206791403586e2167cee2642c500f1f86ea7803fb92a0"
+      "size_bytes": 427,
+      "sha256": "3b97bf360b2230ffc4b45da94b7c566b87666aeb26bef9e08dbaefc511ecdba3"
     },
     {
       "path": "templates/stacked_bar/data_template.csv",
@@ -1677,6 +1877,46 @@
       "path": "templates/stacked_bar/visual_contract.md",
       "size_bytes": 443,
       "sha256": "669b0a705afe9e301aef5fb417133daa9e1baecde6b7a79a0d15a0be1ffed1ea"
+    },
+    {
+      "path": "templates/time_frequency/data_contract.md",
+      "size_bytes": 947,
+      "sha256": "be150b59de60b1c4527e7f15173e1ce5014bec6a192b6474aaf5aad1ad598650"
+    },
+    {
+      "path": "templates/time_frequency/data_template.csv",
+      "size_bytes": 35,
+      "sha256": "4cb89a997429482c43be891bd5df9323701a6b420e9ed45612f3b69e802fcbc7"
+    },
+    {
+      "path": "templates/time_frequency/example_standard.csv",
+      "size_bytes": 306419,
+      "sha256": "ef90a3d657b980efcae789276d785d231e2a802e1cc3f9e2e0d9d4eaa2dd1865"
+    },
+    {
+      "path": "templates/time_frequency/manifest.yaml",
+      "size_bytes": 1556,
+      "sha256": "c54d05d2427264e94ce0b1fd8ec1bf8406cf9c224296d9707ba6a011d26b4e28"
+    },
+    {
+      "path": "templates/time_frequency/runner.py",
+      "size_bytes": 390,
+      "sha256": "b2f880d0f4748a588c77e3e0fbc5e03f99d256f850f35ef12878fa13f1f84e76"
+    },
+    {
+      "path": "templates/time_frequency/schema.json",
+      "size_bytes": 520,
+      "sha256": "b3153cefdd0665f069612d7adcf65573feb0556fb3982958ddae37071ec1a00b"
+    },
+    {
+      "path": "templates/time_frequency/service.py",
+      "size_bytes": 223,
+      "sha256": "bd8a2189719b46a6f108e5f2c863dee5124e847783158c98f9fed145c15e94af"
+    },
+    {
+      "path": "templates/time_frequency/visual_contract.md",
+      "size_bytes": 1354,
+      "sha256": "7b22801eeb4b9e01d6fb8f5743092e5996f8aa53840fc5bd92ff950ba8877d9d"
     },
     {
       "path": "templates/trajectory3d/data_contract.md",
@@ -1845,8 +2085,8 @@
     },
     {
       "path": "templates/violin/visual_contract.md",
-      "size_bytes": 247,
-      "sha256": "88ea3c5d5b0d0e10851676adb55d596b79d38d277f98f089bbb90489129d5731"
+      "size_bytes": 658,
+      "sha256": "663c5c8c5566083aed2a79f784f5e5ab25f80091ac1a18c6d353ed10a070f3d7"
     },
     {
       "path": "templates/xas/data_contract.md",

@@ -32,6 +32,7 @@ _PRIMARY_ROLES = frozenset(
         "z_imag",
         "magnitude",
         "phase",
+        "frequency_axis",
         "source",
         "target",
         "value",
@@ -102,6 +103,8 @@ def _element_kind(plot_kind: str, series_role: str) -> str:
         return "line"
     return {
         "scatter": "symbol",
+        "flim_phasor": "symbol",
+        "time_frequency": "heatmap_cell",
         "bar_error": "bar",
         "horizontal_bar": "bar",
         "stacked_bar": "stacked_bar",
@@ -295,6 +298,88 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
         str(column)
         for column in getattr(spec, "phase_tick_columns", ())
     )
+
+    if plot_kind == "event_raster":
+        raster = spec.event_raster_plan
+        ordinal_id = "derived_trial_ordinal"
+        derived_items.append(DerivedDataItem(
+            item_id=ordinal_id, semantic_role="display_trial_position_not_measurement",
+            disposition=DataDisposition.RENDER_PRIMARY, operation_id="source_order_trial_ordinal",
+            input_item_ids=(item_ids[raster.event_time_column], item_ids[raster.trial_column],
+                            item_ids[raster.condition_column]), confidence=1.0,
+            parameters=(("order_rule", "first_source_appearance"), ("index_origin", 1),
+                        ("trial_count", len(raster.trial_order)), ("event_count", len(raster.event_rows)),
+                        ("inventory_row_count", len(raster.inventory_rows)),
+                        ("empty_trial_count", len(raster.empty_trial_ids)),
+                        ("inventory_semantics", "blank_time_declares_trial_not_event")),
+        ))
+        row_y, trial_conditions = dict(raster.row_trial_positions), dict(raster.trial_conditions)
+        conditions_with_events = {trial_conditions[raster.trial_order[row_y[row] - 1]] for row in raster.event_rows}
+        for index, condition in enumerate(raster.condition_order):
+            if condition in conditions_with_events:
+                elements.append(FigureElement(
+                    element_id=f"event_condition_{index:02d}", element_kind="scatter",
+                    data_item_ids=(item_ids[raster.event_time_column], ordinal_id, item_ids[raster.condition_column]),
+                    required=True, axis="supplied_event_time_and_source_trial_order", legend_label=condition,
+                ))
+            elements.append(FigureElement(
+                element_id=f"event_condition_legend_{index:02d}", element_kind="legend",
+                data_item_ids=(item_ids[raster.condition_column],), required=True, legend_label=condition,
+            ))
+
+    if plot_kind == "signal_stack":
+        signal = spec.signal_stack_plan
+        for index, (label, offset) in enumerate(signal.offsets):
+            derived_id = f"derived_signal_offset_{index:02d}"
+            derived_items.append(DerivedDataItem(
+                item_id=derived_id, semantic_role="display_channel_offset_only",
+                disposition=DataDisposition.RENDER_PRIMARY, operation_id="offset_by_constant",
+                input_item_ids=(item_ids[signal.value_column], item_ids[signal.channel_column]),
+                confidence=1.0, parameters=(("offset", offset), ("channel_index", index)),
+                evidence_codes=("common_amplitude_no_normalization",),
+            ))
+            elements.append(FigureElement(
+                element_id=f"signal_channel_{index:02d}", element_kind="line",
+                data_item_ids=(item_ids[signal.time_column], derived_id), required=True,
+                axis="common_amplitude_display_offsets", legend_label=label,
+            ))
+        ruler_id = "derived_signal_amplitude_ruler"
+        derived_items.append(DerivedDataItem(
+            item_id=ruler_id, semantic_role="amplitude_display_reference",
+            disposition=DataDisposition.RENDER_SECONDARY, operation_id="signal_amplitude_ruler",
+            input_item_ids=(item_ids[signal.value_column],), confidence=1.0,
+            parameters=(("length", signal.amplitude_scale_length), ("unit", signal.value_unit),
+                        ("reference_kind", signal.amplitude_scale_kind), ("rule", "nice_125_global_span_quarter")),
+        ))
+        elements.append(FigureElement(
+            element_id="signal_amplitude_ruler", element_kind="reference_line", data_item_ids=(ruler_id,),
+            required=True, axis=signal.amplitude_scale_kind, legend_label=spec.signal_stack_layout.reference_text,
+        ))
+
+    if plot_kind == "time_frequency":
+        value_column = spec.time_frequency_plan.value_column
+        elements.append(FigureElement(
+            element_id="time_frequency_colorbar", element_kind="colorbar",
+            data_item_ids=(item_ids[value_column],), required=True,
+            axis="supplied_values", legend_label=value_column,
+        ))
+
+    if plot_kind == "flim_phasor":
+        phasor = spec.phasor_plan
+        reference_id = "derived_phasor_reference_semicircle"
+        derived_items.append(DerivedDataItem(
+            item_id=reference_id, semantic_role="mathematical_reference_not_experimental_data",
+            disposition=DataDisposition.RENDER_SECONDARY, operation_id="phasor_reference_semicircle",
+            input_item_ids=_unique_existing((phasor.g_column, phasor.s_column), item_ids), confidence=1.0,
+            parameters=(("center_g", 0.5), ("center_s", 0.0), ("radius", 0.5), ("point_count", 181),
+                        ("reference_kind", phasor.reference_kind),
+                        ("lineage_kind", "coordinate_definition_not_value_derivation")),
+            evidence_codes=("fixed_phasor_coordinate_reference_not_lifetime_fit",),
+        ))
+        elements.append(FigureElement(
+            element_id="phasor_reference_semicircle", element_kind="line", data_item_ids=(reference_id,),
+            required=True, axis=phasor.reference_kind, legend_label="Universal semicircle / 数学参考半圆",
+        ))
 
     if plot_kind == "circular_network":
         network_bindings = _unique_existing(
@@ -562,7 +647,7 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
 
     scientific_series = (
         ()
-        if plot_kind in {"circular_network", "density_ridgeline3d", "shap_summary"}
+        if plot_kind in {"circular_network", "density_ridgeline3d", "shap_summary", "signal_stack", "event_raster"}
         else spec.series
     )
     for index, series in enumerate(scientific_series):

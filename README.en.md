@@ -131,11 +131,10 @@ percentage and display calculations before rendering.
 
 Ask Codex for the SHAP dashboard and select `dashboard_blue_red`, `dashboard_viridis`, or
 `dashboard_red_blue`. Codex records the choice as the column mapping's `plot_mode`.
+I show one blue-to-wine representative below; all three palettes remain selectable within this template.
 
 <div align="center">
-  <img src="assets/gallery/shap-dashboard-blue-red.png" width="32%" alt="SHAP dashboard blue to wine">
-  <img src="assets/gallery/shap-dashboard-viridis.png" width="32%" alt="SHAP dashboard purple green yellow">
-  <img src="assets/gallery/shap-dashboard-red-blue.png" width="32%" alt="SHAP dashboard red yellow blue">
+  <img src="assets/gallery/shap-dashboard-blue-red.png" width="85%" alt="SHAP dashboard blue to wine">
 </div>
 
 ### Preparing the new materials and relationship routes
@@ -167,9 +166,15 @@ I made and manually checked these examples with synthetic teaching data. Metadat
   <img src="assets/gallery/circular-network.png" alt="Multi-panel circular directed weighted network" width="31%">
 </div>
 
-➡️ [Browse the 48 public showcase examples](docs/gallery.en.md)
+➡️ [Browse one representative for each of the 45 templates](docs/gallery.en.md)
 
-The current public capability set contains 41 Origin plotting routes. The repository retains 50 verification PNGs that passed live artifacts, object readback, human visual review, and the public-asset audit; 48 are displayed, while two hidden heatmap cases remain only as regression evidence. DSC, NMR, FTIR/IR, XPS comparison, multi-condition PL, multi-sample UV–Vis, the 30×30 dense heatmap, the 576-point composite SHAP figure, the multi-period circular directed weighted network, and the 3D dual-density baseline-locator route have all completed the Origin 2024b gate.
+I currently provide 45 Origin plotting routes and display one representative per template: 45 images. All 54 reviewed verification PNGs remain in the repository. The other nine palette or mode examples, their data, and their plotting capabilities remain available.
+
+My [fluorescence, time-frequency, multichannel and event-raster guide](docs/research_signals.md) explains the input boundary. Time-frequency figures display supplied cells; multichannel figures retain supplied waveform samples and a common amplitude scale. Event rasters retain supplied event times and explicitly declared empty trials.
+
+This update adds a **FLIM phasor plot** for upstream G/S coordinates and optional group names, with equal physical scales and a mathematical reference semicircle. The example uses synthetic teaching data; the route displays supplied phasors rather than calculating lifetimes from raw images. I also updated the bar example's palette and borderless external legend, with separate native checks for fill color, border color, and physical border width.
+
+All three SHAP palettes, steady-state and temperature-series PL, multi-sample UV–Vis, signed-effect bars, PR curves, and heatmap sizes remain available. The existing DSC, NMR, FTIR/IR, XPS comparison, dense heatmap, composite SHAP, circular network, and 3D density routes are retained. Origin 2024b remains the complete live baseline.
 
 ### How long should one run take?
 
@@ -339,7 +344,7 @@ I keep the public repository complete and runnable. To avoid mixing private data
 |---|---|
 | Apache-2.0 source, complete Skill, sanitized runtime | `DEVELOPMENT_LEDGER.md`, internal plans, development logs |
 | Neutral synthetic examples and original palette assets | Your original data, reference screenshots, material without redistribution rights |
-| 50 reviewed, metadata-sanitized verification PNGs; 48 are displayed across 41 plotting routes | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
+| 54 reviewed, metadata-sanitized verification PNGs; one representative per route, 45 displayed images | OPJU/PDF/TIF, RenderPlans, readback and verification JSON |
 | Bilingual docs, tests, dependency locks, asset/runtime manifests | Absolute paths, caches, virtual environments, temporary outputs, secrets and tokens |
 
 To avoid publishing local material by mistake, I use an allowlist, secret scanning, PNG checks, and SHA-256 manifests. See [release and licensing boundaries](docs/release-boundaries.md).

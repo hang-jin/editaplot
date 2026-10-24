@@ -1,0 +1,33 @@
+id: signal_stack
+name: 多通道信号与共同幅度尺
+category: research/signals
+version: 0.1.0
+description: 保留完整时间与幅度，仅用确认后的纵向偏移展示1–16个已处理通道
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: implemented
+visibility: public
+workflow: scientific_table
+service: service.py
+ui_order: 153
+family: research_imaging
+blank_template: data_template.csv
+examples:
+  - id: synthetic-eight-channel
+    name_zh: 八通道完整轨迹教学数据
+    file: example_standard.csv
+    description_zh: 8×1001个独立拟定的合成信号值，不是实际EEG记录或电极定位。
+data_guide:
+  headline_zh: 上传Time、Channel、Amplitude长表；时间与幅度的单位写在列名括号里。
+  required_columns: [Time (s), Channel, Amplitude (uV)]
+  optional_columns: []
+  accepted_layouts: [长表，每行一个通道的一个已处理观测]
+  aliases: [时间, 通道, ROI, 幅值, 振幅, 电压, 响应, Intensity]
+  notes_zh:
+    - 每通道至少2个有限数值，时间已严格递增；允许不同通道使用不同采样时间，不自动对齐或插值。
+    - 保留通道首次出现顺序和所有源值；仅纵向显示偏移，共同幅度单位，不逐通道归一化或居中。
+    - 通道标签和共同幅度尺放在页边，X轴只显示真实时间范围，Y数值刻度隐藏。
+    - 原始设备文件需先在上游处理成表格；不做滤波、重参考、去伪迹、事件检测或频谱分析。

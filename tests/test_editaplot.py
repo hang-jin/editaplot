@@ -2190,7 +2190,7 @@ def test_batch_launcher_probes_compatibility_before_bootstrap() -> None:
     assert "EDITAPLOT_PYTHON_PROBE" in launcher
     assert "sys.version_info[:2] in ((3,10),(3,11),(3,12))" in launcher
     assert '-c "import sys"' not in launcher
-    assert "if not defined EDITAPLOT_PYTHON goto launcher_312" in launcher
+    assert "if not defined EDITAPLOT_PYTHON goto configured_runtime" in launcher
     assert "reg.exe query" in launcher
     assert "PythonCore\\%~1\\InstallPath" in launcher
     assert launcher.find(":registry_python") < launcher.find(":local_312")
@@ -2350,7 +2350,7 @@ def test_public_asset_provenance_is_complete_and_synthetic() -> None:
     )
     records = {item["path"]: item for item in provenance["assets"]}
     assert provenance["human_review"]["decision"] == "approved_for_public_source_release"
-    for field in ("inventory_generator", "gallery_fixture_generator"):
+    for field in ("inventory_generator", "gallery_fixture_generator", "research_fixture_generator"):
         binding = provenance[field]
         bound_path = PRODUCT_ROOT / binding["path"]
         assert binding["sha256"] == hashlib.sha256(bound_path.read_bytes()).hexdigest()
@@ -2555,7 +2555,7 @@ def test_gallery_report_covers_all_public_verified_routes() -> None:
     )
     assert report["programmatic_pass_count"] == report["case_count"]
     assert report["manual_visual_pass_count"] == report["case_count"]
-    assert report["collection_count"] == 6
+    assert report["collection_count"] == 7
     assert {case["programmatic_status"] for case in report["cases"]} == {"pass"}
     assert {case["manual_visual_review"] for case in report["cases"]} == {"pass"}
 
@@ -2589,7 +2589,8 @@ def test_gallery_index_links_are_relative_to_the_showcase_directory() -> None:
     assert '<html lang="zh-CN">' in chinese
     assert 'href="index.zh-CN.html"' in document
     assert 'href="index.html"' in chinese
-    assert "按科研目的浏览六大类" in chinese
+    assert 'href="collections-zh/fluorescence-imaging-signals.html"' in chinese
+    assert 'href="collections/fluorescence-imaging-signals.html"' in document
     assert "可直接改写的精确需求词" in chinese
     assert "医学分组箱线图与原始点" in chinese
     assert 'class="skip-link"' in document
@@ -2616,8 +2617,10 @@ def test_curated_collection_pages_link_back_to_verified_artifacts() -> None:
     pages = sorted(collection_dir.glob("*.html"))
     chinese_pages = sorted(collection_zh_dir.glob("*.html"))
 
-    assert len(pages) == 6
-    assert len(chinese_pages) == 6
+    assert len(pages) == 7
+    assert len(chinese_pages) == 7
+    assert (collection_dir / "fluorescence-imaging-signals.html").is_file()
+    assert (collection_zh_dir / "fluorescence-imaging-signals.html").is_file()
     for page in pages:
         document = page.read_text(encoding="utf-8")
         assert 'href="../index.html"' in document

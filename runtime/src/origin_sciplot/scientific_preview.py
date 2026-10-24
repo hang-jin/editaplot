@@ -16,7 +16,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch, Patch, PathPatch, Rectangle
 from matplotlib.path import Path
 from matplotlib.text import Text
-from matplotlib.ticker import AutoMinorLocator, FixedLocator, MaxNLocator
+from matplotlib.ticker import AutoMinorLocator, FixedLocator, MaxNLocator, MultipleLocator
 
 from .circular_network_layout import (
     MAX_NODE_GROUP_COUNT,
@@ -28,12 +28,14 @@ from .heatmap_layout import (
     resolve_heatmap_colorbar_geometry,
     resolve_heatmap_layout,
 )
+from .event_raster import event_rows_by_condition
 from .scientific_visual import (
     AdaptiveOriginStyle,
     interpolate_hex_colors,
     palette_colors,
     series_palette_colors,
     signed_effect_colors,
+    time_frequency_scale_region,
 )
 from .scientific_workflow import (
     ScientificPreparation,
@@ -199,6 +201,7 @@ def _new_figure(
     dual_y: bool = False,
     horizontal_bar: bool = False,
     rotated_category: bool = False,
+    frozen_geometry: bool = False,
 ) -> tuple[Figure, Any]:
     origin_style = preparation.plot_spec.display_plan.figure_style
     if origin_style is None:
@@ -215,7 +218,9 @@ def _new_figure(
     )
     setattr(figure, "_origin_sciplot_preview_style", preview)
     left = origin_style.layer_left_percent / 100.0
-    bottom = max(0.06, 1.0 - (origin_style.layer_top_percent + origin_style.layer_height_percent) / 100.0)
+    bottom = 1.0 - (origin_style.layer_top_percent + origin_style.layer_height_percent) / 100.0
+    if not frozen_geometry:
+        bottom = max(0.06, bottom)
     width = origin_style.layer_width_percent / 100.0
     height = origin_style.layer_height_percent / 100.0
     if dual_y:
@@ -984,7 +989,10 @@ def _draw_horizontal_bars(axis: Any, frame: Any, preparation: ScientificPreparat
         if finite.size and float(np.min(finite)) < 0 < float(np.max(finite)):
             ablation_colors = signed_effect_colors(values)
         else:
-            ablation_colors = interpolate_hex_colors(style.colors[0], style.colors[-1], len(categories))
+            origin_style = spec.display_plan.figure_style
+            assert origin_style is not None
+            palette = palette_colors(origin_style.palette_name)
+            ablation_colors = interpolate_hex_colors(palette[0], palette[-1], len(categories))
     for index, series in enumerate(spec.series):
         offset = (index - (count - 1) / 2.0) * spacing
         axis.barh(
@@ -1965,8 +1973,6 @@ def _draw_radar(figure: Figure, frame: Any, preparation: ScientificPreparation) 
     )
     axis.set_theta_offset(np.pi / 2.0)
     axis.set_theta_direction(-1)
-    upper = max(float(np.nanmax(series_values(frame, series))) for series in spec.series)
-    upper = max(upper * 1.08, 1.0)
     for index, series in enumerate(spec.series):
         values = series_values(frame, series)
         closed_values = np.concatenate([values, values[:1]])
@@ -1984,15 +1990,21 @@ def _draw_radar(figure: Figure, frame: Any, preparation: ScientificPreparation) 
             zorder=3,
         )
     axis.set_xticks(angles, categories, fontsize=style.tick_label_pt)
-    axis.set_ylim(0.0, upper)
-    axis.yaxis.set_major_locator(MaxNLocator(nbins=5))
+    axis.set_ylim(spec.axis_plan.y_from, spec.axis_plan.y_to)
+    axis.yaxis.set_major_locator(MultipleLocator(spec.axis_plan.y_step))
     axis.tick_params(axis="y", labelsize=style.tick_label_pt * 0.86, pad=2)
     axis.grid(color="#D9DEE5", linewidth=style.frame_line_pt * 0.50, alpha=0.85)
     axis.spines["polar"].set_color("#39424E")
     axis.spines["polar"].set_linewidth(style.frame_line_pt)
     axis.legend(
         loc="upper left",
-        bbox_to_anchor=(1.01, 1.08),
+        bbox_to_anchor=(
+            (origin_style.layer_left_percent + origin_style.layer_width_percent) / 100.0
+            + 0.6 / origin_style.page_width_cm,
+            1.0 - origin_style.layer_top_percent / 100.0,
+        ),
+        bbox_transform=figure.transFigure,
+        borderaxespad=0,
         frameon=False,
         fontsize=style.legend_pt,
         handlelength=1.5,
@@ -2108,11 +2120,8 @@ def _set_axis_contract(axis: Any, preparation: ScientificPreparation, right_axis
             fontsize=style.axis_title_pt,
             fontweight="bold",
         )
-        axis.set_ylabel(
-            _matplotlib_label(spec.x_title),
-            fontsize=style.axis_title_pt,
-            fontweight="bold",
-        )
+        # Category names already identify the vertical axis, as in Origin.
+        axis.set_ylabel("")
         axis.set_xlim(plan.y_from, plan.y_to)
         axis.xaxis.set_major_locator(MaxNLocator(nbins=6))
         axis.xaxis.set_minor_locator(AutoMinorLocator(2))
@@ -2201,11 +2210,14 @@ def _add_legend(axis: Any, right_axis: Any | None, preparation: ScientificPrepar
         handles.extend(right_handles)
         labels.extend(right_labels)
     external = preparation.plot_spec.plot_kind == "percent_stacked_bar"
+    publication_external = preparation.plot_spec.display_plan.figure_style.profile_name.endswith(
+        "-external-legend"
+    )
     legend = axis.legend(
         handles,
         labels,
-        loc="center left" if external else "best",
-        bbox_to_anchor=(1.03, 0.5) if external else None,
+        loc="upper left" if publication_external else "center left" if external else "best",
+        bbox_to_anchor=(1.03, 1.0) if publication_external else (1.03, 0.5) if external else None,
         frameon=False,
         fontsize=style.legend_pt,
         handlelength=1.5,
@@ -2221,6 +2233,45 @@ def _apply_font_contract(figure: Figure) -> None:
             text.set_fontfamily("Arial")
 
 
+def _draw_flim_phasor_preview(axis: Any, frame: Any, preparation: ScientificPreparation) -> None:
+    from matplotlib.ticker import MultipleLocator
+
+    spec = preparation.plot_spec
+    plan = spec.phasor_plan
+    if plan is None:
+        raise ScientificPreviewError("phasor_plan_missing", "The phasor coordinate plan is missing.")
+    style = _preview_style(axis.figure)
+    origin_style = spec.display_plan.figure_style
+    physical_scale = PREVIEW_WIDTH_IN / (origin_style.page_width_cm / 2.54)
+    reference_width = min(1.2, origin_style.plot_line_width_pt * 0.5) * physical_scale
+    reference_label = "Universal semicircle"
+    while reference_label in plan.group_order:
+        reference_label += " (reference)"
+    axis.plot(
+        plan.reference_g, plan.reference_s, color="#89939D", linewidth=reference_width,
+        label=reference_label, zorder=1,
+    )
+    for index, (label, positions) in enumerate(plan.group_rows):
+        group = frame.iloc[list(positions)]
+        axis.scatter(
+            group[plan.g_column].to_numpy(dtype=float), group[plan.s_column].to_numpy(dtype=float),
+            s=style.marker_pt**2, facecolors="none", edgecolors=style.colors[index],
+            linewidths=style.marker_pt * 0.175, label=label, zorder=3,
+        )
+    axis.set_xlim(*plan.x_range)
+    axis.set_ylim(*plan.y_range)
+    axis.set_aspect("equal", adjustable="box")
+    axis.set_xlabel(spec.x_title, fontsize=style.axis_title_pt, fontweight="bold")
+    axis.set_ylabel(spec.y_title, fontsize=style.axis_title_pt, fontweight="bold")
+    axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
+    axis.yaxis.set_major_locator(MultipleLocator(spec.axis_plan.y_step))
+    plot_width_cm = origin_style.page_width_cm * origin_style.layer_width_percent / 100
+    axis.legend(
+        loc="upper left", bbox_to_anchor=(1 + 0.6 / plot_width_cm, 1.0),
+        frameon=False, fontsize=style.legend_pt, borderaxespad=0.0,
+    )
+
+
 def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figure:
     try:
         frame = load_scientific_frame(preparation.source_path, preparation)
@@ -2229,6 +2280,112 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         raise ScientificPreviewError(code, str(exc)) from exc
 
     spec = preparation.plot_spec
+    if spec.plot_kind == "event_raster":
+        figure, axis = _new_figure(preparation, frozen_geometry=True)
+        _style_axis(axis)
+        plan, layout = spec.event_raster_plan, spec.event_raster_layout
+        if plan is None or layout is None:
+            raise ScientificPreviewError("event_raster_plan_missing", "The frozen event/trial layout is missing.")
+        style = _preview_style(figure)
+        row_y = dict(plan.row_trial_positions)
+        colors = dict(layout.condition_colors)
+        for condition, source_rows in event_rows_by_condition(plan):
+            rows = list(source_rows)
+            if rows:
+                axis.plot(frame.iloc[rows][plan.event_time_column], [row_y[row] for row in rows],
+                          linestyle="None", marker="|", markersize=style.marker_pt, color=colors[condition],
+                          markeredgewidth=style.marker_pt * layout.marker_edge_percent / 200)
+        axis.set_xlim(*layout.x_range)
+        axis.set_ylim(*layout.y_range)
+        axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
+        axis.xaxis.set_minor_locator(AutoMinorLocator(2))
+        axis.set_yticks([])
+        axis.set_xlabel(spec.x_title, fontsize=style.axis_title_pt, fontweight="bold")
+        figure.text(layout.y_title_x_percent / 100, 1 - layout.y_title_y_percent / 100,
+                    spec.y_title, rotation=90, va="center", ha="center", fontsize=style.axis_title_pt,
+                    fontweight="bold")
+        for text, _ordinal, right, y in layout.trial_labels:
+            figure.text(right / 100, 1 - y / 100, text, ha="right", va="center", fontsize=style.legend_pt)
+        for condition, left, y in layout.condition_labels:
+            figure.text(left / 100, 1 - y / 100, condition, ha="left", va="center",
+                        fontsize=style.legend_pt, color=colors[condition])
+        _apply_font_contract(figure)
+        return figure
+    if spec.plot_kind == "signal_stack":
+        figure, axis = _new_figure(preparation, frozen_geometry=True)
+        _style_axis(axis)
+        plan, layout = spec.signal_stack_plan, spec.signal_stack_layout
+        if plan is None or layout is None:
+            raise ScientificPreviewError("signal_plan_missing", "The frozen signal layout is missing.")
+        style = _preview_style(figure)
+        origin_style = spec.display_plan.figure_style
+        colors = interpolate_hex_colors("#24485A", "#207E80", len(plan.channel_order))
+        offsets = dict(plan.offsets)
+        for (label, rows), color in zip(plan.channel_rows, colors, strict=True):
+            values = frame.iloc[list(rows)]
+            axis.plot(values[plan.time_column], values[plan.value_column] + offsets[label],
+                      color=color, linewidth=style.plot_line_pt)
+        axis.set_xlim(*layout.x_range)
+        axis.set_ylim(*layout.y_range)
+        axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
+        axis.set_yticks([])
+        axis.set_xlabel(spec.x_title, fontsize=style.axis_title_pt, fontweight="bold")
+        figure.text(layout.y_title_x_percent / 100, 1 - layout.y_title_y_percent / 100,
+                    spec.y_title, rotation=90, va="center", ha="center",
+                    fontsize=style.axis_title_pt, fontweight="bold")
+        for name, right, center_y in layout.channel_labels:
+            figure.text(right / 100, 1 - center_y / 100, name, ha="right", va="center",
+                        fontsize=style.legend_pt, color="#263D46")
+        physical_scale = PREVIEW_WIDTH_IN / (origin_style.page_width_cm / 2.54)
+        axis.plot([layout.reference_x] * 2, [layout.reference_y_from, layout.reference_y_to],
+                  color="#52616B", linewidth=1.4 * physical_scale, clip_on=False)
+        figure.text(layout.reference_text_x_percent / 100, 1 - layout.reference_text_y_percent / 100,
+                    layout.reference_text, ha="center", va="center", fontsize=style.legend_pt,
+                    color="#263D46")
+        _apply_font_contract(figure)
+        return figure
+    if spec.plot_kind == "time_frequency":
+        from matplotlib.colors import ListedColormap
+
+        figure, axis = _new_figure(preparation, frozen_geometry=True)
+        _style_axis(axis)
+        plan = spec.time_frequency_plan
+        if plan is None:
+            raise ScientificPreviewError("time_frequency_plan_missing", "The physical cell plan is missing.")
+        values = np.asarray(plan.grid.values)
+        edges = plan.grid.cell_edges
+        x = np.linspace(edges[0], edges[1], values.shape[1] + 1)
+        y = np.linspace(edges[2], edges[3], values.shape[0] + 1)
+        mesh = axis.pcolormesh(
+            x, y, values, cmap=ListedColormap(spec.color_scale_hex),
+            vmin=plan.color_limits[0], vmax=plan.color_limits[1], shading="flat", rasterized=True,
+        )
+        axis.set_xlim(*plan.x_range)
+        axis.set_ylim(*plan.y_range)
+        preview = _preview_style(figure)
+        axis.set_xlabel(spec.x_title, fontsize=preview.axis_title_pt, fontweight="bold")
+        axis.set_ylabel(spec.y_title, fontsize=preview.axis_title_pt, fontweight="bold")
+        axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
+        axis.yaxis.set_major_locator(MultipleLocator(spec.axis_plan.y_step))
+        origin_style = spec.display_plan.figure_style
+        region = time_frequency_scale_region(origin_style)
+        color_axis = figure.add_axes([
+            region["left_percent"] / 100,
+            1 - (region["top_percent"] + region["height_percent"]) / 100,
+            region["bar_width_percent"] / 100, region["height_percent"] / 100,
+        ])
+        bar = figure.colorbar(mesh, cax=color_axis, ticks=np.linspace(*plan.color_limits, 6))
+        physical_scale = PREVIEW_WIDTH_IN / (origin_style.page_width_cm / 2.54)
+        bar.ax.tick_params(labelsize=15.0 * physical_scale)
+        bar.set_label(spec.series[0].label, fontsize=preview.legend_pt)
+        _apply_font_contract(figure)
+        return figure
+    if spec.plot_kind == "flim_phasor":
+        figure, axis = _new_figure(preparation)
+        _style_axis(axis)
+        _draw_flim_phasor_preview(axis, frame, preparation)
+        _apply_font_contract(figure)
+        return figure
     if spec.plot_kind == "trajectory3d":
         figure = _new_empty_figure(preparation)
         _draw_trajectory3d(figure, frame, preparation)

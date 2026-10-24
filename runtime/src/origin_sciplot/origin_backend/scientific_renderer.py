@@ -33,8 +33,12 @@ from .export_utils import export_graph
 from .safe_errors import OriginDrawError
 from .session import OriginSession
 from .verify_utils import (
+    NativePlotReference,
+    apply_column_style,
     read_layer_geometry_percent,
     require_nonempty,
+    verify_column_border_widths,
+    verify_column_colors,
     verify_page_and_layer,
     verify_plot_color,
     verify_plot_line_widths,
@@ -827,6 +831,7 @@ def _title_geometry(op: Any, labels: dict[str, Any]) -> dict[str, float]:
 
 
 def _add_plot(
+    op: Any,
     layer: Any,
     worksheet: Any,
     series: OriginSeriesPlan,
@@ -845,7 +850,7 @@ def _add_plot(
         raise OriginDrawError(f"Origin could not add plot: {series.source_column}")
     plot.color = series.color
     if series.plot_type == "c":
-        plot.set_cmd(f"-w {pt_to_origin_width_units(style.bar_border_width_pt)}")
+        apply_column_style(op, plot, series.color, border_width_pt=style.bar_border_width_pt)
         if series.bar_gap_percent is not None:
             # Official LabTalk set option: -vg sets the column/bar gap percentage.
             plot.set_cmd(f"-vg {series.bar_gap_percent:g}")
@@ -856,7 +861,7 @@ def _add_plot(
     if series.plot_type in {"s", "y"}:
         plot.symbol_kind = series.symbol_kind or 2
         if not series.is_phase_tick:
-            plot.symbol_interior = 2
+            plot.set_cmd("-kf 1")
         plot.symbol_size = series.marker_size_pt
         if not series.is_phase_tick:
             plot.set_cmd(f"-kh {MARKER_EDGE_PERCENT:g}")
@@ -995,7 +1000,10 @@ def _legend_lines(
     main_plots: dict[str, Any],
     plots: list[Any],
 ) -> list[str]:
-    plot_indices = {plot.lt_range(): index for index, plot in enumerate(plots, start=1)}
+    if main_plots and all(isinstance(plot, NativePlotReference) for plot in main_plots.values()):
+        plot_indices = {plot.lt_range(): plot.native_index for plot in main_plots.values()}
+    else:
+        plot_indices = {plot.lt_range(): index for index, plot in enumerate(plots, start=1)}
     lines: list[str] = []
     for entry in entries:
         label = re.sub(r"\s+", " ", entry.label.replace("×", "x")).strip() or "Series"
@@ -1041,6 +1049,61 @@ def _style_legend(
     legend.set_int("font", _origin_font_code(op, style.font_family))
     _set_borderless_legend(legend)
     return legend
+
+
+def _position_publication_legend(
+    op: Any, layer: Any, legend: Any | None, style: AdaptiveOriginStyle
+) -> dict[str, float | int]:
+    """Explicitly place editable legend text and verify physical page bounds."""
+    if legend is None:
+        return {}
+    external = style.profile_name.endswith("-external-legend")
+    legend.set_int("attach", 1)
+    layer.obj.LT_execute("doc -uw;")
+    page_width = float(op.lt_float("page.width"))
+    page_height = float(op.lt_float("page.height"))
+    legend.set_float(
+        "left",
+        page_width
+        * (
+            (style.layer_left_percent + style.layer_width_percent) / 100 + 0.6 / style.page_width_cm
+            if external else style.layer_left_percent / 100 + 0.3 / style.page_width_cm
+        ),
+    )
+    legend.set_float(
+        "top", page_height * (style.layer_top_percent / 100 + (0 if external else 0.3 / style.page_height_cm))
+    )
+    layer.obj.LT_execute("doc -uw;")
+    bounds = {key: float(legend.get_float(key)) for key in ("left", "top", "width", "height")}
+    attach = int(legend.get_int("attach"))
+    frame = int(legend.get_int("showframe"))
+    plot_right = page_width * (style.layer_left_percent + style.layer_width_percent) / 100
+    if (
+        not all(math.isfinite(v) for v in (page_width, page_height, *bounds.values()))
+        or page_width <= 0
+        or page_height <= 0
+        or bounds["width"] <= 0
+        or bounds["height"] <= 0
+        or bounds["left"] < 0
+        or (external and bounds["left"] <= plot_right)
+        or bounds["top"] < 0
+        or bounds["left"] + bounds["width"] > page_width * 0.99
+        or bounds["top"] + bounds["height"] > page_height * 0.97
+        or attach != 1
+        or frame != 0
+    ):
+        raise OriginDrawError(
+            ("The external legend does not fit its reserved column; "
+             "use shorter display labels or a larger page.")
+            if external else ("The legend does not fit within the physical page; "
+                              "use a larger page or shorter display labels.")
+        )
+    return {
+        **{f"legend.{key}": value for key, value in bounds.items()},
+        "legend.attach": attach,
+        "legend.showframe": frame,
+        "legend.outside_data_field": external,
+    }
 
 
 def _add_bland_altman_labels(
@@ -1268,7 +1331,7 @@ def _verify_plots(
                 verify_plot_line_widths(op, line_plots, style.plot_line_width_pt) if line_plots else {}
             ),
             "bar_border_widths": (
-                verify_plot_line_widths(op, bar_plots, style.bar_border_width_pt) if bar_plots else {}
+                verify_column_border_widths(op, bar_plots, style.bar_border_width_pt) if bar_plots else {}
             ),
             "bar_transparency_percent": bar_transparency,
             "error_bar_widths": (
@@ -1280,6 +1343,7 @@ def _verify_plots(
                     main_plots[item.label],
                     expected_size_pt=item.marker_size_pt,
                     expected_edge_percent=MARKER_EDGE_PERCENT,
+                    expected_symbol_interior=None if item.is_phase_tick else 1,
                 )
                 for item in table.series
                 if item.label in scatter_plots
@@ -1296,7 +1360,7 @@ def _verify_plots(
                 if item.is_phase_tick
             },
             "colors": {
-                item.label: verify_plot_color(
+                item.label: (verify_column_colors if item.plot_type == "c" else verify_plot_color)(
                     op,
                     main_plots[item.label],
                     item.color,
@@ -1589,6 +1653,7 @@ def _build_origin_graph(
     error_plots: dict[str, Any] = {}
     for series in table.series:
         main, errors = _add_plot(
+            op,
             layer,
             worksheet,
             series,
@@ -1642,6 +1707,7 @@ def _build_origin_graph(
 
     bland_labels = _add_bland_altman_labels(op, layer, preparation)
     title_labels.update(bland_labels)
+    legend_geometry = _position_publication_legend(op, layer, legend, style)
 
     axis_state = _read_axis_state(op, layer, preparation)
     axis_state["x.label.rotate"] = layer.get_float("x.label.rotate")
@@ -1684,6 +1750,7 @@ def _build_origin_graph(
         "origin_series_columns": [asdict(item) for item in table.series],
         "origin_axis_state": axis_state,
         "origin_text_state": {
+            **legend_geometry,
             **text_state,
             **font_state,
             **title_state,

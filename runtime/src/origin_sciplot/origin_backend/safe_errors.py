@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Iterator, Mapping
 from typing import Any
@@ -64,6 +65,13 @@ class OriginExportError(_StructuredOriginError):
     default_stage = "export"
 
 
+class OriginGeometryError(OriginDrawError):
+    """A finite physical page measurement differs from the frozen contract."""
+
+    default_code = "origin_page_geometry_mismatch"
+    default_stage = "style_graph"
+
+
 _ACTIVATION_HRESULT_CODES = {
     0x80004005: "origin_com_unspecified_failure",
     0x80010001: "origin_com_call_rejected",
@@ -101,6 +109,10 @@ _PUBLIC_DIAGNOSTIC_FIELDS = frozenset(
         "execution_context",
         "requires_codex_user_approval",
         "requires_user_approval",
+        "geometry_check",
+        "expected_value",
+        "measured_value",
+        "tolerance_value",
     }
 )
 _PUBLIC_DIAGNOSTIC_IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]{0,79}$")
@@ -108,6 +120,7 @@ _PUBLIC_ACTIVATION_CODES = frozenset(_ACTIVATION_HRESULT_CODES.values()) | {
     "origin_instance_start_failed"
 }
 _PUBLIC_DIAGNOSTIC_ENUMS = {
+    "geometry_check": frozenset({"page_width_cm", "page_height_cm"}),
     "primary_activation_code": _PUBLIC_ACTIVATION_CODES,
     "primary_activation_stage": frozenset({"create_instance"}),
     "cleanup_error_code": _PUBLIC_ACTIVATION_CODES,
@@ -138,6 +151,15 @@ def _normalize_public_diagnostics(
         if key not in _PUBLIC_DIAGNOSTIC_FIELDS:
             continue
         allowed_values = _PUBLIC_DIAGNOSTIC_ENUMS.get(key)
+        if key in {"expected_value", "measured_value", "tolerance_value"}:
+            if (
+                isinstance(diagnostics.get("geometry_check"), str)
+                and diagnostics.get("geometry_check") in _PUBLIC_DIAGNOSTIC_ENUMS["geometry_check"]
+                and isinstance(value, (int, float)) and not isinstance(value, bool)
+                and math.isfinite(float(value)) and 0 <= float(value) <= 10000
+            ):
+                normalized[key] = float(value)
+            continue
         if isinstance(value, bool) and allowed_values is None:
             normalized[key] = value
         elif isinstance(value, str) and _PUBLIC_DIAGNOSTIC_IDENTIFIER.fullmatch(value):

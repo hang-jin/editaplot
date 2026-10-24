@@ -3,24 +3,28 @@
   "release_policy": "synthetic teaching data and original/generated assets only",
   "inventory_generator": {
     "path": "tools/build_asset_provenance.py",
-    "sha256": "2aba4382dc1411f19f9d0aea95ba7d4cd4167103dd48de49a9d00156e11db2be"
+    "sha256": "ddcb309b96dcbdad78cec4f8d1f655c2f893d6d3033e853d589cd4b2ba5b7ec5"
   },
   "gallery_fixture_generator": {
     "path": "tools/generate_showcase_data.py",
-    "sha256": "ab1104fb57f49d925026632f58c80faedf83f0eeff9d9c30dc78368369172f7c"
+    "sha256": "30e550eef25213ae8895b28e9e7e4e846819e208514179f37a35070d940d2ca8"
+  },
+  "research_fixture_generator": {
+    "path": "tools/generate_research_data.py",
+    "sha256": "949eec4e39c5fe2d65b7292c9050e81695e2aad8c69ac5b9092a5295fa954823"
   },
   "human_review": {
     "decision": "approved_for_public_source_release",
-    "reviewed_on": "2026-07-30",
+    "reviewed_on": "2026-10-24",
     "scope": "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, metadata, payment-identifier intent, and redistribution boundary"
   },
-  "asset_count": 235,
+  "asset_count": 251,
   "assets": [
     {
       "path": "assets/gallery/bar-error-groups.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 40793,
-      "sha256": "2b8e80b3865f46c8c2a76714555cfb4c189aff5a3b3bc4edb2feaf50be450ee8",
+      "size_bytes": 31281,
+      "sha256": "a7e086f9fc3dc5ca326fb54f9e6a6012107e441ff5de41752093c2d32f4a035c",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -79,8 +83,8 @@
     {
       "path": "assets/gallery/cv-cycles.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 45041,
-      "sha256": "aa833fcc1c84bcd1228c0503a349121e5e62eb5faaf3644872faff6fb2c15fb4",
+      "size_bytes": 36031,
+      "sha256": "322a541d8eb6ca07de91e0800b3ac741b4c6ce2960d8040453cd380f88a6c3c1",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -159,8 +163,48 @@
     {
       "path": "assets/gallery/eis-nyquist.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 38248,
-      "sha256": "81c3d11fbd416e9ed06b38750b8914e2afee04b359cbbf0048e5098b0fdcb8ef",
+      "size_bytes": 36946,
+      "sha256": "702f7636e2d082304e6735838ea02a4b35bbef9391bd8ee3d7f5491ed3f228bc",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/event-raster.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 69410,
+      "sha256": "2fcac68272c1a12dc24e790f2c7e82a038ca8e68a841d597d173b9fa98ddee5e",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/flim-phasor.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 33137,
+      "sha256": "e084c5fab2c2af3267acd1595861ef123140fcb33ef081937434364cc410491f",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -299,8 +343,8 @@
     {
       "path": "assets/gallery/horizontal-long-labels.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 36741,
-      "sha256": "c28e195ee11ba9b3fe21f7ecd95b4324314760b11e0b5e769af9f86478c0f186",
+      "size_bytes": 33466,
+      "sha256": "8439248e37a1417bee2a6b1c623ec3fc94d118335b048840772ac821644ce409",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -319,8 +363,8 @@
     {
       "path": "assets/gallery/line-error.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 42193,
-      "sha256": "947abc2b43816da39fb121ba715615624f2d946c352d198dadee279105e98bcc",
+      "size_bytes": 31073,
+      "sha256": "09cc85efdb57458bc0ef1575d8a1359caf954e75a5947fc0af216f37408e6b4a",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -339,8 +383,8 @@
     {
       "path": "assets/gallery/lsv-multi.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 47321,
-      "sha256": "ba2d4621f2d6eb87ba5c5ec63a8a1fcbe5adb298998e0737615a7df1a1aa09b5",
+      "size_bytes": 35704,
+      "sha256": "f8b0b1260755b1742e632f1934e3984e598c9cb94034978c436b458bc5722a4d",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -419,8 +463,8 @@
     {
       "path": "assets/gallery/medical-decision.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 48762,
-      "sha256": "6d2f48233c0b8db1640ae2d70d365f151abbeadd9b25b3bf90c77dfdb81af17c",
+      "size_bytes": 40465,
+      "sha256": "cebe2f031c5f21bc2d0e0f2a9f6c97487d220f08d5fa3a0d0ea94a84f043bf3d",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -440,7 +484,7 @@
       "path": "assets/gallery/medical-grouped-box.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
       "size_bytes": 44179,
-      "sha256": "95c690aeddeb7e24c63d6154f84826cae8c01d733fef800cc167fa433c740255",
+      "sha256": "ab5ad4004bcce5054a94c368ba2d6cb5a9bbcc1be6ee1580eadf0e6e2186c3cc",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -479,8 +523,8 @@
     {
       "path": "assets/gallery/medical-pr.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 51957,
-      "sha256": "e5b312190236477f15f2c3e9527897e3f851e90c5621dfceab0e841698b34664",
+      "size_bytes": 41232,
+      "sha256": "a9e924b07bd6cf0cf7f4cfc0fac1683fae3ded64280b9cd8eeffc3cce300c762",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -519,8 +563,8 @@
     {
       "path": "assets/gallery/medical-roc.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 60062,
-      "sha256": "48f6d231725c67dc1bc417050304756a961cf65f3b9d21f470613d7c5a78fc5b",
+      "size_bytes": 47756,
+      "sha256": "c44b3ecb1eca6551698cceb1efdd5f48f61d9f042c26a26353933cfc42d454e6",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -579,8 +623,8 @@
     {
       "path": "assets/gallery/percent-composition.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 58827,
-      "sha256": "f9b288608c88b0068d944dbe2c6b84b1ee667a3f4c7a5bdb23fe7bfea3d268cc",
+      "size_bytes": 60837,
+      "sha256": "d188c40ab525d085757175c2249ae5ab5cc8f5bc3d38a0937cf672426a03abfd",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -679,8 +723,8 @@
     {
       "path": "assets/gallery/radar-multimetric.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 170728,
-      "sha256": "2b36550711fffb9ef5ea66f139fd0e19b1076d08eb97e6b9902b88feb29bbfc7",
+      "size_bytes": 167592,
+      "sha256": "6628b4cc66a714562e417a1401808110140b509c00202348e6b88ae63b61bb3c",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -739,8 +783,8 @@
     {
       "path": "assets/gallery/scatter-dense.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 92294,
-      "sha256": "8f2c4ffc428c4e70f5a6a717455bdcc58c6477dd9dcf95626b79ef364344e3f6",
+      "size_bytes": 62097,
+      "sha256": "3b1d17fc6a9cb82bee6233e71db946d9e8f8ae347bd43a58c91ca2349a6744af",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -817,10 +861,50 @@
       }
     },
     {
+      "path": "assets/gallery/signal-stack.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 90591,
+      "sha256": "85501bbe1f7bb98c69e28f1367eab463647f59c27c3b3039f41c2a75f202a1f2",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
       "path": "assets/gallery/stacked-composition.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 37375,
-      "sha256": "16ce1362ca424227581b2fe106dc625fffb560cf0f4fa7855ac56c7acbacd413",
+      "size_bytes": 38598,
+      "sha256": "8508b81ee323d61dc40b5df6452201742986c668a49d0e8f35cf25a61ebc206e",
+      "synthetic_or_generated": true,
+      "contains_phi": false,
+      "png_text": {
+        "Author": "",
+        "Description": "",
+        "Copyright": "",
+        "Creation time": "",
+        "Software": "",
+        "Disclaimer": "",
+        "Warning": "",
+        "Source": "",
+        "Comment": "",
+        "Title": ""
+      }
+    },
+    {
+      "path": "assets/gallery/time-frequency.png",
+      "kind": "verified_origin_export_from_synthetic_fixture",
+      "size_bytes": 67662,
+      "sha256": "7b2a17014f3067a3c04f8d938dde714d504265a583dc4a825b9ef3ac14896d72",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -859,8 +943,8 @@
     {
       "path": "assets/gallery/trend-progression.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 39934,
-      "sha256": "7908b309b86e2628e9980e9367ff717c47015e5ab1d3031592cfd4fdd7d4f575",
+      "size_bytes": 31677,
+      "sha256": "c4cec750c803767e78859f7f8ed41bd472b645830e30f95a9801626a668efac1",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -919,8 +1003,8 @@
     {
       "path": "assets/gallery/violin-distributions.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 88788,
-      "sha256": "fd7bd3394e38426d37ffefc0057af149ea9af11ec9c0753043746d2696f83229",
+      "size_bytes": 78166,
+      "sha256": "4f0e07dad5ee0fd9b69b11063188ae9440f81e0c3f8b6c6899891cb32f92614f",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -939,8 +1023,8 @@
     {
       "path": "assets/gallery/xas-profiles.png",
       "kind": "verified_origin_export_from_synthetic_fixture",
-      "size_bytes": 47719,
-      "sha256": "c0a93898ffb6fbc148c0c6368db1776c90e8aa075bab16d15935a82215fc4e47",
+      "size_bytes": 37622,
+      "sha256": "11743c0a8b36c3af11bb8790ff64365eb97ea54e64f2d628ff2ee4aee7f7a3b3",
       "synthetic_or_generated": true,
       "contains_phi": false,
       "png_text": {
@@ -1232,6 +1316,22 @@
       "contains_phi": false
     },
     {
+      "path": "examples/gallery/event_raster.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 20137,
+      "sha256": "84765362127a8570387f0fb1c4e18bf68a036811aa7474da8618ce348325c9ee",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/flim_phasor.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 19878,
+      "sha256": "7788ff1216be7015ceb4b591f751a8fcce867f6987dbb4a929d078bb1dc28827",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "examples/gallery/forest_intervals.csv",
       "kind": "synthetic_public_example",
       "size_bytes": 218,
@@ -1298,8 +1398,8 @@
     {
       "path": "examples/gallery/line_error.csv",
       "kind": "synthetic_public_example",
-      "size_bytes": 450,
-      "sha256": "59580b0df5a7adc8042d90cffd107f3094ed773255d107f886a0b51c6c7e612d",
+      "size_bytes": 449,
+      "sha256": "78d5ac18cecb5eae10d757c1d43247ca5a67ba807f7dcbab1caaaca7a2a48fd1",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1458,8 +1558,8 @@
     {
       "path": "examples/gallery/scatter_dense.csv",
       "kind": "synthetic_public_example",
-      "size_bytes": 6892,
-      "sha256": "30cf25a829a49d12ff2c71975096c64b7af87b2c9bac63d8ab273a0b9ee51fa1",
+      "size_bytes": 6893,
+      "sha256": "3abad36f79f70c31b552f77e900f5baa00c8baa1ae194a3027597f60fcec5b10",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1472,10 +1572,26 @@
       "contains_phi": false
     },
     {
+      "path": "examples/gallery/signal_stack.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 292235,
+      "sha256": "610dcd347f5893ece3e27b23be1ab75c40f243bb6ecc39dd1589849df54d5fbb",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "examples/gallery/stacked_composition.csv",
       "kind": "synthetic_public_example",
       "size_bytes": 168,
       "sha256": "c40a9bdd963e97fbeedaed2ae8ad9cc5c1e3b8274334d558501b82aa03aa9d13",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "examples/gallery/time_frequency.csv",
+      "kind": "synthetic_public_example",
+      "size_bytes": 306419,
+      "sha256": "ef90a3d657b980efcae789276d785d231e2a802e1cc3f9e2e0d9d4eaa2dd1865",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1809,6 +1925,38 @@
       "contains_phi": false
     },
     {
+      "path": "runtime/templates/event_raster/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 25,
+      "sha256": "d032688665071529239cb41796fb1a9ca468971de19de54086e2ff63c0375445",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/event_raster/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 20137,
+      "sha256": "84765362127a8570387f0fb1c4e18bf68a036811aa7474da8618ce348325c9ee",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/flim_phasor/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 10,
+      "sha256": "22cb7fd8c84320ec0754aa181276a5bb85be9f9aa82d611a5baa6696f731e273",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/flim_phasor/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 19878,
+      "sha256": "7788ff1216be7015ceb4b591f751a8fcce867f6987dbb4a929d078bb1dc28827",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "runtime/templates/forest/data_template.csv",
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 120,
@@ -1907,8 +2055,8 @@
     {
       "path": "runtime/templates/line_error/data_template.csv",
       "kind": "synthetic_runtime_fixture",
-      "size_bytes": 54,
-      "sha256": "449f148df978cdbcd62f2341392732ec4d489d40dec885ca68e38cda1ec8f157",
+      "size_bytes": 53,
+      "sha256": "4c6e01b39c57e541c11be1d47f7816c85a2e5fdcebc595b0f11555f013d41158",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -1916,15 +2064,15 @@
       "path": "runtime/templates/line_error/example_chinese.csv",
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 301,
-      "sha256": "701d54ada637b588b9fd7e0fc2e2ecddbc11e9122d9d3f983f0bf3867a285c3d",
+      "sha256": "4586fb758c145e848eda0045b80600aed0bc4c6d7dd1f53f72e35cafb2590b00",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
     {
       "path": "runtime/templates/line_error/example_standard.csv",
       "kind": "synthetic_runtime_fixture",
-      "size_bytes": 164,
-      "sha256": "b1ba08c614d119b9845c2d2c50cc50d8fb9b37e99dbece2d8e60533244bb35e1",
+      "size_bytes": 449,
+      "sha256": "78d5ac18cecb5eae10d757c1d43247ca5a67ba807f7dcbab1caaaca7a2a48fd1",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -2115,8 +2263,8 @@
     {
       "path": "runtime/templates/scatter/example_standard.csv",
       "kind": "synthetic_runtime_fixture",
-      "size_bytes": 105,
-      "sha256": "fa45a9f66762bc7ad28400e1f8ab2237dc4c07938ca95418c45365825a2865eb",
+      "size_bytes": 6893,
+      "sha256": "3abad36f79f70c31b552f77e900f5baa00c8baa1ae194a3027597f60fcec5b10",
       "synthetic_or_generated": true,
       "contains_phi": false
     },
@@ -2153,6 +2301,22 @@
       "contains_phi": false
     },
     {
+      "path": "runtime/templates/signal_stack/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 32,
+      "sha256": "1b55a776000949b04c10fb0ed2a27f1a7856f2dd3b433dfe5eb9524e9c6e9f29",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/signal_stack/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 292235,
+      "sha256": "610dcd347f5893ece3e27b23be1ab75c40f243bb6ecc39dd1589849df54d5fbb",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
       "path": "runtime/templates/stacked_bar/data_template.csv",
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 23,
@@ -2165,6 +2329,22 @@
       "kind": "synthetic_runtime_fixture",
       "size_bytes": 168,
       "sha256": "c40a9bdd963e97fbeedaed2ae8ad9cc5c1e3b8274334d558501b82aa03aa9d13",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/time_frequency/data_template.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 35,
+      "sha256": "4cb89a997429482c43be891bd5df9323701a6b420e9ed45612f3b69e802fcbc7",
+      "synthetic_or_generated": true,
+      "contains_phi": false
+    },
+    {
+      "path": "runtime/templates/time_frequency/example_standard.csv",
+      "kind": "synthetic_runtime_fixture",
+      "size_bytes": 306419,
+      "sha256": "ef90a3d657b980efcae789276d785d231e2a802e1cc3f9e2e0d9d4eaa2dd1865",
       "synthetic_or_generated": true,
       "contains_phi": false
     },

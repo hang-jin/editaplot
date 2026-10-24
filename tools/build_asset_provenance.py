@@ -126,9 +126,13 @@ def main() -> int:
             "path": "tools/generate_showcase_data.py",
             "sha256": _sha256(root / "tools" / "generate_showcase_data.py"),
         },
+        "research_fixture_generator": {
+            "path": "tools/generate_research_data.py",
+            "sha256": _sha256(root / "tools" / "generate_research_data.py"),
+        },
         "human_review": {
             "decision": "approved_for_public_source_release",
-            "reviewed_on": "2026-07-30",
+            "reviewed_on": "2026-10-24",
             "scope": (
                 "all listed CSV and PNG assets; synthetic/generated status, PHI, labels, "
                 "metadata, payment-identifier intent, and redistribution boundary"

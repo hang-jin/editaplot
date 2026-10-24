@@ -4,15 +4,19 @@ This open-source release contains project-created teaching/verification fixtures
 assets, and one author-provided support-payment QR image that the author explicitly approved for
 public display.
 
-The 2026-07-30 public-release review covered every listed CSV and PNG, including synthetic/generated
+The public-release review, updated on 2026-10-19, covers every listed CSV and PNG, including synthetic/generated
 status, patient/clinical identifiers, labels, embedded PNG text/EXIF, payment-identifier intent, and
 redistribution boundaries.
-The manifest also binds the inventory builder and gallery fixture generator by SHA-256; changing
-either script requires regenerating and manually reviewing the manifest.
+The manifest binds the inventory builder and both fixture generators by SHA-256; changing a
+generator requires regenerating and reviewing the manifest.
 
-The promoted release inventory retains 47 verified PNG assets across 40 public plotting routes. The public
-page displays 45 cases. The two non-displayed heatmap PNGs remain only as regression and audit
-history; they are not alternate public showcase entries.
+The inventory retains 51 verified PNG assets across 42 public plotting routes and displays exactly
+one representative per route. Nine additional palette/mode images remain as verification history.
+The smaller and 40×40 heatmap images are retained; the public heatmap representative is 30×30.
+
+- The FLIM phasor CSV uses project-generated synthetic G/S clouds, not measurements or coordinates
+  recovered from a paper image. Its semicircle is a labelled mathematical reference. All 18
+  replacement/new exports in this update completed native readback, image inspection and saved-project reopening.
 
 - Every distributed CSV is synthetic. It is not experimental, patient, clinical, or production
   data and must not be interpreted as a scientific result.

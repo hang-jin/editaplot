@@ -1,0 +1,14 @@
+{
+  "template_id": "flim_phasor",
+  "workflow": "scientific_table",
+  "layout": "precomputed_long",
+  "required_roles": ["x", "series", "category"],
+  "optional_roles": [],
+  "standard_columns": {"x": "G", "series": "S", "category": "Group"},
+  "min_columns": 3,
+  "min_rows": 1,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"],
+  "source_data_modified": false,
+  "automatic_lifetime_estimation": false,
+  "automatic_clustering": false
+}

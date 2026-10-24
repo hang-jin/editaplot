@@ -33,7 +33,18 @@ def _public_implemented_manifest_ids() -> set[str]:
 
 
 def test_every_public_implemented_manifest_has_exactly_one_profile() -> None:
-    assert set(TEMPLATE_CAPABILITY_PROFILES) == _public_implemented_manifest_ids()
+    from origin_sciplot.scientific_workflow import SUPPORTED_SCIENTIFIC_TEMPLATE_IDS
+
+    implemented = _public_implemented_manifest_ids()
+    assert set(TEMPLATE_CAPABILITY_PROFILES) >= implemented
+    for template_id in set(TEMPLATE_CAPABILITY_PROFILES) - implemented:
+        path = RUNTIME_SRC.parent / "templates" / template_id / "manifest.yaml"
+        manifest = yaml.safe_load(path.read_text(encoding="utf-8"))
+        assert manifest["id"] == template_id
+        assert manifest["status"] == "planned"
+        assert manifest["visibility"] == "public"
+        assert manifest["workflow"] == "scientific_table"
+        assert template_id in SUPPORTED_SCIENTIFIC_TEMPLATE_IDS
     assert all(
         template_id == profile.template_id
         for template_id, profile in TEMPLATE_CAPABILITY_PROFILES.items()

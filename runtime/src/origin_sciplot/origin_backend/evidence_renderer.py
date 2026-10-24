@@ -79,6 +79,10 @@ _SUPPORTED_KINDS = frozenset(
         "bubble",
         "shap_summary",
         "grouped_box",
+        "flim_phasor",
+        "time_frequency",
+        "signal_stack",
+        "event_raster",
     }
 )
 
@@ -217,7 +221,13 @@ def _validate_axes(
     op: Any,
     layer: Any,
     preparation: ScientificPreparation,
+    *,
+    expected_x_label_table: int = 0,
 ) -> dict[str, float | int]:
+    if expected_x_label_table != 0 and (
+        expected_x_label_table != 1 or preparation.plot_spec.plot_kind != "grouped_box"
+    ):
+        raise OriginDrawError("Only a source-bound grouped-box category axis may use a tick-label table.")
     style = _figure_style(preparation)
     state = _axis_state(layer)
     expected_font_code = _origin_font_code(op, style.font_family)
@@ -229,7 +239,8 @@ def _validate_axes(
             raise OriginDrawError(f"Origin {axis_name.upper()} labels are hidden.")
         if int(state[f"{axis_name}.atZero"]) != 0:
             raise OriginDrawError(f"Origin kept an unwanted {axis_name.upper()} zero axis.")
-        if int(state[f"{axis_name}.label.table"]) != 0:
+        expected_table = expected_x_label_table if axis_name == "x" else 0
+        if int(state[f"{axis_name}.label.table"]) != expected_table:
             raise OriginDrawError(
                 f"Origin kept an inherited {axis_name.upper()} tick-label table."
             )
@@ -469,6 +480,87 @@ def _build_raw_summary_graph(
     }
 
 
+def _violin_viewport_report(
+    frame: pd.DataFrame,
+    preparation: ScientificPreparation,
+    *,
+    native_auto_y_limits: tuple[float, float],
+    actual_y_limits: tuple[float, float],
+) -> dict[str, Any]:
+    """Audit the frozen viewport without mistaking autoscale for KDE bounds."""
+    plan = preparation.plot_spec.axis_plan
+    expected = (plan.y_from, plan.y_to)
+    if not all(
+        math.isfinite(actual) and math.isclose(actual, target, rel_tol=1e-8, abs_tol=1e-8)
+        for actual, target in zip(actual_y_limits, expected, strict=True)
+    ):
+        raise OriginDrawError("Origin violin Y limits do not match the frozen display plan.")
+    columns = [series.source_column for series in preparation.plot_spec.series]
+    source_counts = {column: int(frame[column].notna().sum()) for column in columns}
+    values = np.concatenate([frame[column].dropna().to_numpy(dtype=float) for column in columns])
+    source_lower, source_upper = float(values.min()), float(values.max())
+    if not actual_y_limits[0] <= source_lower <= source_upper <= actual_y_limits[1]:
+        raise OriginDrawError("Origin violin Y limits exclude source observations.")
+    return {
+        "native_auto_y_limits": list(native_auto_y_limits),
+        "frozen_y_limits": list(expected),
+        "actual_y_limits": list(actual_y_limits),
+        "source_y_limits": [source_lower, source_upper],
+        "source_counts": source_counts,
+        "source_values_inside_final_axis": True,
+        "frozen_axis_contains_native_auto_range": (
+            actual_y_limits[0] <= native_auto_y_limits[0]
+            and native_auto_y_limits[1] <= actual_y_limits[1]
+        ),
+        # Origin's automatic axis range can include extra tick padding; it is
+        # useful evidence but is not an object-level density-envelope readback.
+        "native_auto_range_is_density_extent": False,
+        "density_tail_visibility_requires_visual_qa": True,
+    }
+
+
+def _bind_violin_group_labels(
+    op: Any,
+    graph: Any,
+    layer: Any,
+    preparation: ScientificPreparation,
+) -> dict[str, Any]:
+    """Bind the one-level violin labels without altering its raw-data sheet."""
+    native_before = {key: int(layer.get_int(key)) for key in ("x.label.table", "x.label.type")}
+    labels = [series.label for series in preparation.plot_spec.series]
+    helper = op.new_sheet("w", "Violin Group Labels")
+    if helper is None:
+        raise OriginDrawError("Origin could not create the violin group-label worksheet.")
+    helper.from_list(0, labels, lname="GroupLabel", axis="N")
+    if helper.to_list(0) != labels:
+        raise OriginDrawError("Origin changed the violin group labels or their order.")
+    graph.activate()
+    layer.activate()
+    # This exact single-level binding route was exercised in the P30 Origin
+    # 10.15 probe. Do not apply it to native multi-level grouped-box tables.
+    _clean_numeric_x_axis(op, graph)
+    label_range = f"{helper.lt_range(False)}!col(1)"
+    if not layer.obj.LT_execute(
+        f"range __violin_group_labels={label_range};axis -ps X T __violin_group_labels;"
+    ):
+        raise OriginDrawError("Origin could not bind the violin group labels.")
+    layer.axis("x").set_limits(0.5, len(labels) + 0.5, 1.0)
+    layer.set_int("x.minorTicks", 0)
+    _apply_axis_label_font(op, layer, ("x", "y"), _figure_style(preparation))
+    op.lt_exec("doc -uw;")
+    explicit_after = {key: int(layer.get_int(key)) for key in ("x.label.table", "x.label.type")}
+    if explicit_after != {"x.label.table": 0, "x.label.type": 2}:
+        raise OriginDrawError("Origin did not keep the explicit single-level violin group labels.")
+    return {
+        "source_columns": [series.source_column for series in preparation.plot_spec.series],
+        "labels": helper.to_list(0),
+        "helper_column": "GroupLabel",
+        "helper_range": label_range,
+        "native_before": native_before,
+        "explicit_after": explicit_after,
+    }
+
+
 def _build_distribution_graph(
     op: Any,
     frame: pd.DataFrame,
@@ -502,6 +594,11 @@ def _build_distribution_graph(
     geometry = _apply_page_layer(op, graph, layer, dual_y=False, preparation=preparation)
     graph.set_int("background", op.ocolor("#FFFFFF"))
     layer.rescale()
+    native_auto_y_limits = (
+        (float(layer.get_float("y.from")), float(layer.get_float("y.to")))
+        if spec.plot_kind == "violin"
+        else None
+    )
     _style_evidence_axes(op, layer, preparation, x_numeric=False, y_numeric=True)
     layer.axis("x").set_limits(0.5, len(series_columns) + 0.5, 1.0)
     plan = spec.axis_plan
@@ -532,10 +629,43 @@ def _build_distribution_graph(
         box_state.append(item)
     _remove_label(layer, "Legend")
     _remove_label(layer, "legend")
+    group_label_binding = (
+        _bind_violin_group_labels(op, graph, layer, preparation)
+        if spec.plot_kind == "violin"
+        else None
+    )
     labels, title_state, text_state = _style_titles(op, graph, layer, preparation)
+    if group_label_binding is not None:
+        group_label_binding["y_after_binding_and_titles"] = [
+            float(layer.get_float("y.from")), float(layer.get_float("y.to"))
+        ]
+        # Native label binding/title refresh can rescale Y after the earlier
+        # set_limits call. Restore the frozen density-tail margin last.
+        layer.axis("y").set_limits(plan.y_from, plan.y_to, plan.y_step)
+        op.lt_exec("doc -uw;")
     axis_state = _validate_axes(op, layer, preparation)
+    if group_label_binding is not None:
+        if int(axis_state["x.label.type"]) != 2:
+            raise OriginDrawError("Origin lost the explicit violin group-label binding after refresh.")
+        group_label_binding["y_after_restore"] = [
+            float(axis_state["y.from"]), float(axis_state["y.to"])
+        ]
+    violin_viewport = (
+        {
+            "origin_violin_viewport": _violin_viewport_report(
+                frame,
+                preparation,
+                native_auto_y_limits=native_auto_y_limits,
+                actual_y_limits=(float(axis_state["y.from"]), float(axis_state["y.to"])),
+            )
+        }
+        if native_auto_y_limits is not None
+        else {}
+    )
     return graph, {
         **geometry,
+        **violin_viewport,
+        **({"origin_group_label_binding": group_label_binding} if group_label_binding is not None else {}),
         "origin_command": command,
         "origin_plot_state": plot_state,
         "origin_distribution_state": box_state,
@@ -548,10 +678,48 @@ def _build_distribution_graph(
             "tick_label_size_pt": style.tick_label_size_pt,
             "adaptive_profile": style.to_dict(),
         },
-        "origin_helper_columns": [],
+        "origin_helper_columns": ["GroupLabel"] if group_label_binding is not None else [],
         "origin_plot_data_columns": series_columns,
         "specialized_theme": theme,
         "title_objects": list(labels),
+    }
+
+
+def _bind_grouped_box_labels(
+    op: Any, graph: Any, layer: Any, sheet: Any, preparation: ScientificPreparation
+) -> dict[str, Any]:
+    """Retain the native merged category row and verify both source label roles.
+
+    plotgboxraw uses Long Name for the one category grouping row; Comments
+    retain each box's explicit group. Unlike a numeric evidence axis, this is
+    a required table, not an inherited artifact to erase (community #35).
+    """
+    spec = preparation.plot_spec
+    if spec.plot_kind != "grouped_box":
+        raise OriginDrawError("This label binding is only for grouped-box data.")
+    expected = {
+        "Long Name": [series.category or series.label for series in spec.series],
+        "Comments": [series.group or "Group" for series in spec.series],
+    }
+    actual = {"Long Name": list(sheet.get_labels("L")), "Comments": list(sheet.get_labels("C"))}
+    if actual != expected:
+        raise OriginDrawError("Origin grouped-box category/group source labels changed or lost their order.")
+    graph.activate()
+    layer.activate()
+    layer.set_int("x.label.table", 1)
+    layer.set_int("x.label.type", 7)
+    layer.set_int("x.label.collabel", 1)
+    op.lt_exec("doc -uw;")
+    state = {
+        "axis_label_table": int(layer.get_int("x.label.table")),
+        "axis_label_type": int(layer.get_int("x.label.type")),
+        "axis_column_label": int(layer.get_int("x.label.collabel")),
+    }
+    if tuple(state.values()) != (1, 7, 1):
+        raise OriginDrawError("Origin grouped-box label table no longer displays the source Long Name row.")
+    return {
+        **state, "column_label_rows": actual,
+        "category_order": list(spec.category_order), "group_order": list(spec.group_order),
     }
 
 
@@ -768,6 +936,7 @@ def _build_grouped_box_graph(
         }
     if layer.label("Legend") is not None or layer.label("legend") is not None:
         raise OriginDrawError("Origin kept the unwanted framed grouped-box legend.")
+    label_binding = _bind_grouped_box_labels(op, graph, layer, sheet, preparation)
     labels, title_state, text_state = _style_titles(op, graph, layer, preparation)
     title_font_codes: dict[str, int] = {}
     for name, label in labels.items():
@@ -778,7 +947,7 @@ def _build_grouped_box_graph(
         if title_font_codes[name] != font_code:
             raise OriginDrawError(f"Origin grouped-box {name} is not {style.font_family}.")
     op.lt_exec("doc -uw;")
-    axis_state = _validate_axes(op, layer, preparation)
+    axis_state = _validate_axes(op, layer, preparation, expected_x_label_table=1)
     axis_state["x.label.font"] = float(layer.get_float("x.label.font"))
     axis_state["y.label.font"] = float(layer.get_float("y.label.font"))
     expected_limits = {
@@ -832,10 +1001,8 @@ def _build_grouped_box_graph(
         },
         "origin_helper_columns": helper_columns,
         "origin_plot_data_columns": columns,
-        "column_label_rows": {
-            "Long Name": [series.category for series in spec.series],
-            "Comments": [series.group for series in spec.series],
-        },
+        "column_label_rows": label_binding["column_label_rows"],
+        "origin_grouped_box_label_binding": label_binding,
         "title_objects": list(labels),
     }
 
@@ -2299,6 +2466,15 @@ def _read_shap_plot_binding(
     return result
 
 
+def _verify_page_label_text(actual: str, expected: str, name: str) -> str:
+    # Origin's text objects serialize newlines as CRLF (also confirmed on 10.15).
+    # Only that equivalent representation is allowed: keep spaces, symbols,
+    # blank lines and the original raw readback intact.
+    if actual.replace("\r\n", "\n") != expected.replace("\r\n", "\n"):
+        raise OriginDrawError(f"Origin changed text object {name!r}.")
+    return actual
+
+
 def _add_shap_page_label(
     op: Any,
     graph: Any,
@@ -2365,8 +2541,7 @@ def _add_shap_page_label(
         or actual_top + actual_height > page_height
     ):
         raise OriginDrawError(f"Origin SHAP text object {name!r} is clipped by the page.")
-    if str(label.text) != text:
-        raise OriginDrawError(f"Origin changed SHAP text object {name!r}.")
+    actual_text = _verify_page_label_text(str(label.text), text, name)
     if actual_attach != 1:
         raise OriginDrawError(
             f"Origin SHAP text object {name!r} is not attached to the graph page."
@@ -2377,7 +2552,7 @@ def _add_shap_page_label(
         )
     text_state.update(
         {
-            f"{name}.text": text,
+            f"{name}.text": actual_text,
             f"{name}.attach": actual_attach,
             f"{name}.rotate": actual_rotation,
             f"{name}.left": actual_left,
@@ -3514,7 +3689,29 @@ def _build_origin_graph(
     preparation: ScientificPreparation,
 ) -> tuple[Any, dict[str, Any]]:
     kind = preparation.plot_spec.plot_kind
-    if kind == "raw_summary":
+    if kind == "event_raster":
+        from .event_raster_renderer import build_event_raster_graph
+
+        graph, state = build_event_raster_graph(op, frame, preparation)
+    elif kind == "signal_stack":
+        from .signal_stack_renderer import build_signal_stack_graph
+
+        plan = preparation.plot_spec.signal_stack_plan
+        if plan is None:
+            raise OriginDrawError("The frozen signal source plan is missing.")
+        graph, state = build_signal_stack_graph(op, frame, preparation, plan)
+    elif kind == "time_frequency":
+        from .time_frequency_renderer import build_time_frequency_graph
+
+        graph, state = build_time_frequency_graph(op, frame, preparation)
+    elif kind == "flim_phasor":
+        from .flim_phasor_renderer import build_flim_phasor_graph
+
+        plan = preparation.plot_spec.phasor_plan
+        if plan is None:
+            raise OriginDrawError("The frozen phasor coordinate plan is missing.")
+        graph, state = build_flim_phasor_graph(op, frame, preparation, plan)
+    elif kind == "raw_summary":
         graph, state = _build_raw_summary_graph(op, frame, preparation)
     elif kind == "violin":
         graph, state = _build_distribution_graph(op, frame, preparation)
@@ -3577,6 +3774,18 @@ def run_evidence_template(
             output.result_tif,
         )
         verify_report["exports"] = exports
+        if resolved.plot_spec.plot_kind == "event_raster":
+            from .event_raster_renderer import _verify_event_y_title
+
+            layer = graph[0]
+            anchor = _verify_event_y_title(
+                layer.label("EventYTitle"), resolved.plot_spec.event_raster_layout,
+                op.lt_float("page.width"), op.lt_float("page.height"),
+                expected_text=resolved.plot_spec.y_title,
+            )
+            if layer.label("yl").get_int("show") != 0:
+                raise OriginDrawError("Origin restored an automatic Y title during export.")
+            verify_report["origin_event_raster_readback"]["post_export_y_title_anchor"] = anchor
         write_json(output.origin_verify_report, verify_report)
         write_json(
             output.environment_report,

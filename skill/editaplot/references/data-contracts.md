@@ -10,7 +10,7 @@
 
 Keep the original file read-only.
 
-These contracts cover the 41 registered public plotting routes. The data contract is independent
+These contracts cover the 45 registered public plotting routes. The data contract is independent
 of the installed Origin version. After semantic confirmation and plan creation, run the isolated
 `origin-smoke` before formal rendering. Rendering starts a dedicated EditaPlot-owned Origin
 instance and then checks the selected template against the detected host. Target Origin/OriginPro
@@ -23,6 +23,48 @@ place the RenderPlan, OPJU, PNG, PDF, TIF, readback, validation, and provenance 
 destination only after an explicit user request.
 
 ## Recognized layouts
+
+### Supplied event-time raster table
+
+Use `Time (s),Trial,Condition` with an explicit time unit. Keep 1–200 source-first trials and
+1–8 conditions; each trial belongs to one condition and the table contains at least one event.
+Blank Time declares trial inventory: retain the empty lane and condition, never replace it with
+an event at zero. Reject duplicate trial/time events and duplicate inventory rows. Confirm the
+ordinal display helper; it is not a measurement or ranking. Sparse labels do not remove events
+or lanes. Numeric-looking text IDs keep leading zeros. `SourceRow` means the 1-based parsed data
+row, excluding headers and fully empty rows removed by the loader. No detection, PSTH/rate,
+scientific sorting or raw-device decoding is performed. Custom time titles must end with the
+same explicit unit in parentheses/brackets; changing wording does not convert time values.
+
+### Multichannel signal table
+
+Use `Time (s),Channel,Amplitude (uV)` or an explicitly mapped fluorescence table such as
+`Time (s),ROI,Intensity (a.u.)`. Require 1–16 named channels, at least two finite observations per
+channel, and strictly increasing source times within each channel. Different sampling times are
+retained. The route performs no filtering, alignment, interpolation, centering or normalization.
+Typed boolean/date cells cannot become measurements through numeric coercion.
+
+Confirm each channel's additive display offset and the independently declared unit-length ruler;
+neither is an estimate or error bar. The source table is unchanged. Source channel labels are
+stored as text in the editable workbook, preserving identifiers such as `01`. Use actual text
+cells when leading zeros are meaningful in Excel. Channel names and the ruler occupy separate
+page columns, without extending the data time range. Long names, channel count and explicit axis
+titles determine physical geometry while font sizes remain fixed.
+
+### Precomputed time–frequency field
+
+Use one row per supplied time×frequency cell, e.g. `Time (s),Frequency (Hz),Power (dB)`.
+Chinese headers and explicitly declared alternative units are accepted through column mapping;
+units in parentheses/brackets are required and remain verbatim. Provide at least two distinct,
+uniformly spaced coordinates per axis and the complete grid. Both ascending and descending
+directions are retained. Duplicates, gaps, nonuniform spacing and nonfinite cells are rejected,
+not repaired. Extra columns must be classified and confirmed before planning.
+
+`time_frequency` draws the upstream values exactly on numeric physical axes with a detached
+101-level sequential color scale. Half-cell edges describe display boundaries, not observations.
+It performs no signal transform, interpolation, normalization, baseline/dB conversion or event
+inference; negative dB does not introduce a zero-reference or diverging color claim. Raw EEG
+voltage tables are not time-frequency input. Keep source data immutable.
 
 ### Numeric XY wide table
 
@@ -238,6 +280,15 @@ or a third-axis header without a unit is insufficient.
 和焦点；我不会在绘图流程中运行 KDE、平滑、插值、归一化或焦点计算。该路线已在 Origin
 2024b / 10.15 基线上完成 OPJU、PNG/PDF/TIF、对象反读和人工视觉验收；其他主机仍须通过
 实时 smoke 与 `OPEN_GL_3D` 能力检查。
+
+## FLIM phasor coordinates
+
+Provide finite, upstream `G` and `S` coordinates with an optional `Group` column (1–8 groups).
+Chinese mappings include 相量G、相量S、分组. Keep the original row order and all outside-circle
+or negative-S points; they are not automatically rejected as outliers. The route preserves equal
+physical units on G and S and adds only the explicitly approved mathematical reference semicircle
+centred at (0.5, 0) with radius 0.5. It does not calculate lifetimes, transform raw decay traces,
+fit, unmix, normalize or cluster. Extra source columns need an explicit retained/support mapping.
 
 ## Repair guidance
 

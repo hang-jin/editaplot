@@ -87,6 +87,10 @@ VERIFIED_TEMPLATE_IDS = frozenset(
         "raincloud",
         "shap_summary",
         "shap_dashboard",
+        "flim_phasor",
+        "time_frequency",
+        "signal_stack",
+        "event_raster",
         "grouped_box",
         "pl",
         "dsc",
@@ -918,6 +922,12 @@ _INTENT_KEYWORDS: dict[str, tuple[str, ...]] = {
     "decision_curve": ("decisioncurve", "netbenefit", "dca", "决策曲线", "净获益"),
     "raincloud": ("raincloud", "raincloudplot", "halfviolin", "雨云图", "半小提琴"),
     "shap_dashboard": ("shap dashboard", "nested donut", "双层环图", "分栏 SHAP", "shap 分栏"),
+    "flim_phasor": ("flim phasor", "phasor plot", "相量图", "荧光相量", "荧光寿命相量"),
+    "time_frequency": ("time frequency", "spectrogram", "时频", "时间频率", "预计算时频"),
+    "signal_stack": (
+        "multichannel", "signal stack", "eeg traces", "fluorescence traces", "多通道", "脑电波形", "荧光轨迹",
+    ),
+    "event_raster": ("event raster", "spike raster", "trial events", "事件栅格", "试次事件", "已提供事件"),
     "shap_summary": (
         "shapsummary",
         "shapbeeswarm",
@@ -1466,6 +1476,26 @@ def _beginner_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _prepare_with_mapping(service: Any, path: str | Path, mapping: dict[str, Any] | None) -> Any:
+    """Honor explicit scientific roles before automatic inference can fail."""
+    if mapping is None:
+        return service.prepare(path)
+    assignments = mapping.get("assignments")
+    if not isinstance(assignments, dict):
+        raise EditaPlotError("mapping_invalid", "Mapping JSON needs an assignments object.")
+    assignments = {str(key): str(value) for key, value in assignments.items()}
+    context = str(mapping.get("energy_kind") or mapping.get("plot_mode") or "")
+    from origin_sciplot.scientific_workflow import ScientificColumnMapping
+    from origin_sciplot.template_service import ScientificTemplateService
+
+    if isinstance(service, ScientificTemplateService):
+        return service.prepare(path, column_mapping=ScientificColumnMapping(
+            assignments=tuple(assignments.items()), plot_mode=context or None,
+        ))
+    prepared = service.prepare(path)
+    return service.confirm_mapping(prepared, assignments=assignments, energy_kind=context)
+
+
 def _prepare_template_for_understanding(
     path: str | Path,
     *,
@@ -1484,17 +1514,7 @@ def _prepare_template_for_understanding(
     registry = TemplateServiceRegistry()
     try:
         service = registry.get(template_id)
-        prepared = service.prepare(path)
-        if mapping is not None:
-            assignments = mapping.get("assignments")
-            if not isinstance(assignments, dict):
-                raise EditaPlotError("mapping_invalid", "Mapping JSON needs an assignments object.")
-            context = str(mapping.get("energy_kind") or mapping.get("plot_mode") or "")
-            prepared = service.confirm_mapping(
-                prepared,
-                assignments={str(key): str(value) for key, value in assignments.items()},
-                energy_kind=context,
-            )
+        prepared = _prepare_with_mapping(service, path, mapping)
     except TemplateServiceError as exc:
         raise EditaPlotError(exc.code, str(exc)) from exc
     return service, prepared, root
@@ -2109,17 +2129,7 @@ def build_plan(
     registry = TemplateServiceRegistry()
     try:
         service = registry.get(template_id)
-        prepared = service.prepare(path)
-        if mapping is not None:
-            assignments = mapping.get("assignments")
-            if not isinstance(assignments, dict):
-                raise EditaPlotError("mapping_invalid", "Mapping JSON needs an assignments object.")
-            context = str(mapping.get("energy_kind") or mapping.get("plot_mode") or "")
-            prepared = service.confirm_mapping(
-                prepared,
-                assignments={str(key): str(value) for key, value in assignments.items()},
-                energy_kind=context,
-            )
+        prepared = _prepare_with_mapping(service, path, mapping)
     except TemplateServiceError as exc:
         raise EditaPlotError(exc.code, str(exc)) from exc
 
@@ -2362,11 +2372,14 @@ def build_plan(
         },
         "can_render": bool(
             template_id in VERIFIED_TEMPLATE_IDS
+            and service.manifest.status == "implemented"
             and not prepared.requires_confirmation
             and reference_renderer_ready
         ),
         "blocked_reasons": (
             (["column_mapping_confirmation_required"] if prepared.requires_confirmation else [])
+            + (["template_not_implemented"] if service.manifest.status != "implemented" else [])
+            + (["template_not_verified"] if template_id not in VERIFIED_TEMPLATE_IDS else [])
             + reference_blocked_reasons
         ),
     }

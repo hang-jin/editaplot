@@ -34,11 +34,36 @@ class ShowcaseCase:
 
 
 CASES = (
+    ShowcaseCase(
+        "event-raster", "event_raster", "event_raster.csv",
+        "Synthetic supplied event times retain every event and explicitly declared empty trial in source order.",
+        "event timing", "supplied event raster with empty trial inventory",
+        title_zh="已提供事件与试次栅格",
+    ),
+    ShowcaseCase(
+        "signal-stack", "signal_stack", "signal_stack.csv",
+        "Synthetic channels retain all observations and common amplitude units with explicit display offsets.",
+        "signal comparison", "multichannel processed signal traces",
+        title_zh="多通道信号与共同幅度尺",
+    ),
+    ShowcaseCase(
+        "time-frequency", "time_frequency", "time_frequency.csv",
+        "Synthetic supplied time-frequency values show two illustrative regions without signal processing.",
+        "time-frequency distribution", "precomputed time frequency matrix",
+        title_zh="时间–频率物理矩阵",
+    ),
+    ShowcaseCase(
+        "flim-phasor", "flim_phasor", "flim_phasor.csv",
+        "Synthetic upstream G-S coordinates show three distributions relative to a mathematical reference semicircle.",
+        "distribution geometry", "FLIM phasor distribution",
+        title_zh="FLIM 荧光寿命相量分布",
+    ),
     *(ShowcaseCase(
         f"shap-dashboard-{palette.replace('_', '-')}", "shap_dashboard", "shap_dashboard.csv",
         "Synthetic precomputed SHAP values show feature importance, direction and grouped contribution.",
         "interpretability", f"SHAP importance nested doughnut and beeswarm ({palette})",
         title_zh=f"SHAP 分栏与双层环图 · {title}", mapping_mode=f"dashboard_{palette}",
+        display_in_gallery=palette == "blue_red",
     ) for palette, title in (("blue_red", "蓝白酒红"), ("viridis", "紫绿金"), ("red_blue", "红黄蓝"))),
     ShowcaseCase(
         "xps-fit",
@@ -131,6 +156,7 @@ CASES = (
         "spectral comparison",
         "steady-state PL emission spectrum",
         x_title="Wavelength (nm)",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "pl-temperature-series",
@@ -140,6 +166,7 @@ CASES = (
         "ordered spectral comparison",
         "steady-state PL temperature series",
         title_zh="PL 温度序列光谱",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "uv-vis-tauc",
@@ -157,6 +184,7 @@ CASES = (
         "optical spectral comparison",
         "UV-vis multi-sample absorbance comparison",
         title_zh="UV-Vis 多样品吸收光谱",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "dsc-multi",
@@ -208,6 +236,7 @@ CASES = (
         "Signed teaching effect scores preserve direction and magnitude with a restrained cool-neutral-warm encoding.",
         "effect comparison",
         "diverging signed-effect horizontal bars",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "stacked-composition",
@@ -365,6 +394,7 @@ CASES = (
         "Two precomputed precision-recall curves are interpreted against an explicit prevalence baseline.",
         "discrimination",
         "medical imaging precision recall PR curve",
+        display_in_gallery=False,
     ),
     ShowcaseCase(
         "medical-calibration",

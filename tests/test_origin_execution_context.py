@@ -30,6 +30,39 @@ from origin_sciplot.workers import (  # noqa: E402
 SYNTHETIC_PROFILE = "\\".join((f"{chr(67)}:", "Users", "Example", "Profile"))
 
 
+@pytest.fixture(autouse=True)
+def _desktop_token_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(execution_context, "_windows_token_is_app_container", lambda: False, raising=False)
+
+
+@pytest.mark.parametrize("account", ["DESKTOP-TEST\\Example", None])
+def test_app_container_is_sandbox_even_with_normal_or_unavailable_account(
+    monkeypatch: pytest.MonkeyPatch, account: str | None
+) -> None:
+    monkeypatch.setattr(execution_context, "_windows_token_name_from_winapi", lambda: account)
+    monkeypatch.setattr(execution_context, "_windows_token_is_app_container", lambda: True, raising=False)
+    monkeypatch.setattr(execution_context.os, "getlogin", lambda: "Example")
+    context = detect_origin_execution_context(os_name="nt")
+    assert context.to_public_dict() == {
+        "status": "codex_sandbox", "requires_current_user_approval": True
+    }
+    with pytest.raises(OriginEnvironmentError) as error:
+        require_interactive_origin_context(context)
+    assert error.value.code == "origin_codex_sandbox_context"
+
+
+def test_unreadable_container_flag_does_not_claim_interactive_access(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(execution_context, "_windows_token_name_from_winapi", lambda: "Example")
+    monkeypatch.setattr(execution_context, "_windows_token_is_app_container", lambda: None, raising=False)
+    context = detect_origin_execution_context(os_name="nt")
+    assert context.status == "unknown"
+    with pytest.raises(OriginEnvironmentError) as error:
+        require_interactive_origin_context(context)
+    assert error.value.code == "origin_execution_context_unknown"
+
+
 @pytest.mark.parametrize(
     "account_name",
     [

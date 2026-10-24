@@ -26,9 +26,16 @@ from .circular_network_layout import (
     resolve_circular_network_layout,
 )
 from .data_loader import DataLoadError, LoadedTable, load_table
+from .event_raster import EventRasterPlan, build_event_raster_plan, validate_event_time_title
+from .event_raster_layout import EventRasterLayout, build_event_raster_layout
+from .flim_phasor import PhasorPlan, build_phasor_plan
 from .heatmap_layout import heatmap_cell_labels_enabled
 from .palette_catalog import get_palette
-from .scientific_visual import AdaptiveOriginStyle, resolve_adaptive_style
+from .scientific_visual import (
+    AdaptiveOriginStyle, resolve_adaptive_style, resolve_signal_stack_style, resolve_time_frequency_style,
+)
+from .signal_stack import SignalStackPlan, build_signal_stack_plan
+from .signal_stack_layout import SignalStackLayout, build_signal_stack_layout
 from .shap_composite import (
     SHAP_COMPOSITE_PROFILES,
     ShapCompositeError,
@@ -36,6 +43,7 @@ from .shap_composite import (
     build_shap_composite_plan,
 )
 from .shap_dashboard import DASHBOARD_MODES, ShapDashboardPlan, build_dashboard_plan
+from .time_frequency import TimeFrequencyPlan, build_time_frequency_plan
 from .xrd_semantics import (
     GSAS_II_PUBLICATION_CSV,
     XrdSemanticError,
@@ -75,6 +83,10 @@ ScientificTemplateId = Literal[
     "raincloud",
     "shap_summary",
     "shap_dashboard",
+    "flim_phasor",
+    "time_frequency",
+    "signal_stack",
+    "event_raster",
     "grouped_box",
     "dsc",
     "nmr",
@@ -122,6 +134,10 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "raincloud",
         "shap_summary",
         "shap_dashboard",
+        "flim_phasor",
+        "time_frequency",
+        "signal_stack",
+        "event_raster",
         "grouped_box",
         "dsc",
         "nmr",
@@ -274,6 +290,13 @@ class ScientificPlotSpec:
     condition_positions: tuple[tuple[str, float], ...] = ()
     shap_plan: ShapCompositePlan | None = None
     shap_dashboard: ShapDashboardPlan | None = None
+    phasor_plan: PhasorPlan | None = None
+    time_frequency_plan: TimeFrequencyPlan | None = None
+    signal_stack_plan: SignalStackPlan | None = None
+    signal_stack_layout: SignalStackLayout | None = None
+    event_raster_plan: EventRasterPlan | None = None
+    event_raster_layout: EventRasterLayout | None = None
+    color_scale_hex: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -304,6 +327,20 @@ def _plot_digest_payload(spec: ScientificPlotSpec) -> dict:
     payload = asdict(spec)
     if spec.shap_dashboard is None:
         payload.pop("shap_dashboard")
+    if spec.phasor_plan is None:
+        payload.pop("phasor_plan")
+    if spec.time_frequency_plan is None:
+        payload.pop("time_frequency_plan")
+    if spec.signal_stack_plan is None:
+        payload.pop("signal_stack_plan")
+    if spec.signal_stack_layout is None:
+        payload.pop("signal_stack_layout")
+    if spec.event_raster_plan is None:
+        payload.pop("event_raster_plan")
+    if spec.event_raster_layout is None:
+        payload.pop("event_raster_layout")
+    if not spec.color_scale_hex:
+        payload.pop("color_scale_hex")
     return payload
 
 
@@ -356,6 +393,11 @@ def apply_scientific_text_overrides(
     spec = preparation.plot_spec
     resolved_x_title = normalized(x_title, "X axis title", spec.x_title)
     resolved_y_title = normalized(y_title, "Y axis title", spec.y_title)
+    if preparation.template_id == "event_raster":
+        try:
+            validate_event_time_title(resolved_x_title, spec.event_raster_plan.time_unit)
+        except ValueError as error:
+            raise ScientificWorkflowError("event_time_unit_changed", str(error)) from error
     if preparation.template_id == "trajectory3d":
         if _alias_score(resolved_x_title, _TRAJECTORY3D_X_ALIASES) == 0:
             raise ScientificWorkflowError(
@@ -387,6 +429,31 @@ def apply_scientific_text_overrides(
     )
     if overridden == spec:
         return preparation
+    if preparation.template_id == "event_raster":
+        layout = build_event_raster_layout(spec.event_raster_plan, resolved_x_title, resolved_y_title,
+                                          palette_name=spec.display_plan.figure_style.palette_name)
+        overridden = replace(overridden, event_raster_layout=layout,
+                             display_plan=replace(spec.display_plan, figure_style=layout.style,
+                                                  marker_size_pt=layout.marker_size_pt))
+    if preparation.template_id in {"time_frequency", "signal_stack"}:
+        if preparation.template_id == "time_frequency":
+            measured = resolve_time_frequency_style(resolved_x_title, resolved_y_title, spec.series[0].label)
+        else:
+            measured = resolve_signal_stack_style(
+                spec.signal_stack_plan.channel_order, resolved_x_title, resolved_y_title,
+                spec.signal_stack_layout.reference_text,
+            )
+        geometry_keys = (
+            "page_width_cm", "page_height_cm", "layer_left_percent", "layer_top_percent",
+            "layer_width_percent", "layer_height_percent",
+        )
+        style = replace(spec.display_plan.figure_style, **{key: getattr(measured, key) for key in geometry_keys})
+        overridden = replace(overridden, display_plan=replace(spec.display_plan, figure_style=style))
+        if preparation.template_id == "signal_stack":
+            layout = build_signal_stack_layout(
+                spec.signal_stack_plan, style, y_range=(spec.axis_plan.y_from, spec.axis_plan.y_to)
+            )
+            overridden = replace(overridden, signal_stack_layout=layout)
     return replace(
         preparation,
         plot_spec=overridden,
@@ -395,6 +462,7 @@ def apply_scientific_text_overrides(
 
 
 _PALETTE_OVERRIDE_MODE_BY_TEMPLATE: dict[str, str] = {
+    "event_raster": "qualitative",
     "eis": "qualitative",
     "cv": "qualitative",
     "lsv": "qualitative",
@@ -478,6 +546,10 @@ def apply_scientific_palette_override(
     overridden_style = replace(style, palette_name=requested)
     overridden_display = replace(spec.display_plan, figure_style=overridden_style)
     overridden_spec = replace(spec, display_plan=overridden_display)
+    if preparation.template_id == "event_raster":
+        layout = build_event_raster_layout(spec.event_raster_plan, spec.x_title, spec.y_title,
+                                          palette_name=requested)
+        overridden_spec = replace(overridden_spec, event_raster_layout=layout)
     return replace(
         preparation,
         plot_spec=overridden_spec,
@@ -1136,6 +1208,7 @@ _ROLE_LABELS: dict[str, str] = {
     "z_real": "Z real / 阻抗实部",
     "z_imag": "Z imaginary / 阻抗虚部",
     "frequency": "Frequency / 频率",
+    "frequency_axis": "Frequency axis / 频率坐标",
     "magnitude": "|Z| / 阻抗模",
     "phase": "Phase / 相位",
     "source": "Source / 起点",
@@ -1238,6 +1311,15 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
             "ignored",
         )
         unique = set(keys) - {"ignored"}
+    elif template_id == "time_frequency":
+        keys = ("x", "frequency_axis", "series", "ignored")
+        unique = {"x", "frequency_axis", "series"}
+    elif template_id == "event_raster":
+        keys = ("x", "category", "series_id", "ignored")
+        unique = {"x", "category", "series_id"}
+    elif template_id in {"flim_phasor", "signal_stack"}:
+        keys = ("x", "series", "category", "ignored")
+        unique = {"x", "series", "category"}
     elif template_id in {"raw_summary", "violin", "histogram", "raincloud", "grouped_box"}:
         keys = ("series", "ignored")
         unique = set()
@@ -1307,6 +1389,12 @@ def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
 
 
 def mapping_context_options(template_id: str) -> tuple[tuple[str, str], ...]:
+    if template_id == "event_raster":
+        return (("events_only", "已提供事件；保留空试次，不检测事件或计算PSTH"),)
+    if template_id == "signal_stack":
+        return (("common_amplitude", "共同幅度单位；仅纵向显示偏移"),)
+    if template_id == "time_frequency":
+        return (("sequential", "已提供数值的连续高低（不进行基线或dB计算）"),)
     if template_id == "shap_dashboard":
         return (("dashboard_blue_red", "蓝白酒红"), ("dashboard_viridis", "紫绿金"),
                 ("dashboard_red_blue", "红黄蓝"))
@@ -1637,6 +1725,9 @@ def _automatic_error_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapp
     for column in map(str, frame.columns):
         if column == anchor:
             assignments[column] = anchor_role
+        elif template_id == "percent_stacked_bar" and _error_info(column) is not None:
+            assignments[column] = "ignored"
+            warnings.append("percent_error_columns_retained")
         elif (
             template_id in {"bar", "horizontal_bar", "stacked_bar", "line_error"}
             and _error_info(column) is not None
@@ -1647,6 +1738,9 @@ def _automatic_error_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapp
         else:
             assignments[column] = "series"
     custom_error = "error_kind_unspecified" in warnings
+    if "percent_error_columns_retained" in warnings:
+        reasons = tuple((*reasons, "percent_error_columns_retained"))
+        confidence = min(confidence, 0.72)
     if custom_error:
         reasons = tuple((*reasons, "error_kind_unspecified"))
         confidence = min(confidence, 0.72)
@@ -3077,6 +3171,23 @@ def _validate_assignment_shape(
         )
     if template_id == "eis" and mode not in {"nyquist", "bode"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select Nyquist or Bode for EIS.")
+    if template_id == "time_frequency":
+        if mode == "default":
+            mode = "sequential"
+        if mode != "sequential":
+            raise ScientificWorkflowError(
+                "mapping_plot_mode", "This route supports sequential mode only; no color reference is inferred."
+            )
+    if template_id == "signal_stack":
+        if mode == "default":
+            mode = "common_amplitude"
+        if mode != "common_amplitude":
+            raise ScientificWorkflowError("mapping_plot_mode", "Select common_amplitude mode; no normalization is performed.")
+    if template_id == "event_raster":
+        if mode == "default":
+            mode = "events_only"
+        if mode != "events_only":
+            raise ScientificWorkflowError("mapping_plot_mode", "Select events_only mode; event detection and PSTH are not performed.")
     if template_id == "diagnostic_curve" and mode not in {"roc", "pr"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select ROC or Precision-Recall mode.")
     if template_id == "pl" and mode not in {"steady_state", "trpl"}:
@@ -3106,6 +3217,18 @@ def _require_series(assignments: dict[str, str]) -> list[str]:
     if not series:
         raise ScientificWorkflowError("series_missing", "At least one data series is required.")
     return series
+
+
+def _legend_label_length(series: tuple[ScientificSeries, ...]) -> int:
+    """Conservative display-width units, including CJK and error definitions."""
+    return max(
+        (
+            sum(2 if unicodedata.east_asian_width(char) in {"W", "F"} else 1 for char in item.label)
+            + (8 if item.error_column else 0)
+            for item in series
+        ),
+        default=0,
+    )
 
 
 def _pair_errors(series_columns: list[str], error_columns: list[str]) -> dict[str, tuple[str, str]]:
@@ -3153,6 +3276,7 @@ def _coerced_selected_frame(
         "z_real",
         "z_imag",
         "frequency",
+        "frequency_axis",
         "magnitude",
         "phase",
         "value",
@@ -3431,6 +3555,7 @@ def _build_line_spec(
         plot_kind=plot_kind,
         row_count=len(frame),
         series_count=len(series),
+        max_label_length=_legend_label_length(series),
     )
     axis_plan = _axis_plan(
         frame,
@@ -4092,11 +4217,15 @@ def _build_error_spec(
             warnings.append("category_labels_long")
     else:
         categories = []
+    category_label_units = max(
+        (sum(2 if unicodedata.east_asian_width(char) in {"W", "F"} else 1 for char in value)
+         for value in categories), default=0,
+    )
     category_rotation = (
         45.0
         if category
         and template_id not in {"horizontal_bar", "pie", "radar", "heatmap", "confusion_matrix"}
-        and (len(categories) > 6 or max((len(value) for value in categories), default=0) > 10)
+        and (len(categories) > 6 or category_label_units > 10)
         else 0.0
     )
     y_title = (
@@ -4127,6 +4256,16 @@ def _build_error_spec(
                     column=column,
                     row=index + 2,
                 )
+    if template_id in {"stacked_bar", "percent_stacked_bar"}:
+        missing = frame[series_columns].isna().to_numpy()
+        if bool(missing.any()):
+            row_index, column_index = np.argwhere(missing)[0]
+            column = series_columns[int(column_index)]
+            raise ScientificWorkflowError(
+                "composition_missing_value",
+                "Stacked compositions need an explicit value for every component; blanks cannot mean zero.",
+                column=column, row=int(row_index) + 2,
+            )
     if template_id == "pie" and len(series) != 1:
         raise ScientificWorkflowError(
             "pie_series_count",
@@ -4199,13 +4338,14 @@ def _build_error_spec(
     plot_kind = plot_kinds.get(template_id, "line_error")
     numeric_values = frame[series_columns].to_numpy(dtype=float)
     signed_values = bool(np.nanmin(numeric_values) < 0 < np.nanmax(numeric_values))
-    max_label_length = max((len(value) for value in categories), default=0)
+    max_label_length = category_label_units
     style = resolve_adaptive_style(
         template_id=template_id,
         plot_kind=plot_kind,
         row_count=len(frame),
         series_count=len(series),
         max_label_length=max_label_length,
+        max_legend_label_length=_legend_label_length(series),
         category_rotation_deg=category_rotation,
         signed_values=signed_values,
     )
@@ -4217,6 +4357,36 @@ def _build_error_spec(
         y_title = anchor
     else:
         x_title = anchor
+    axis_plan = _axis_plan(
+        frame, x_column=None if category else anchor, series=series,
+        category=category, include_zero_y=category,
+    )
+    if template_id == "stacked_bar":
+        totals = frame[series_columns].sum(axis=1, min_count=len(series_columns))
+        extent_frame = pd.DataFrame({"__StackTotal": totals})
+        error_key = None
+        if aggregate_error_column is not None:
+            error_key = "__TotalError"
+            extent_frame[error_key] = frame[aggregate_error_column]
+        axis_plan = _axis_plan(
+            extent_frame, x_column=None,
+            series=(ScientificSeries("__StackTotal", "Stack total", error_column=error_key),),
+            category=True, include_zero_y=True,
+        )
+    elif template_id == "percent_stacked_bar":
+        axis_plan = replace(axis_plan, y_from=0.0, y_to=100.0, y_step=20.0)
+    elif template_id == "radar":
+        maximum = float(np.nanmax(frame[series_columns].to_numpy(dtype=float)))
+        if maximum <= 1.0:
+            upper, step = 1.0, 0.2
+        else:
+            padded = maximum * 1.08
+            raw_step = padded / 5.0
+            scale = 10.0 ** math.floor(math.log10(raw_step))
+            fraction = raw_step / scale
+            step = next(value for value in (1.0, 2.0, 2.5, 5.0, 10.0) if fraction <= value) * scale
+            upper = math.ceil(padded / step) * step
+        axis_plan = replace(axis_plan, y_from=0.0, y_to=upper, y_step=step)
     spec = ScientificPlotSpec(
         plot_kind=plot_kind,
         plot_mode="default",
@@ -4236,13 +4406,7 @@ def _build_error_spec(
             category_rotation,
             style,
         ),
-        axis_plan=_axis_plan(
-            frame,
-            x_column=None if category else anchor,
-            series=series,
-            category=category,
-            include_zero_y=category,
-        ),
+        axis_plan=axis_plan,
         aggregate_error_column=aggregate_error_column,
     )
     return spec, tuple(dict.fromkeys(warnings))
@@ -4292,12 +4456,13 @@ def _build_raw_distribution_spec(
         y_title = "Count"
         bin_rule = "freedman_diaconis_nice_step_v1"
     else:
-        # The half-violin kernel may extend slightly beyond the outermost raw
-        # observation.  Freeze a larger display-only margin so the editable
-        # density tail never touches the frame in the public Raincloud route.
+        # Native full/half violins can extend beyond the raw observations.
+        # Freeze a 25% display-only margin as a starting point, not a claim
+        # about arbitrary KDE support; native tail visibility still needs
+        # rendered QA. No observations or density parameters are changed.
         y_axis = _nice_axis(
             values,
-            padding_fraction=0.25 if template_id == "raincloud" else 0.05,
+            padding_fraction=0.25 if template_id in {"raincloud", "violin"} else 0.05,
         )
         axis_plan = ScientificAxisPlan(None, None, None, *y_axis)
         x_title = "Group"
@@ -4717,6 +4882,7 @@ def _build_diagnostic_curve_spec(
         plot_kind="diagnostic_curve",
         row_count=len(frame),
         series_count=len(series),
+        max_label_length=_legend_label_length(series),
     )
     return (
         ScientificPlotSpec(
@@ -4849,6 +5015,7 @@ def _build_decision_curve_spec(
         plot_kind="decision_curve",
         row_count=len(frame),
         series_count=len(series),
+        max_label_length=_legend_label_length(series),
     )
     return (
         ScientificPlotSpec(
@@ -5914,6 +6081,222 @@ def _eis_axis_title(symbol: str, source_column: str) -> str:
     return f"{symbol} ({formatted})" if unit else symbol
 
 
+def _explicit_header_unit(column: str) -> str:
+    match = re.search(r"(?:\(([^()]+)\)|\[([^\[\]]+)\]|（([^（）]+)）|［([^［］]+)］)\s*$", column)
+    unit = next((part.strip() for part in match.groups() if part), "") if match else ""
+    if not unit or len(column) > 80:
+        raise ScientificWorkflowError("research_unit_required", f"{column}: provide an explicit unit in parentheses or brackets.")
+    return unit
+
+
+def _automatic_signal_mapping(loaded: LoadedTable) -> _AutoMapping:
+    aliases = {
+        "x": {"time", "时间", "时刻"},
+        "category": {"channel", "通道", "sensor", "传感器", "roi", "区域", "cell", "细胞"},
+        "series": {"value", "amplitude", "voltage", "response", "intensity", "fluorescence",
+                   "幅值", "振幅", "电压", "信号", "强度", "响应", "荧光"},
+    }
+    assignments = {}
+    for column in loaded.columns:
+        name = re.split(r"[\(\[（［]", column, maxsplit=1)[0]
+        assignments[column] = next((role for role, names in aliases.items() if _canonical(name) in names), "ignored")
+    reasons = []
+    if any(list(assignments.values()).count(role) != 1 for role in aliases):
+        reasons.append("signal_explicit_time_value_channel_required")
+    if "ignored" in assignments.values():
+        reasons.append("signal_extra_columns_require_confirmation")
+    return _AutoMapping(assignments, "common_amplitude", 0.75 if reasons else 0.98, tuple(reasons), ())
+
+
+def _automatic_event_raster_mapping(loaded: LoadedTable) -> _AutoMapping:
+    aliases = {
+        "x": {"time", "eventtime", "时间", "事件时间", "时刻"},
+        "category": {"trial", "trialid", "unit", "unitid", "试次", "试次编号", "单元"},
+        "series_id": {"condition", "group", "条件", "组别", "分组"},
+    }
+    assignments = {}
+    for column in loaded.columns:
+        name = re.split(r"[\(\[（［]", column, maxsplit=1)[0]
+        assignments[column] = next((role for role, names in aliases.items() if _canonical(name) in names), "ignored")
+    reasons = []
+    if any(list(assignments.values()).count(role) != 1 for role in aliases):
+        reasons.append("event_raster_explicit_time_trial_condition_required")
+    if "ignored" in assignments.values():
+        reasons.append("event_raster_extra_columns_require_confirmation")
+    return _AutoMapping(assignments, "events_only", 0.75 if reasons else 0.98, tuple(reasons), ())
+
+
+def _build_event_raster_spec(frame: pd.DataFrame, assignments: dict[str, str]):
+    time, trial, condition = (_require_one(assignments, role) for role in ("x", "category", "series_id"))
+    try:
+        plan = build_event_raster_plan(frame, event_time_column=time, trial_column=trial,
+                                      condition_column=condition, time_unit=_explicit_header_unit(time))
+    except ValueError as error:
+        raise ScientificWorkflowError("event_raster_data_invalid", str(error)) from error
+    y_title = f"{trial} (source order)"
+    layout = build_event_raster_layout(plan, time, y_title)
+    return ScientificPlotSpec(
+        plot_kind="event_raster", plot_mode="events_only", x_column=time, category_column=trial,
+        series=tuple(ScientificSeries(time, label, group=label) for label in plan.condition_order),
+        x_title=time, y_title=y_title, y2_title=None, x_scale="linear", y_scale="linear",
+        display_transform="source_order_trial_ordinal",
+        display_plan=ScientificDisplayPlan(layout.marker_size_pt, 0.8, 0.7, figure_style=layout.style),
+        axis_plan=ScientificAxisPlan(*layout.x_range,
+                                    _nice_number((plan.x_range[1] - plan.x_range[0]) / 6, round_value=True),
+                                    *layout.y_range, layout.y_step),
+        event_raster_plan=plan, event_raster_layout=layout,
+    ), ("supplied_events_only_no_detection_or_psth",)
+
+
+def _build_signal_stack_spec(frame: pd.DataFrame, assignments: dict[str, str]):
+    time_column, value_column, channel_column = (_require_one(assignments, role) for role in ("x", "series", "category"))
+    try:
+        plan = build_signal_stack_plan(
+            frame, time_column=time_column, value_column=value_column, channel_column=channel_column,
+            time_unit=_explicit_header_unit(time_column), value_unit=_explicit_header_unit(value_column),
+        )
+    except ValueError as error:
+        raise ScientificWorkflowError("signal_stack_data_invalid", str(error)) from error
+    y_title = f"Amplitude ({plan.value_unit}; display offsets)"
+    style = resolve_signal_stack_style(plan.channel_order, time_column, y_title,
+                                       f"{plan.amplitude_scale_length:g} {plan.value_unit}")
+    lower, upper = plan.display_y_range
+    center = lower * 0.5 + upper * 0.5
+    half_span = max(upper - lower, plan.amplitude_scale_length * 4) * 0.58
+    y_range = (center - half_span, center + half_span)
+    layout = build_signal_stack_layout(plan, style, y_range=y_range)
+    series = tuple(ScientificSeries(value_column, label, group=label, display_offset=offset)
+                   for label, offset in plan.offsets)
+    return ScientificPlotSpec(
+        plot_kind="signal_stack", plot_mode="common_amplitude", x_column=time_column,
+        category_column=channel_column, series=series, x_title=time_column, y_title=y_title, y2_title=None,
+        x_scale="linear", y_scale="linear", display_transform=plan.display_transform,
+        display_plan=ScientificDisplayPlan(0.0, 0.8, 0.7, figure_style=style),
+        axis_plan=ScientificAxisPlan(*plan.time_range, _nice_number((plan.time_range[1]-plan.time_range[0])/6, round_value=True),
+                                     *y_range, _nice_number((y_range[1]-y_range[0])/5, round_value=True)),
+        signal_stack_plan=plan, signal_stack_layout=layout,
+    ), ("display_offsets_only_common_amplitude_no_filtering",)
+
+
+def _automatic_time_frequency_mapping(loaded: LoadedTable) -> _AutoMapping:
+    aliases = {
+        "x": {"time", "时间", "时刻"},
+        "frequency_axis": {"frequency", "freq", "频率"},
+        "series": {"power", "psd", "value", "amplitude", "功率", "功率谱密度", "数值", "幅值"},
+    }
+    assignments = {}
+    for column in loaded.columns:
+        name = re.split(r"[\(\[（［]", column, maxsplit=1)[0]
+        assignments[column] = next(
+            (role for role, names in aliases.items() if _canonical(name) in names), "ignored"
+        )
+    reasons = []
+    if any(list(assignments.values()).count(role) != 1 for role in aliases):
+        reasons.append("time_frequency_explicit_columns_required")
+    if "ignored" in assignments.values():
+        reasons.append("time_frequency_extra_columns_require_confirmation")
+    return _AutoMapping(assignments, "sequential", 0.75 if reasons else 0.98, tuple(reasons), ())
+
+
+def _build_time_frequency_spec(
+    frame: pd.DataFrame, assignments: dict[str, str]
+) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    from .shap_dashboard import DASHBOARD_PALETTES, color_ramp
+
+    columns = tuple(_require_one(assignments, role) for role in ("x", "frequency_axis", "series"))
+    units = []
+    for column in columns:
+        units.append(_explicit_header_unit(column))
+    try:
+        plan = build_time_frequency_plan(
+            frame, time_column=columns[0], frequency_column=columns[1], value_column=columns[2],
+            time_unit=units[0], frequency_unit=units[1], value_unit=units[2], color_semantics="sequential",
+        )
+    except ValueError as error:
+        raise ScientificWorkflowError("time_frequency_data_invalid", str(error)) from error
+    # Physical data area and independent scale gutter; cells are never squeezed
+    # into categorical coordinates or annotated individually to fit a dense grid.
+    style = resolve_time_frequency_style(*columns)
+    return ScientificPlotSpec(
+        plot_kind="time_frequency", plot_mode="sequential", x_column=columns[0],
+        y_column=columns[1], category_column=None,
+        series=(ScientificSeries(columns[2], columns[2]),), x_title=columns[0], y_title=columns[1],
+        y2_title=None, x_scale="linear", y_scale="linear", display_transform="identity",
+        display_plan=ScientificDisplayPlan(4.0, 0.8, 0.7, figure_style=style),
+        axis_plan=ScientificAxisPlan(
+            *plan.x_range, _nice_number(abs(plan.x_range[1] - plan.x_range[0]) / 7, round_value=True),
+            *plan.y_range, _nice_number(abs(plan.y_range[1] - plan.y_range[0]) / 5, round_value=True),
+        ),
+        time_frequency_plan=plan, color_rule="sequential_viridis_101",
+        color_scale_hex=color_ramp(DASHBOARD_PALETTES["viridis"]),
+    ), ("supplied_time_frequency_only_no_signal_processing",)
+
+
+def _automatic_phasor_mapping(loaded: LoadedTable) -> _AutoMapping:
+    aliases = {
+        "x": {"g", "phasorg", "相量g", "g坐标", "相量实部"},
+        "series": {"s", "phasors", "相量s", "s坐标", "相量虚部"},
+        "category": {"group", "condition", "分组", "组别", "条件", "组"},
+    }
+    assignments = {
+        column: next((role for role, names in aliases.items() if _canonical(column) in names), "ignored")
+        for column in loaded.columns
+    }
+    reasons = []
+    if any(list(assignments.values()).count(role) != 1 for role in aliases):
+        reasons.append("phasor_explicit_g_s_group_required")
+    if "ignored" in assignments.values():
+        reasons.append("phasor_extra_columns_require_confirmation")
+    return _AutoMapping(assignments, "default", 0.75 if reasons else 0.98, tuple(reasons), ())
+
+
+def _build_phasor_spec(
+    frame: pd.DataFrame, assignments: dict[str, str]
+) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    """Keep G/S physically equal with readable text and a reserved legend column."""
+    g_column, s_column, group_column = (
+        _require_one(assignments, role) for role in ("x", "series", "category")
+    )
+    try:
+        plan = build_phasor_plan(frame, g_column=g_column, s_column=s_column, group_column=group_column)
+    except ValueError as error:
+        raise ScientificWorkflowError("phasor_data_invalid", str(error)) from error
+    series = tuple(ScientificSeries(s_column, label, group=label) for label in plan.group_order)
+    ratio = (plan.y_range[1] - plan.y_range[0]) / (plan.x_range[1] - plan.x_range[0])
+    plot_width, plot_height = 18.0, 18.0 * ratio
+    if plot_height < 8.0:
+        plot_width, plot_height = 8.0 / ratio, 8.0
+    elif plot_height > 24.0:
+        plot_width, plot_height = 24.0 / ratio, 24.0
+    if not 14.0 <= plot_width <= 28.0 or _legend_label_length(series) > 40:
+        raise ScientificWorkflowError(
+            "phasor_layout_unsupported",
+            "The physical phasor layout cannot preserve equal units and readable labels; "
+            "review the coordinate units or use shorter display group labels.",
+        )
+    legend_column_cm = max(10.5, 2.5 + _legend_label_length(series) * 0.30)
+    page_width, page_height = plot_width + 3.5 + legend_column_cm, plot_height + 5.0
+    style = AdaptiveOriginStyle(
+        profile_name="research-flim-phasor-external-legend",
+        page_width_cm=page_width, page_height_cm=page_height,
+        layer_left_percent=3.5 / page_width * 100, layer_top_percent=1.5 / page_height * 100,
+        layer_width_percent=plot_width / page_width * 100,
+        layer_height_percent=plot_height / page_height * 100,
+        plot_line_width_pt=2.0, frame_line_width_pt=1.3, palette_name="publication_signal",
+        x_title_upshift_page_percent=0.0,
+    )
+    return ScientificPlotSpec(
+        plot_kind="flim_phasor", plot_mode="default", x_column=g_column, category_column=group_column,
+        series=series, x_title="G", y_title="S", y2_title=None, x_scale="linear", y_scale="linear",
+        display_transform="identity", display_plan=ScientificDisplayPlan(4.0, 0.8, 0.7, figure_style=style),
+        axis_plan=ScientificAxisPlan(
+            *plan.x_range, _nice_number((plan.x_range[1] - plan.x_range[0]) / 5.0, round_value=True),
+            *plan.y_range, _nice_number((plan.y_range[1] - plan.y_range[0]) / 5.0, round_value=True),
+        ),
+        phasor_plan=plan,
+    ), plan.warnings
+
+
 def _build_plot_spec(
     template_id: str,
     frame: pd.DataFrame,
@@ -5922,6 +6305,14 @@ def _build_plot_spec(
     *,
     source_profile: str | None = None,
 ) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    if template_id == "event_raster":
+        return _build_event_raster_spec(frame, assignments)
+    if template_id == "signal_stack":
+        return _build_signal_stack_spec(frame, assignments)
+    if template_id == "time_frequency":
+        return _build_time_frequency_spec(frame, assignments)
+    if template_id == "flim_phasor":
+        return _build_phasor_spec(frame, assignments)
     if template_id == "xrd":
         return _build_xrd_spec(
             frame,
@@ -5971,6 +6362,14 @@ def _build_plot_spec(
 
 
 def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
+    if template_id == "event_raster":
+        return _automatic_event_raster_mapping(loaded)
+    if template_id == "signal_stack":
+        return _automatic_signal_mapping(loaded)
+    if template_id == "time_frequency":
+        return _automatic_time_frequency_mapping(loaded)
+    if template_id == "flim_phasor":
+        return _automatic_phasor_mapping(loaded)
     if template_id == "xrd":
         return _automatic_xrd_mapping(loaded)
     if template_id == "trajectory3d":
@@ -6039,14 +6438,20 @@ def prepare_scientific(
     if template_id not in SUPPORTED_SCIENTIFIC_TEMPLATE_IDS:
         raise ScientificWorkflowError("template_unknown", f"Unknown scientific template: {template_id}")
     loaded = _load(path)
-    automatic = _automatic_mapping(loaded, template_id)
+    automatic = _automatic_mapping(loaded, template_id) if column_mapping is None else None
     mapping_confirmed = column_mapping is not None
     if column_mapping is None:
         assignments = automatic.assignments
         plot_mode = automatic.plot_mode
     else:
         assignments, plot_mode = _validate_assignment_shape(loaded, template_id, column_mapping)
-    frame = _coerced_selected_frame(loaded, assignments)
+        assignments = {column: assignments[column] for column in loaded.columns}
+    # Physical-cell validation must see Excel's original bool/date types.
+    # The source-bound reload still creates a numeric working copy for COM.
+    frame = (
+        loaded.copy_frame() if template_id in {"time_frequency", "signal_stack", "flim_phasor", "event_raster"}
+        else _coerced_selected_frame(loaded, assignments)
+    )
     source_profile = detect_xrd_source_profile(loaded) if template_id == "xrd" else None
     spec, build_warnings = _build_plot_spec(
         template_id,

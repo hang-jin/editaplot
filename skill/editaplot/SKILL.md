@@ -184,6 +184,14 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
   Neither a user style request nor a reference image may change source values or column roles, the
   high-to-low binding-energy axis contract, component identity, residual disposition, or the
   verified single-region `set_fill_area(..., type=9)` / `-pfm 3` fill implementation.
+- For FLIM, use `flim_phasor` for upstream G/S coordinates with optional groups. Keep every point,
+  including points outside the reference semicircle. Confirm the mathematical semicircle helper;
+  preserve equal physical G/S scales. Do not infer lifetimes, fit decays, unmix or cluster.
+- For supplied event times, use `event_raster` with explicit Time/unit, Trial and Condition. Confirm
+  source-order trial ordinals; blank Time entries declare inventory, not events at zero. Preserve
+  every event and empty lane, and retain zero-event conditions in the borderless outside legend.
+  Never detect events, calculate PSTH/rates or reorder trials by response. Read the event-table
+  section of `references/data-contracts.md`; only condition-compatible palettes may replace the default.
 - For SHAP, accept only externally precomputed per-sample contributions. Never train a model or
   invoke SHAP. Mean |SHAP| and optional group percentages may only summarize those supplied rows
   with the allow-listed formulas recorded in the semantic proposal and explicitly approved; never
@@ -217,6 +225,20 @@ Before any render, read `references/origin-safety.md`, `references/figure-contra
   medical image editor, or merged editable Origin project. Preserve every verified subproject.
 
 ## Apply the publication-informed contract
+
+For supplied time–frequency tables, choose `time_frequency` only when time, frequency and value
+columns explicitly state their units and form a complete uniform grid. Preserve both coordinate
+directions and every cell; use the numeric physical-axis route, not categorical `heatmap`.
+The route shows sequential value magnitude with a detached scale; it performs no FFT/STFT/wavelet,
+filtering, interpolation, baseline or dB conversion. A raw EEG voltage table needs upstream
+processing, not an invented frequency column. Read `references/data-contracts.md` for the input
+and unit contract; confirm any extra columns instead of silently drawing them.
+
+For multichannel EEG or fluorescence traces already supplied as a table, choose `signal_stack`.
+Require explicit Time/Channel/Amplitude roles and units, keep every observation and the channel
+order, and confirm the additive display offsets and common unit ruler. Channel/ROI identities
+remain text, including leading zeros. Do not filter, align, center, normalize, infer events or
+decode acquisition files. Direct names and the ruler live outside the true time-axis data range.
 
 - Make every chart defend one explicit conclusion or evidence role.
 - Use a white background, Arial, restrained color families, clear hierarchy, and no rainbow palette,

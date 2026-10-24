@@ -39,14 +39,31 @@ jobs:
           python -m ruff check --no-cache
           skill/editaplot/scripts
           runtime/src/origin_sciplot/app.py
+          runtime/src/origin_sciplot/event_raster.py
+          runtime/src/origin_sciplot/event_raster_layout.py
+          runtime/src/origin_sciplot/event_response.py
+          runtime/src/origin_sciplot/flim_phasor.py
+          runtime/src/origin_sciplot/research_grid.py
+          runtime/src/origin_sciplot/spatial_profile.py
+          runtime/src/origin_sciplot/ratiometric_response.py
+          runtime/src/origin_sciplot/signal_stack.py
+          runtime/src/origin_sciplot/signal_stack_layout.py
+          runtime/src/origin_sciplot/spectral_density.py
+          runtime/src/origin_sciplot/time_frequency.py
           runtime/src/origin_sciplot/circular_network_layout.py
           runtime/src/origin_sciplot/heatmap_layout.py
+          runtime/src/origin_sciplot/scientific_visual.py
           runtime/src/origin_sciplot/main_window.py
           runtime/src/origin_sciplot/output_manager.py
           runtime/src/origin_sciplot/project_paths.py
           runtime/src/origin_sciplot/origin_backend/capabilities.py
           runtime/src/origin_sciplot/origin_backend/density_ridgeline3d_renderer.py
           runtime/src/origin_sciplot/origin_backend/execution_context.py
+          runtime/src/origin_sciplot/origin_backend/flim_phasor_renderer.py
+          runtime/src/origin_sciplot/origin_backend/event_raster_renderer.py
+          runtime/src/origin_sciplot/origin_backend/research_grid_renderer.py
+          runtime/src/origin_sciplot/origin_backend/time_frequency_renderer.py
+          runtime/src/origin_sciplot/origin_backend/signal_stack_renderer.py
           runtime/src/origin_sciplot/origin_backend/job_queue.py
           runtime/src/origin_sciplot/origin_backend/shap_dashboard_renderer.py
           runtime/src/origin_sciplot/shap_dashboard.py
@@ -61,6 +78,10 @@ jobs:
           runtime/templates/circular_network/service.py
           runtime/templates/density_ridgeline3d/runner.py
           runtime/templates/density_ridgeline3d/service.py
+          runtime/templates/flim_phasor
+          runtime/templates/time_frequency
+          runtime/templates/signal_stack
+          runtime/templates/event_raster
           runtime/templates/xps_adaptive/runner.py
           runtime/templates/xps_c1s_fit/runner.py
           tests
@@ -70,6 +91,7 @@ jobs:
           tools/build_showcase.py
           tools/build_star_trend.py
           tools/generate_showcase_data.py
+          tools/generate_research_data.py
           tools/generate_shap_dashboard_data.py
           tools/sync_public_gallery.py
           tools/verify_public_release.py

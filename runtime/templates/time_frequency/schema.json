@@ -1,0 +1,8 @@
+{
+  "template_id": "time_frequency", "workflow": "scientific_table", "layout": "precomputed_long",
+  "required_roles": ["x", "frequency_axis", "series"], "optional_roles": [],
+  "standard_columns": {"x": "Time (s)", "frequency_axis": "Frequency (Hz)", "series": "Power (dB)"},
+  "min_columns": 3, "min_rows": 4,
+  "supported_extensions": [".csv", ".txt", ".xls", ".xlsx"], "source_data_modified": false,
+  "automatic_frequency_analysis": false, "automatic_baseline_correction": false, "automatic_interpolation": false
+}

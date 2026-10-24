@@ -19,6 +19,7 @@ from .safe_errors import (
     OriginDrawError,
     OriginEnvironmentError,
     OriginExportError,
+    OriginGeometryError,
     structured_error_diagnostics,
 )
 from .session import OriginSession
@@ -223,20 +224,27 @@ def _safe_identifier(value: Any, fallback: str) -> str:
 
 
 def _stable_stage_error(stage: str, cause: Exception) -> Exception:
+    if isinstance(cause, OriginGeometryError):
+        return OriginGeometryError(
+            "Origin physical page size does not match the requested figure size",
+            diagnostics=structured_error_diagnostics(cause),
+        )
     if isinstance(cause, OriginEnvironmentError):
+        cause_stage = _safe_identifier(getattr(cause, "stage", None), stage)
         messages = {
+            "import_originpro": "originpro could not be imported in the selected Python environment",
             "activate": "Origin Automation could not be activated",
             "read_version": "Origin version could not be read",
             "read_program_path": "Origin program path could not be read",
             "ready": "Origin did not become ready",
         }
         return OriginEnvironmentError(
-            messages.get(stage, "Origin smoke environment check failed"),
+            messages.get(cause_stage, messages.get(stage, "Origin smoke environment check failed")),
             code=_safe_identifier(
                 getattr(cause, "code", None),
                 f"origin_smoke_{stage}_failed",
             ),
-            stage=_safe_identifier(getattr(cause, "stage", None), stage),
+            stage=cause_stage,
             diagnostics=structured_error_diagnostics(cause),
         )
 
@@ -433,6 +441,11 @@ def _capability_probe_from_stages(
         "save_project": OriginCapability.EDITABLE_OPJU,
         "readback": OriginCapability.AXIS_READBACK,
     }.get(failed_stage)
+    if (
+        failed_stage == "style_graph"
+        and stages["style_graph"].get("error_code") == "origin_page_geometry_mismatch"
+    ):
+        failure_capability = None  # Geometry failure is not evidence that text readback failed.
     if failure_capability is not None and failure_capability not in available:
         unavailable.add(failure_capability)
     return CapabilityProbeResult(

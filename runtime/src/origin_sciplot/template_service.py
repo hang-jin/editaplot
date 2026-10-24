@@ -9,6 +9,7 @@ from typing import Any
 
 from .scientific_preview import ScientificPreviewError, render_scientific_preview_png
 from .scientific_workflow import (
+    SUPPORTED_SCIENTIFIC_TEMPLATE_IDS,
     ScientificColumnMapping,
     ScientificPreparation,
     ScientificWorkflowError,
@@ -16,7 +17,7 @@ from .scientific_workflow import (
     prepare_scientific,
     role_options,
 )
-from .template_registry import TemplateManifest, TemplateRegistry
+from .template_registry import TemplateManifest, TemplateRegistry, TemplateRegistryError
 from .xps_preview import XpsPreviewError, render_xps_preview_png
 from .xps_workflow import (
     XpsColumnMapping,
@@ -401,6 +402,34 @@ class ScientificTemplateService:
                 ("Target", spec.target_column or "—"),
                 ("Value", spec.series[0].source_column),
             )
+        elif spec.plot_kind == "event_raster":
+            plan = spec.event_raster_plan
+            roles = (("Time / 事件时间", plan.event_time_column), ("Trial / 试次", plan.trial_column),
+                     ("Condition / 条件", plan.condition_column))
+            facts = (*facts, ("事件数", str(len(plan.event_rows))), ("试次数", str(len(plan.trial_order))),
+                     ("空试次", f"{len(plan.empty_trial_ids)}；保留空白泳道，不替换成时间0事件"),
+                     ("计算边界", "仅源顺序显示编号；不检测事件、排序效果或计算PSTH"))
+        elif spec.plot_kind == "signal_stack":
+            plan = spec.signal_stack_plan
+            roles = (("Time / 时间", plan.time_column), ("Channel / 通道", plan.channel_column),
+                     ("Amplitude / 原始幅度", plan.value_column))
+            facts = (*facts, ("通道数", str(len(plan.channel_order))),
+                     ("共同幅度尺", spec.signal_stack_layout.reference_text),
+                     ("显示转换", "仅逐通道加常数偏移；不归一化、滤波或居中"))
+        elif spec.plot_kind == "time_frequency":
+            plan = spec.time_frequency_plan
+            roles = (("时间 / X", plan.time_column), ("频率 / Y", plan.frequency_column),
+                     ("原值 / 色标", plan.value_column))
+            facts = (*facts, ("物理网格", f"{len(plan.grid.y)} × {len(plan.grid.x)}；全部{preparation.row_count}格"),
+                     ("计算边界", "只绘制上游时频值；不做FFT、小波、基线或dB转换"),
+                     ("颜色语义", "原值连续高低；不是自动推断的正负变化"))
+        elif spec.plot_kind == "flim_phasor":
+            plan = spec.phasor_plan
+            roles = (("G / 已提供相量坐标", plan.g_column), ("S / 已提供相量坐标", plan.s_column),
+                     ("Group / 分组", plan.group_column))
+            facts = (*facts, ("数学参考", "中心(0.5, 0)、半径0.5的上半圆；不是实验观测或拟合"),
+                     ("坐标比例", "G/S等物理单位，保留全部圈外点"),
+                     ("参考圈外点", str(plan.outside_reference_count)))
         elif spec.plot_kind == "shap_summary":
             series = spec.series[0]
             shap_plan = spec.shap_plan
@@ -483,9 +512,11 @@ class ScientificTemplateService:
             payload=preparation,
         )
 
-    def prepare(self, path: str | Path) -> PreparedTemplate:
+    def prepare(
+        self, path: str | Path, *, column_mapping: ScientificColumnMapping | None = None
+    ) -> PreparedTemplate:
         try:
-            return self._wrap(prepare_scientific(path, self.manifest.id))
+            return self._wrap(prepare_scientific(path, self.manifest.id, column_mapping=column_mapping))
         except ScientificWorkflowError as exc:
             raise TemplateServiceError(exc.code, str(exc)) from exc
 
@@ -571,6 +602,19 @@ class TemplateServiceRegistry:
         try:
             return self._services[template_id]
         except KeyError as exc:
+            try:
+                manifest = self.registry.get(template_id)
+            except TemplateRegistryError:
+                manifest = None
+            if (
+                manifest is not None and manifest.visibility == "public" and manifest.status == "planned"
+                and manifest.workflow == "scientific_table"
+                and template_id in SUPPORTED_SCIENTIFIC_TEMPLATE_IDS
+            ):
+                # Planned routes may expose read-only preparation, not render
+                # permission. Do not execute planned service.py or include the
+                # service in implemented(); the release gate stays separate.
+                return ScientificTemplateService(manifest)
             raise TemplateServiceError("template_unknown", f"Unknown public template: {template_id}") from exc
 
 

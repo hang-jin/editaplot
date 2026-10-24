@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from .base_style_contract import FIXED_ORIGIN_STYLE, pt_to_origin_width_units
+from .safe_errors import OriginGeometryError
 
 # Origin stores page dimensions in internal/printer units and can round an
 # adaptive size by roughly one tenth of a millimetre on readback.  A 0.3 mm
@@ -15,6 +17,26 @@ from .base_style_contract import FIXED_ORIGIN_STYLE, pt_to_origin_width_units
 # change.
 PAGE_SIZE_TOLERANCE_CM = 0.03
 LAYER_GEOMETRY_TOLERANCE_PERCENT = 0.03
+
+
+class NativePlotReference:
+    """An owned plot slot that survives OriginExt GetIndex proxy invalidation."""
+
+    def __init__(self, native_range: str, layer: Any) -> None:
+        match = re.fullmatch(r"\[[\w]+\][1-9]\d*![1-9]\d*", native_range)
+        if match is None:
+            raise ValueError("Expected an explicit native graph-layer plot range")
+        self._native_range = native_range
+        self.layer = layer
+        self.native_index = int(native_range.rsplit("!", 1)[1])
+
+    def lt_range(self) -> str:
+        return self._native_range
+
+    def set_cmd(self, *commands: str) -> None:
+        script = "{" + f"range rr={self._native_range};" + "".join(f"set rr {c};" for c in commands) + "}"
+        if not self.layer.LT_execute(script):
+            raise RuntimeError("Origin could not style the owned native plot range")
 
 
 def _finite_float(value: Any, label: str) -> float:
@@ -248,6 +270,75 @@ def verify_plot_color(
     }
 
 
+def apply_column_style(op: Any, plot: Any, color: str, *, border_width_pt: float) -> None:
+    """Set the documented column fill, border and point-sized border width."""
+    if not math.isfinite(border_width_pt) or border_width_pt <= 0:
+        raise ValueError("Column border width must be a positive point value")
+    code = int(op.ocolor(color))
+    plot.set_cmd(f"-pfb {code}")
+    plot.set_cmd(f"-pbc {code}")
+    plot.set_cmd(f"-vw {border_width_pt:g}")
+
+
+def verify_column_colors(
+    op: Any, plot: Any, expected_html: str, *, variable_name: str
+) -> dict[str, float | str]:
+    """Read the column fill and border independently; -c is a line property."""
+    expected = int(op.ocolor(expected_html))
+    fill = _read_plot_option(op, plot, "-pfb", f"{variable_name}_fill")
+    border = _read_plot_option(op, plot, "-pbc", f"{variable_name}_border")
+    if int(fill) != expected or int(border) != expected:
+        raise RuntimeError(
+            f"Origin column color verification failed: fill={fill:g}, border={border:g}, "
+            f"expected {expected} for {expected_html}"
+        )
+    return {"html": expected_html, "fill_origin_color_code": fill, "border_origin_color_code": border}
+
+
+def verify_column_border_widths(
+    op: Any, plots: Mapping[str, Any], expected_points: float
+) -> dict[str, dict[str, float]]:
+    """Measure native read units and restore the frozen point width.
+
+    The documented -vw setter uses points. Old get documentation describes
+    -pbw as pt*500, whereas 10.15 returns points. Calibrate on the owned plot
+    instead of mistaking a 500-times-too-wide border for another unit encoding.
+    """
+    if not math.isfinite(expected_points) or expected_points <= 0:
+        raise ValueError("Column border width must be a positive point value")
+    state: dict[str, dict[str, float]] = {}
+    if not plots:
+        return state
+    head = next(iter(plots.values()))
+    try:
+        head.set_cmd("-vw 1")
+        scale = _read_plot_option(op, head, "-pbw", "__osc_bar_reference_unit")
+        if not any(math.isclose(scale, candidate, rel_tol=0, abs_tol=0.001) for candidate in (1, 500)):
+            raise RuntimeError("Origin column border width has an unknown native unit")
+    finally:
+        head.set_cmd(f"-vw {expected_points:g}")
+    for index, (name, plot) in enumerate(plots.items()):
+        plot.set_cmd("-pbw 1")
+        probe = _read_plot_option(op, plot, "-pbw", f"__osc_bar_setter_unit_{index}")
+        if not any(math.isclose(probe, candidate, rel_tol=0, abs_tol=0.001) for candidate in (1, 500)):
+            plot.set_cmd(f"-vw {expected_points:g}")
+            raise RuntimeError("Origin column border setter has an unknown native unit")
+        setter_units_per_pt = scale / probe
+        plot.set_cmd(f"-pbw {expected_points * setter_units_per_pt:g}")
+        actual = _read_plot_option(op, plot, "-pbw", f"__osc_bar_width_{index}")
+        points = actual / scale
+        if not math.isclose(points, expected_points, rel_tol=0, abs_tol=0.01):
+            raise RuntimeError(
+                f"Origin column border width verification failed: {name}={points:g} pt, "
+                f"expected {expected_points:g} pt"
+            )
+        state[name] = {
+            "native_value": actual, "native_units_per_pt": scale, "border_width_pt": points,
+            "setter_units_per_pt": setter_units_per_pt,
+        }
+    return state
+
+
 def verify_symbol_style(
     op: Any,
     plot: Any,
@@ -301,6 +392,38 @@ def verify_symbol_style(
     return state
 
 
+def read_page_geometry_cm(origin: Any, graph: Any) -> dict[str, Any]:
+    """Use documented printer dots/resolution for physical page dimensions."""
+    graph.activate()
+    native = {
+        name: _finite_float(origin.lt_float(f"page.{name}"), f"page.{name}")
+        for name in ("width", "height", "resx", "resy")
+    }
+    for name, value in native.items():
+        if value <= 0:
+            raise RuntimeError(f"Origin page geometry requires positive page.{name}")
+    width = _finite_float(native["width"] / native["resx"] * 2.54, "page.width_cm")
+    height = _finite_float(native["height"] / native["resy"] * 2.54, "page.height_cm")
+    bridge: dict[str, float | None] = {}
+    for dimension, method in (("width", "GetWidth"), ("height", "GetHeight")):
+        try:
+            value = float(getattr(graph.obj, method)()) * 2.54
+            bridge[dimension] = value if math.isfinite(value) else None
+        except Exception:  # Optional COM bridge diagnostics, never the physical-size source.
+            bridge[dimension] = None
+    return {
+        "width_cm": width, "height_cm": height,
+        "page_geometry_readback_source": "labtalk_printer_dots",
+        "page_width_dots": native["width"], "page_height_dots": native["height"],
+        "page_resx": native["resx"], "page_resy": native["resy"],
+        "page_bridge_width_cm": bridge["width"], "page_bridge_height_cm": bridge["height"],
+        "page_bridge_geometry_consistent": all(
+            bridge[name] is not None and abs(float(bridge[name]) - actual) <= PAGE_SIZE_TOLERANCE_CM
+            for name, actual in (("width", width), ("height", height))
+        ),
+    }
+
+
 def verify_page_and_layer(
     graph: Any,
     layer: Any,
@@ -322,21 +445,20 @@ def verify_page_and_layer(
     def read_layer() -> dict[str, Any]:
         return read_layer_geometry_percent(origin, layer)
 
-    def read_page() -> dict[str, float]:
-        return {
-            "width_cm": _finite_float(
-                graph.obj.GetWidth() * 2.54, "page.width_cm"
-            ),
-            "height_cm": _finite_float(
-                graph.obj.GetHeight() * 2.54, "page.height_cm"
-            ),
-        }
+    def read_page() -> dict[str, Any]:
+        return read_page_geometry_cm(origin, graph)
 
     def restore_contract() -> None:
         graph.activate()
-        graph.obj.LT_execute("page.updatetoprinter=0;page.kar=0;doc -uw;")
-        graph.obj.PutWidth(style.page_width_cm / 2.54)
-        graph.obj.PutHeight(style.page_height_cm / 2.54)
+        for name in ("resx", "resy"):
+            if _finite_float(origin.lt_float(f"page.{name}"), f"page.{name}") <= 0:
+                raise RuntimeError(f"Origin page geometry requires positive page.{name}")
+        if not graph.obj.LT_execute(
+            "page.updatetoprinter=0;page.kar=0;"
+            f"page.width=({style.page_width_cm:.17g}/2.54)*page.resx;"
+            f"page.height=({style.page_height_cm:.17g}/2.54)*page.resy;doc -uw;"
+        ):
+            raise RuntimeError("Origin native page size assignment failed")
         layer.activate()
         layer.set_int("unit", 1)
         layer.set_float("left", expected["left_percent"])
@@ -383,14 +505,18 @@ def verify_page_and_layer(
     except RuntimeError as exc:
         raise RuntimeError(f"Origin page geometry verification failed: {exc}") from exc
     if abs(page_cm["width_cm"] - style.page_width_cm) > PAGE_SIZE_TOLERANCE_CM:
-        raise RuntimeError(
+        raise OriginGeometryError(
             f"Origin page width verification failed: got {page_cm['width_cm']:.3f} cm, "
-            f"expected {style.page_width_cm:.3f} cm"
+            f"expected {style.page_width_cm:.3f} cm",
+            diagnostics={"geometry_check": "page_width_cm", "expected_value": style.page_width_cm,
+                         "measured_value": page_cm["width_cm"], "tolerance_value": PAGE_SIZE_TOLERANCE_CM},
         )
     if abs(page_cm["height_cm"] - style.page_height_cm) > PAGE_SIZE_TOLERANCE_CM:
-        raise RuntimeError(
+        raise OriginGeometryError(
             f"Origin page height verification failed: got {page_cm['height_cm']:.3f} cm, "
-            f"expected {style.page_height_cm:.3f} cm"
+            f"expected {style.page_height_cm:.3f} cm",
+            diagnostics={"geometry_check": "page_height_cm", "expected_value": style.page_height_cm,
+                         "measured_value": page_cm["height_cm"], "tolerance_value": PAGE_SIZE_TOLERANCE_CM},
         )
     try:
         layer_values = read_layer()
