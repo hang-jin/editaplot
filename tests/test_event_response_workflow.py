@@ -27,6 +27,7 @@ from origin_sciplot.scientific_workflow import (  # noqa: E402
     role_options,
 )
 from origin_sciplot.semantic_analysis import propose_prepared_semantics  # noqa: E402
+from origin_sciplot.semantic_contract import SemanticContractError  # noqa: E402
 
 INTERVAL = "Upstream asymmetric interval (not CI)"
 
@@ -331,3 +332,17 @@ def test_complete_event_data_cannot_fall_through_to_a_generic_line_preview(tmp_p
     with pytest.raises(ScientificPreviewError) as caught:
         _build_scientific_preview_figure(preparation)
     assert caught.value.code == "event_response_preview_unavailable"
+
+
+def test_missing_scientific_facts_cannot_be_confirmed_by_a_generic_resolution_choice(tmp_path: Path) -> None:
+    source = _write_event_csv(tmp_path)
+    draft = prepare_scientific(source, "event_response", column_mapping=_mapping())
+    proposal = _semantic_proposal(draft)
+    resolutions = {item.ambiguity_id: "provide_scientific_context" for item in proposal.ambiguities}
+    with pytest.raises(SemanticContractError) as caught:
+        proposal.confirm(user_confirmed=True, resolved_ambiguities=resolutions)
+    assert caught.value.code == "semantic_scientific_context_required"
+    ready = prepare_scientific(
+        source, "event_response", column_mapping=_mapping(context={"interval_label": INTERVAL})
+    )
+    assert _semantic_proposal(ready).confirm(user_confirmed=True).proposal.scientific_context

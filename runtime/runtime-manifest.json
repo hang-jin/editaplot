@@ -295,8 +295,8 @@
     },
     {
       "path": "src/origin_sciplot/semantic_contract.py",
-      "size_bytes": 49779,
-      "sha256": "a7a320e5e58da23889a095219a0af6cf07835dee01103eb4737e250b43040fbb"
+      "size_bytes": 50206,
+      "sha256": "2e29542f9a8df6ea6cd28c39eb943eca08216e655ca4242835a4566119d9243c"
     },
     {
       "path": "src/origin_sciplot/shap_composite.py",
