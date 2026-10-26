@@ -28,19 +28,26 @@ from .circular_network_layout import (
 from .data_loader import DataLoadError, LoadedTable, load_table
 from .event_raster import EventRasterPlan, build_event_raster_plan, validate_event_time_title
 from .event_raster_layout import EventRasterLayout, build_event_raster_layout
-from .event_response import EventResponsePlan, build_event_response_plan
+from .event_response import (
+    EventResponsePlan,
+    build_event_response_plan,
+    validate_event_response_titles,
+)
 from .event_response_layout import EventResponseLayout, build_event_response_layout
 from .flim_phasor import PhasorPlan, build_phasor_plan
 from .heatmap_layout import HeatmapLayoutPlan, heatmap_cell_labels_enabled, resolve_heatmap_layout
 from .palette_catalog import get_palette
 from .scientific_context import (
-    ScientificContextError, freeze_scientific_context, normalize_scientific_context,
+    ScientificContextError,
+    freeze_scientific_context,
+    normalize_scientific_context,
 )
 from .scientific_visual import (
-    AdaptiveOriginStyle, resolve_adaptive_style, resolve_signal_stack_style, resolve_time_frequency_style,
+    AdaptiveOriginStyle,
+    resolve_adaptive_style,
+    resolve_signal_stack_style,
+    resolve_time_frequency_style,
 )
-from .signal_stack import SignalStackPlan, build_signal_stack_plan
-from .signal_stack_layout import SignalStackLayout, build_signal_stack_layout
 from .shap_composite import (
     SHAP_COMPOSITE_PROFILES,
     ShapCompositeError,
@@ -48,6 +55,8 @@ from .shap_composite import (
     build_shap_composite_plan,
 )
 from .shap_dashboard import DASHBOARD_MODES, ShapDashboardPlan, build_dashboard_plan
+from .signal_stack import SignalStackPlan, build_signal_stack_plan
+from .signal_stack_layout import SignalStackLayout, build_signal_stack_layout
 from .time_frequency import TimeFrequencyPlan, build_time_frequency_plan
 from .xrd_semantics import (
     GSAS_II_PUBLICATION_CSV,
@@ -436,6 +445,23 @@ def apply_scientific_text_overrides(
             validate_event_time_title(resolved_x_title, spec.event_raster_plan.time_unit)
         except ValueError as error:
             raise ScientificWorkflowError("event_time_unit_changed", str(error)) from error
+    if preparation.template_id == "event_response":
+        plan = spec.event_response_plan
+        if plan is None:
+            raise ScientificWorkflowError(
+                "scientific_context_required",
+                "Provide the event-response interval definition and units before changing titles.",
+            )
+        try:
+            validate_event_response_titles(plan, resolved_x_title, resolved_y_title)
+        except ValueError as error:
+            raise ScientificWorkflowError(
+                "event_response_unit_changed",
+                (
+                    "Event-response titles must retain declared units "
+                    f"{plan.time_unit!r} and {plan.response_unit!r}: {error}"
+                ),
+            ) from error
     if preparation.template_id == "trajectory3d":
         if _alias_score(resolved_x_title, _TRAJECTORY3D_X_ALIASES) == 0:
             raise ScientificWorkflowError(
@@ -473,6 +499,18 @@ def apply_scientific_text_overrides(
         overridden = replace(overridden, event_raster_layout=layout,
                              display_plan=replace(spec.display_plan, figure_style=layout.style,
                                                   marker_size_pt=layout.marker_size_pt))
+    if preparation.template_id == "event_response":
+        layout = build_event_response_layout(
+            spec.event_response_plan,
+            resolved_x_title,
+            resolved_y_title,
+            palette_name=spec.display_plan.figure_style.palette_name,
+        )
+        overridden = replace(
+            overridden,
+            event_response_layout=layout,
+            display_plan=replace(spec.display_plan, figure_style=layout.style),
+        )
     if preparation.template_id in {"time_frequency", "signal_stack"}:
         if preparation.template_id == "time_frequency":
             measured = resolve_time_frequency_style(resolved_x_title, resolved_y_title, spec.series[0].label)
@@ -501,6 +539,7 @@ def apply_scientific_text_overrides(
 
 _PALETTE_OVERRIDE_MODE_BY_TEMPLATE: dict[str, str] = {
     "event_raster": "qualitative",
+    "event_response": "qualitative",
     "eis": "qualitative",
     "cv": "qualitative",
     "lsv": "qualitative",
@@ -570,6 +609,13 @@ def apply_scientific_palette_override(
         category_count = max(1, len(spec.group_order))
     elif preparation.template_id == "density_ridgeline3d":
         category_count = max(1, len(spec.group_order))
+    elif preparation.template_id == "event_response":
+        if spec.event_response_plan is None:
+            raise ScientificWorkflowError(
+                "scientific_context_required",
+                "Provide the event-response interval definition and units before choosing a palette.",
+            )
+        category_count = len(spec.event_response_plan.condition_order)
     else:
         category_count = len(spec.series)
     if required_mode == "qualitative" and category_count > palette.max_qualitative_categories:
@@ -588,6 +634,18 @@ def apply_scientific_palette_override(
         layout = build_event_raster_layout(spec.event_raster_plan, spec.x_title, spec.y_title,
                                           palette_name=requested)
         overridden_spec = replace(overridden_spec, event_raster_layout=layout)
+    if preparation.template_id == "event_response":
+        layout = build_event_response_layout(
+            spec.event_response_plan,
+            spec.x_title,
+            spec.y_title,
+            palette_name=requested,
+        )
+        overridden_spec = replace(
+            overridden_spec,
+            event_response_layout=layout,
+            display_plan=replace(spec.display_plan, figure_style=layout.style),
+        )
     return replace(
         preparation,
         plot_spec=overridden_spec,

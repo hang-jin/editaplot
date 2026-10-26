@@ -329,9 +329,8 @@ def test_complete_event_data_cannot_fall_through_to_a_generic_line_preview(tmp_p
         "event_response",
         column_mapping=_mapping(context={"interval_label": INTERVAL}),
     )
-    with pytest.raises(ScientificPreviewError) as caught:
-        _build_scientific_preview_figure(preparation)
-    assert caught.value.code == "event_response_preview_unavailable"
+    figure = _build_scientific_preview_figure(preparation)
+    assert len(figure.axes[0].collections) == 2  # Each supplied condition keeps its own band.
 
 
 def test_missing_scientific_facts_cannot_be_confirmed_by_a_generic_resolution_choice(tmp_path: Path) -> None:

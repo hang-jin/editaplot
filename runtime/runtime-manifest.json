@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 475,
+  "file_count": 476,
   "files": [
     {
       "path": "LICENSE",
@@ -65,8 +65,8 @@
     },
     {
       "path": "src/origin_sciplot/event_response.py",
-      "size_bytes": 7011,
-      "sha256": "76a332afecdf746f4100ef2739c1220a6cfdd07c346feca90e59e1eaa071c81e"
+      "size_bytes": 7595,
+      "sha256": "41e375cc183dd750c0b2038ac51fe2a8d409dd64e2d77741cd92e18d17c8722d"
     },
     {
       "path": "src/origin_sciplot/event_response_layout.py",
@@ -122,6 +122,11 @@
       "path": "src/origin_sciplot/origin_backend/event_raster_renderer.py",
       "size_bytes": 17561,
       "sha256": "ea3f6d317c2285ed28ca87bcab5bb08e0f94cead77be5063b023d12c95c84a0c"
+    },
+    {
+      "path": "src/origin_sciplot/origin_backend/event_response_renderer.py",
+      "size_bytes": 22369,
+      "sha256": "e9a6b8f623402aec30fae9451dd548dedddd0a843ef3319a4f676bcb497bfc24"
     },
     {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
@@ -275,8 +280,8 @@
     },
     {
       "path": "src/origin_sciplot/scientific_preview.py",
-      "size_bytes": 98920,
-      "sha256": "038348179ac3d2fd149303b40f3926cf4ce2c1be4868ae0fcbebce39fb2b15e7"
+      "size_bytes": 101072,
+      "sha256": "03b06cf328dbae37344ef14b0df2a3b1e00b8a52ba3de748692e8eee6851726c"
     },
     {
       "path": "src/origin_sciplot/scientific_visual.py",
@@ -285,8 +290,8 @@
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 253305,
-      "sha256": "d10ce3996db0ea2938f4cafb959a03f9bda17f5d7d5f0005b6d35a60f3136268"
+      "size_bytes": 255437,
+      "sha256": "03cab98e01845cb79ed7111ef6a688137e58e97c5533328513597d2e791ce720"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
