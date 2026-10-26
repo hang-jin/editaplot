@@ -1,20 +1,24 @@
 <div align="center">
   <img src="runtime/src/origin_sciplot/resources/app_icon.png" width="64" alt="EditaPlot icon">
   <h1>EditaPlot</h1>
-  <p><strong>Understand the data, then build an editable Origin figure</strong></p>
-  <p>Give Codex a table, confirm the meaning, and receive OPJU plus PNG / PDF / TIF.</p>
+  <p><strong>Give Codex the table. Get an editable scientific figure back in Origin.</strong></p>
+  <p>Understand the data · Choose the view · Customize the style · Verify the deliverables</p>
   <p>
     <img alt="Apache-2.0 open source" src="https://img.shields.io/badge/license-Apache--2.0-0f766e?style=flat-square">
     <img alt="Windows 10/11 x64" src="https://img.shields.io/badge/Windows-10%2F11%20x64-315b7d?style=flat-square">
     <img alt="Python 3.11–3.12" src="https://img.shields.io/badge/Python-3.11%E2%80%933.12-315b7d?style=flat-square">
     <a href="https://github.com/hang-jin/editaplot"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/hang-jin/editaplot?style=social"></a>
   </p>
-  <p><a href="#get-started">Get started</a> · <a href="docs/gallery.en.md">Explore templates</a> · <a href="docs/quickstart.en.md">Tutorial</a> · <a href="README.md">中文</a></p>
+  <p><a href="#get-started">Start</a> · <a href="docs/gallery.en.md">Gallery</a> · <a href="#three-common-requests-to-copy">Prompts</a> · <a href="docs/quickstart.en.md">Guide</a> · <a href="README.md">中文</a></p>
 </div>
 
-I built EditaPlot as a Codex Skill that explains column roles before choosing a chart and driving local Origin. You make the scientific decisions; the software turns the confirmed choices into a figure you can continue editing.
+I built EditaPlot to spend less time repeatedly tuning figures and more time discussing the data itself.
 
-**For physical Windows 10/11 x64 computers with Codex and a local Origin/OriginPro installation.** macOS, Linux, WSL, and virtual machines are not supported. You do not need to open Origin manually first.
+Tell Codex what the table contains and what you want to show. It explains each column first, waits for confirmation, then uses local Origin and checks the result.
+
+EditaPlot is a **Codex Skill, not a standalone plotting application**. You can continue editing curves, axes, and legends in Origin. Within each verified route, you can also specify supported colors, line widths, and layouts.
+
+**Requirements: a physical Windows 10/11 x64 computer, Codex, and local Origin/OriginPro.** You do not need to open Origin first. macOS, Linux, WSL, and virtual machines are currently unsupported.
 
 ## See the results
 
@@ -33,25 +37,25 @@ I built EditaPlot as a Codex Skill that explains column roles before choosing a 
   </tr>
   <tr>
     <td width="50%" align="center" valign="top">
-      <a href="assets/gallery/time-frequency.png"><img src="assets/gallery/time-frequency.png" width="420" alt="Native Origin precomputed time-frequency matrix and detached numeric color scale, synthetic teaching data"></a><br>
-      <strong>Precomputed time–frequency matrices</strong><br>
-      <sub>Keep the complete grid, physical coordinates and units, with a detached scale.</sub>
+      <a href="assets/gallery/shap-dashboard-blue-red.png"><img src="assets/gallery/shap-dashboard-blue-red.png" width="420" alt="Native Origin SHAP dashboard using synthetic teaching data"></a><br>
+      <strong>SHAP importance, contribution, and beeswarm</strong><br>
+      <sub>Use upstream per-sample SHAP values; the plotting layer does not train a model.</sub>
     </td>
     <td width="50%" align="center" valign="top">
-      <a href="assets/gallery/flim-phasor.png"><img src="assets/gallery/flim-phasor.png" width="420" alt="Native Origin FLIM G-S phasor cloud and mathematical reference semicircle, synthetic teaching data"></a><br>
-      <strong>FLIM G–S phasors</strong><br>
-      <sub>Display supplied coordinates without inferring lifetimes from raw images.</sub>
+      <a href="assets/gallery/heatmap-dense-30x30.png"><img src="assets/gallery/heatmap-dense-30x30.png" width="420" alt="Native Origin 30 by 30 dense heatmap with a detached scale and 900 synthetic source values"></a><br>
+      <strong>30 × 30 dense heatmap</strong><br>
+      <sub>Keep all 900 source values and row/column order, without interpolation or automatic clustering.</sub>
     </td>
   </tr>
 </table>
 
 All examples use **synthetic teaching data and real Origin output**. They are not experimental or clinical findings. Click an image for the full-resolution file.
 
-**[Explore all 45 plotting routes →](docs/gallery.en.md)**　[中文图库](docs/gallery.md)
+**[Explore all 45 plotting routes →](docs/gallery.en.md)**　[Fluorescence and EEG signals](docs/research_signals.md)　[中文图库](docs/gallery.md)
 
 ## Get started
 
-### 1. Ask Codex to install the complete repository
+### 1 / Install: give this request to Codex
 
 You do not need to learn Git first. Copy this into Codex:
 
@@ -64,7 +68,9 @@ Do not install or modify Origin, change the registry/DCOM, request administrator
 Report whether the environment is ready, then ask me for the dataset.
 ~~~
 
-Alternatively, [download the complete ZIP](https://github.com/hang-jin/editaplot/archive/refs/heads/main.zip), extract it, and let Codex install from that folder. **Do not copy only <code>skill/editaplot</code>**: it needs the bundled drawing engine.
+Alternatively, [download the complete ZIP](https://github.com/hang-jin/editaplot/archive/refs/heads/main.zip), extract it, and let Codex install from that folder.
+
+**Do not copy only <code>skill/editaplot</code>**. It needs the bundled drawing engine.
 
 <details>
 <summary>I use Git; show me the installation commands</summary>
@@ -73,29 +79,38 @@ Alternatively, [download the complete ZIP](https://github.com/hang-jin/editaplot
 git clone https://github.com/hang-jin/editaplot.git
 Set-Location editaplot
 .\editaplot.cmd setup
+.\editaplot.cmd doctor
 ~~~
 
 If no compatible Python is available, follow the consent and setup steps in the [installation guide](docs/installation.md). Dependencies stay in the project environment, not global Python.
 
 </details>
 
-### 2. Attach a table and describe the intended comparison
+### 2 / Provide the data: say what you want to compare
 
 Start a new Codex conversation, invoke <code>$editaplot</code>, and attach CSV, TXT, XLS, or XLSX data. For example:
 
 ~~~text
-Use $editaplot to work with this dataset without modifying the original.
-Explain each column's use, recommend 1–3 suitable charts, and list any units, uncertainty definitions or figure elements I need to confirm.
-After I confirm, draw through Origin and deliver editable OPJU, PNG, PDF and TIF with axis, font and visual checks.
+Use $editaplot to inspect this dataset. Do not draw yet and do not modify the source file.
+Explain each column in plain language, recommend no more than three suitable charts, and tell me what still needs confirmation.
 ~~~
 
 Chinese headers and file paths are supported. Ask for suggestions if you are unsure, or name a chart such as grouped boxes, XPS comparison, or precomputed SHAP.
 
-Deidentify medical data and reference images under your institution's rules, including burned-in identifiers. EditaPlot does not promise automatic PHI detection.
+If the headers need reorganizing, open the [matching template example](docs/gallery.en.md) or ask Codex to compare your table with it.
 
-### 3. Confirm the meaning and receive editable files
+Helper columns are created only in memory or the editable Origin workbook. The source file remains unchanged.
 
-The checklist distinguishes **drawn columns, supporting columns, retained-but-hidden columns, and unresolved roles**. Missing measurements, components or uncertainty values are not fabricated.
+### 3 / Confirm and draw: receive files you can keep editing
+
+After confirming groups, units, uncertainty meaning, and visible figure elements, continue with:
+
+~~~text
+Use the plan we just confirmed and draw it through Origin. Export an editable OPJU plus PNG, PDF, and TIF.
+Check the data mapping, axes, fonts, and exported appearance, then briefly report the output location and verification result.
+~~~
+
+I have the Skill verify the local drawing path before rendering the formal dataset. It does not invent measurements, fitted components, or uncertainty values missing from the source.
 
 By default, results stay together in a new folder beside the original dataset:
 
@@ -110,20 +125,52 @@ my-data_EditaPlot_<time>/
   …readback and verification reports
 ~~~
 
-You may keep the editable Origin window open and adjust details such as the legend. Legend overlap may be adjusted later; missing axes, wrong fonts, overlapping color scales and clipped text still require correction. See the [full quick start](docs/quickstart.en.md).
+Add “keep the editable Origin window open” if you want to continue adjusting it.
+
+**A picture alone is not completion.** A formal delivery also needs the real OPJU, other exports, and data and figure checks. See the [full guide](docs/quickstart.en.md).
 
 <details>
 <summary>How do I update an existing installation?</summary>
 
 Ask Codex to inspect local changes, preserve your files, safely update the complete repository, and rerun <code>editaplot.cmd setup</code> and <code>doctor</code>.
 
-The secure runtime uses Python 3.11/3.12 and Pillow 13, preferring 3.12 for new environments. Python 3.10 no longer carries this dependency lock. Replaced project environments and Skills are retained as backups; failed preparation never silently falls back to old dependencies. If an old plan reports <code>analysis_changed</code>, repeat understanding and confirmation and generate a new plan rather than editing its JSON.
+The secure runtime uses Python 3.11/3.12 and Pillow 13, with 3.12 preferred for new environments. Python 3.10 no longer carries this dependency lock.
+
+Replaced environments and Skills remain as backups. Failed preparation never silently falls back to old dependencies.
+
+If an old plan reports <code>analysis_changed</code>, repeat the understanding and confirmation steps. Generate a new plan instead of editing its JSON.
 
 </details>
 
+## Three common requests to copy
+
+### I am not sure what to plot
+
+~~~text
+Use $editaplot to inspect this table read-only. I want to compare differences among groups, but I have not chosen a chart.
+Recommend no more than three options, explain the required columns, and wait for my confirmation before drawing.
+~~~
+
+### I already know the chart I want
+
+~~~text
+Use $editaplot to draw grouped boxplots with the raw observations overlaid.
+First confirm the groups, Y-axis unit, meaning of each observation, and sample sizes. Do not add significance marks automatically.
+~~~
+
+### I want to follow a reference figure's style
+
+~~~text
+Use $editaplot to take color, line-width, and layout cues from this reference. Use only my table for data.
+First list what the current template can adopt, what must keep its default, and what cannot be implemented. Wait for my confirmation before drawing.
+Do not copy the reference's data, conclusions, sample names, or watermark.
+~~~
+
 ## Choose by your data
 
-I currently maintain **45 public plotting routes**. A route can accommodate different series counts, headers and supported display modes without becoming a separate template for every material. Inspect its input example before using your own data.
+I currently maintain **45 public plotting routes**. One route can accommodate different series counts, headers, and supported display modes.
+
+You do not need a separate template for every material. Inspect the input example before using your own data.
 
 | Your data | Typical views | Input and examples |
 |---|---|---|
@@ -134,17 +181,25 @@ I currently maintain **45 public plotting routes**. A route can accommodate diff
 | Relationships, flows and 3D | Scatter, bubbles, trends, radar, Sankey, directed networks and meaningful 3D curves | [Native examples and data](docs/gallery.en.md) |
 | Categorical matrices | Heatmaps and density-adaptive matrices, retaining values and order | [Input format](runtime/templates/heatmap/data_template.csv) |
 
-XPS, GSAS, SHAP, lifetime and bandgap workflows have specific scientific boundaries. The drawing layer does not silently fit, identify peaks, train models, reconstruct images or calculate spectra from raw EEG. Required upstream results and unresolved choices are stated first. Capabilities depend on the route and local checks.
+XPS, GSAS, SHAP, lifetime, and bandgap workflows have specific scientific boundaries.
 
-## Reference figures and colors
+The drawing layer does not silently fit, identify peaks, train models, reconstruct images, or calculate spectra from raw EEG. Required upstream results and unresolved choices are stated first.
 
-Choose among **template defaults, reference-guided suggestions, and exact custom values**. Your explicit choices take precedence. A reference provides compatible grammar and style, not borrowed values, conclusions, sample names or watermarks.
+Capabilities depend on the route and local checks.
 
-For example: “Raw <code>#173F5F</code>, <code>2.4 pt</code> lines, <code>38%</code> fill transparency, an <code>18 × 18 cm</code> page, and no legend.” Codex checks the route and records each field as applied, template default retained, or rejected. Unsupported parameters are never presented as applied.
+## Choose your reference style and colors
+
+Choose among **template defaults, reference-guided suggestions, and exact custom values**. Your explicit choices take precedence.
+
+A reference provides compatible grammar and style, not borrowed values, conclusions, sample names, or watermarks.
+
+For XPS, for example: “Raw <code>#173F5F</code>, <code>2.4 pt</code> lines, <code>38%</code> fill transparency, an <code>18 × 18 cm</code> page, and no legend.”
+
+Supported adjustments differ by template. Codex reports each request as applied, default retained, or rejected. It does not present an unsupported parameter as if it worked.
 
 [Chinese palette selector](docs/palette-guide.md) · [Reference and exact-style policy](skill/editaplot/references/reference-figures.md)
 
-## Environment and permissions
+## What you need to know before using it
 
 | Item | Current scope |
 |---|---|
@@ -154,20 +209,39 @@ For example: “Raw <code>#173F5F</code>, <code>2.4 pt</code> lines, <code>38%</
 | Live baseline | Python 3.12.14 + Pillow 13.0.0 + Origin 2024b (10.15.132), six representative regressions; other environments need smoke and template capability checks |
 | Installation | Complete repository and project-local dependencies; Origin is not bundled, installed or modified |
 
-**Grant only task-scoped access**: read the repository and selected data; write to the repository, the current user's <code>$HOME\.codex\skills\editaplot</code>, and the source data folder; run local commands and an EditaPlot-owned Origin instance. Network access is mainly for download, updates and locked dependencies.
+**Grant only task-scoped access.** Read the repository and selected data. Write only to the project, the current user's <code>$HOME\.codex\skills\editaplot</code>, and the data folder.
 
-Normal use needs no administrator rights, mouse control, whole-drive write access, or DCOM, registry, firewall or Origin-installation changes. For a protected output directory, permit only the current folder or explicitly select another writable destination.
+Allow local commands and a dedicated Origin instance. Network access is needed for downloads and dependency updates.
+
+Normal use needs no administrator rights, mouse control, whole-drive write access, or DCOM, registry, firewall, or Origin-installation changes.
+
+For a protected output directory, permit only the current folder or explicitly choose another writable destination.
 
 <details>
 <summary>What if Codex reports an isolated execution context or denied access?</summary>
 
-Have Codex request formal, narrowly scoped local execution for **the original exact Origin command**. Rerun only after approval; auto-review neither guarantees approval nor grants all later commands. Do not move the task to administrator PowerShell, change DCOM/registry settings, or loop retries.
+Have Codex request formal, narrowly scoped local execution for **the original exact Origin command**. Rerun only after approval.
+
+Auto-review neither guarantees approval nor grants all later commands. Do not use administrator PowerShell, change DCOM or registry settings, or loop retries.
 
 See [installation and troubleshooting](docs/installation.md) for the full procedure, queue behavior and timing diagnostics.
 
 </details>
 
-The local runtime and Origin automation do not initiate a network upload of your data. Files supplied to Codex remain governed by your Codex account, organization and retention policies. See [Privacy](PRIVACY.md).
+**Deidentify sensitive data first**, including names or IDs left in reference images. I do not claim that the Skill finds every sensitive detail.
+
+The local plotting runtime does not initiate a network upload. Files given to Codex remain governed by your account, organization, and retention policies. See [Privacy](PRIVACY.md).
+
+<details>
+<summary>Common questions: stalled runs, queues, and reference figures</summary>
+
+- **Installation or drawing appears stuck:** check the last stage instead of submitting repeatedly.
+- **How long should it take?** Once setup and confirmation are complete, 4–5 minutes is a reasonable local reference, not a deadline. If progress stops, use the [stage guide](docs/installation.md#runtime-duration).
+- **Several tasks are open:** data analysis may run concurrently. Current EditaPlot releases queue the steps that actually call Origin within one Windows session. Do not treat a queue message as failure.
+- **The result does not exactly copy a reference:** a reference is a visual brief, not a one-click cloning source. Supported styling can be adapted, while data meaning and verified rendering capabilities remain boundaries.
+- **Reporting a problem:** share the Windows and Origin versions, the last short error, and a publishable minimal example. Do not publish full experiments, medical records, credentials, or private paths.
+
+</details>
 
 ## Go deeper
 

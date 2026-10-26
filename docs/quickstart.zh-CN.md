@@ -1,6 +1,21 @@
 # 中文快速开始
 
-## 30 秒版本
+## 先跑通第一张图
+
+第一次用，我建议只记住三步：**下载完整仓库 → 让 Codex 安装和检查 → 附上表格，确认后绘图**。
+不用先学 Git，也不用自己逐条输入绘图命令。把下面这段话交给 Codex：
+
+```text
+请从 https://github.com/hang-jin/editaplot 的最新 main 下载并保留完整仓库（含 runtime），
+运行 editaplot.cmd setup 和 doctor。需要安装 Python 时先征得我的同意，不要安装或修改 Origin。
+环境检查通过后，请用 $editaplot 只读理解我提供的表格，推荐图形并让我确认，再调用 Origin 绘图。
+请把可编辑 OPJU、PNG、PDF、TIF 和检查结果保存在原始数据旁的新文件夹中。
+```
+
+如果环境已经装好，就在新对话里附上数据，从“请用 $editaplot 只读理解这份表格”开始。
+下面是具体环境要求、操作细节和常见问题；不需要把它们全部背下来。
+
+## 环境与安装细节
 
 前提：Windows 10/11 x64 实体电脑、64 位 CPython 3.11 或 3.12（新安装推荐 3.12），以及本机已安装
 Origin/OriginPro 2021–2026b 范围内的版本。当前 CPython 3.12.14 + Pillow 13.0.0 + Origin 2024b
@@ -18,6 +33,7 @@ Z=0 基线焦点，不会自动运行 KDE、找峰或求交点。热力图页面
 
 ```powershell
 .\editaplot.cmd setup
+.\editaplot.cmd doctor
 ```
 
 不要只复制 `skill/editaplot`，那样没有绘图 runtime。会 Git 的用户可以 `git clone`；不会 Git

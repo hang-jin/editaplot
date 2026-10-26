@@ -1,6 +1,23 @@
 # English quick start
 
-## The 30-second version
+## Make your first figure
+
+For a first run, I suggest three steps: **download the complete repository → let Codex install
+and check it → attach a table, confirm the meaning, and draw**. You do not need to learn Git or
+type the plotting commands yourself. Give Codex this prompt:
+
+```text
+Download and keep the complete latest main repository, including runtime, from
+https://github.com/hang-jin/editaplot. Run editaplot.cmd setup and doctor.
+Ask before installing Python; do not install or modify Origin.
+Then use $editaplot to inspect my table read-only, recommend charts, and ask me to confirm before drawing.
+Save editable OPJU, PNG, PDF, TIF and verification results in a new folder beside the original data.
+```
+
+Already installed? Start a new conversation, attach your data, and ask `$editaplot` to inspect
+it read-only. The requirements and details below are here when you need them, not a list to memorize.
+
+## Environment and installation details
 
 Requirements: a physical Windows 10/11 x64 computer, 64-bit CPython 3.11 or 3.12 (3.12 recommended
 for new installations), and a local Origin/OriginPro version in the 2021–2026b compatibility target.
@@ -23,6 +40,7 @@ Download the **complete repository** and run this from its root:
 
 ```powershell
 .\editaplot.cmd setup
+.\editaplot.cmd doctor
 ```
 
 Do not copy only `skill/editaplot`; it does not contain the rendering runtime. Git users can clone
