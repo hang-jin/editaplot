@@ -2300,6 +2300,53 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         raise ScientificPreviewError(code, str(exc)) from exc
 
     spec = preparation.plot_spec
+    if spec.plot_kind == "event_response" and (
+        spec.event_response_plan is None or spec.event_response_layout is None
+    ):
+        raise ScientificPreviewError("scientific_context_required", "Provide the interval definition and units first.")
+    if spec.plot_kind == "event_response":
+        figure, axis = _new_figure(preparation, frozen_geometry=True)
+        _style_axis(axis)
+        plan, layout = spec.event_response_plan, spec.event_response_layout
+        style = _preview_style(figure)
+        colors = dict(layout.condition_colors)
+        for condition, positions in plan.condition_rows:
+            rows = frame.iloc[list(positions)]
+            axis.fill_between(
+                rows[plan.time_column].to_numpy(dtype=float),
+                rows[plan.lower_column].to_numpy(dtype=float),
+                rows[plan.upper_column].to_numpy(dtype=float),
+                color=colors[condition], alpha=_fill_alpha(style), linewidth=0, zorder=1,
+            )
+        if plan.zero_time_visible:
+            axis.axvline(0, color="#9AA7AE", linewidth=style.frame_line_pt, zorder=2)
+        for condition, positions in plan.condition_rows:
+            rows = frame.iloc[list(positions)]
+            axis.plot(
+                rows[plan.time_column].to_numpy(dtype=float), rows[plan.mean_column].to_numpy(dtype=float),
+                color=colors[condition], linewidth=style.plot_line_pt, label=condition, zorder=3,
+            )
+        axis.set_xlim(*plan.x_range)
+        axis.set_ylim(*plan.y_range)
+        axis.xaxis.set_major_locator(MultipleLocator(spec.axis_plan.x_step))
+        axis.yaxis.set_major_locator(MultipleLocator(spec.axis_plan.y_step))
+        axis.xaxis.set_minor_locator(AutoMinorLocator(2))
+        axis.yaxis.set_minor_locator(AutoMinorLocator(2))
+        axis.set_xlabel(spec.x_title, fontsize=style.axis_title_pt, fontweight="bold")
+        figure.text(
+            layout.y_title_center[0] / 100, 1 - layout.y_title_center[1] / 100,
+            spec.y_title, rotation=90, va="center", ha="center",
+            fontsize=style.axis_title_pt, fontweight="bold",
+        )
+        for condition, left, y in layout.condition_labels:
+            figure.text(left / 100, 1 - y / 100, condition, ha="left", va="center",
+                        fontsize=style.legend_pt, color=colors[condition])
+        figure.text(
+            layout.interval_label_center[0] / 100, 1 - layout.interval_label_center[1] / 100,
+            plan.interval_label, ha="center", va="center", fontsize=style.legend_pt,
+        )
+        _apply_font_contract(figure)
+        return figure
     if spec.plot_kind == "event_raster":
         figure, axis = _new_figure(preparation, frozen_geometry=True)
         _style_axis(axis)

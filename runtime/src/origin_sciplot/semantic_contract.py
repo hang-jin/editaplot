@@ -997,6 +997,14 @@ def _validate_confirmation(
     approved_derived_item_ids: tuple[str, ...],
     resolved_ambiguities: tuple[tuple[str, str], ...],
 ) -> None:
+    missing_facts = [item.ambiguity_id for item in proposal.ambiguities
+                     if item.blocking and item.code == "scientific_context_missing"]
+    if missing_facts:
+        raise SemanticContractError(
+            "semantic_scientific_context_required",
+            "Provide the missing scientific declarations and regenerate the proposal before confirmation.",
+            ambiguity_ids=missing_facts,
+        )
     uncertain = [
         item.item_id
         for item in (*proposal.data_items, *proposal.derived_items)

@@ -12,7 +12,6 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from contextlib import suppress
-from dataclasses import asdict
 from typing import Any
 
 import numpy as np
@@ -3743,7 +3742,7 @@ def _build_origin_graph(
         **state,
         "template_id": preparation.template_id,
         "plan_digest": preparation.plan_digest,
-        "plot_spec": asdict(preparation.plot_spec),
+        "plot_spec": preparation.plot_spec.to_dict(),
         "source_sha256": preparation.source_sha256,
         "source_columns": list(preparation.source_columns),
         "source_data_modified": False,

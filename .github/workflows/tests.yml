@@ -42,6 +42,7 @@ jobs:
           runtime/src/origin_sciplot/event_raster.py
           runtime/src/origin_sciplot/event_raster_layout.py
           runtime/src/origin_sciplot/event_response.py
+          runtime/src/origin_sciplot/event_response_layout.py
           runtime/src/origin_sciplot/scientific_context.py
           runtime/src/origin_sciplot/reference_figure.py
           runtime/src/origin_sciplot/flim_phasor.py
@@ -64,6 +65,7 @@ jobs:
           runtime/src/origin_sciplot/origin_backend/flim_phasor_renderer.py
           runtime/src/origin_sciplot/origin_backend/heatmap_labels.py
           runtime/src/origin_sciplot/origin_backend/event_raster_renderer.py
+          runtime/src/origin_sciplot/origin_backend/event_response_renderer.py
           runtime/src/origin_sciplot/origin_backend/research_grid_renderer.py
           runtime/src/origin_sciplot/origin_backend/time_frequency_renderer.py
           runtime/src/origin_sciplot/origin_backend/signal_stack_renderer.py

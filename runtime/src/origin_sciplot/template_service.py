@@ -266,6 +266,16 @@ class ScientificTemplateService:
     def _summary(self, preparation: ScientificPreparation) -> TemplateSummary:
         spec = preparation.plot_spec
         assignments = dict(preparation.assignments)
+        if self.manifest.id == "event_response":
+            context = dict(preparation.scientific_context)
+            return TemplateSummary(
+                heading=f"{self.manifest.name} · 上游均值与区间",
+                facts=tuple((name, str(context.get(name, "待明确")))
+                            for name in ("interval_label", "time_unit", "response_unit")),
+                roles=tuple((role, column) for column, role in preparation.assignments),
+                components=spec.event_response_plan.condition_order if spec.event_response_plan else (),
+                warnings=preparation.warnings,
+            )
         if self.manifest.id == "xrd":
 
             def assigned(role: str) -> str:
@@ -526,16 +536,19 @@ class ScientificTemplateService:
         *,
         assignments: dict[str, str],
         energy_kind: str,
+        scientific_context: object = None,
     ) -> PreparedTemplate:
         if set(assignments) != set(prepared.source_columns):
             raise TemplateServiceError(
                 "mapping_incomplete", "Every source column must be assigned a role or ignored."
             )
-        mapping = ScientificColumnMapping(
-            assignments=tuple((column, assignments[column]) for column in prepared.source_columns),
-            plot_mode=energy_kind or None,
-        )
         try:
+            mapping = ScientificColumnMapping(
+                assignments=tuple((column, assignments[column]) for column in prepared.source_columns),
+                plot_mode=energy_kind or None,
+                scientific_context=(getattr(prepared.payload, "scientific_context", ())
+                                    if scientific_context is None else scientific_context),
+            )
             return self._wrap(
                 prepare_scientific(
                     prepared.source_path,
@@ -543,10 +556,16 @@ class ScientificTemplateService:
                     column_mapping=mapping,
                 )
             )
-        except ScientificWorkflowError as exc:
-            raise TemplateServiceError(exc.code, str(exc)) from exc
+        except ValueError as exc:
+            # Context validation and source validation share the public service envelope.
+            code = getattr(exc, "code", "scientific_context_invalid")
+            raise TemplateServiceError(code, str(exc)) from exc
 
     def render_preview(self, prepared: PreparedTemplate) -> bytes:
+        if getattr(self.manifest, "status", "implemented") != "implemented":
+            raise TemplateServiceError(
+                "template_not_implemented", "This route is read-only until native validation.",
+            )
         if prepared.requires_confirmation:
             raise TemplateConfirmationRequired()
         try:
@@ -562,6 +581,7 @@ class ScientificTemplateService:
         return ScientificColumnMapping(
             assignments=preparation.assignments,
             plot_mode=preparation.plot_spec.plot_mode,
+            scientific_context=preparation.scientific_context,
         ).to_dict()
 
 

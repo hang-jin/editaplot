@@ -394,7 +394,7 @@ def _build_graph(
             "trajectory": OFFICIAL_TRAJECTORY_REFERENCE,
         },
         "commands": commands,
-        "plot_spec": asdict(spec),
+        "plot_spec": spec.to_dict(),
         "source_sha256": preparation.source_sha256,
         "input_copy_sha256_after_render": input_copy_hash,
         "source_columns": list(preparation.source_columns),

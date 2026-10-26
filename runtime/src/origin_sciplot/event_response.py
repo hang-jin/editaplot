@@ -36,6 +36,16 @@ class EventResponsePlan:
     axis_include_zero: bool
 
 
+def validate_event_response_titles(plan: EventResponsePlan, x_title: str, y_title: str) -> None:
+    """Cosmetic wording cannot relabel a supplied physical unit without conversion."""
+    for title, unit in ((x_title, plan.time_unit), (y_title, plan.response_unit)):
+        if not isinstance(title, str) or not any(
+            title.endswith(f"{opening}{unit}{closing}")
+            for opening, closing in (("(", ")"), ("[", "]"), ("（", "）"), ("［", "］"))
+        ):
+            raise ValueError("Event-response axis titles must retain their exact declared unit suffix.")
+
+
 def _finite_values(frame: pd.DataFrame, column: str) -> np.ndarray:
     series = frame[column]
     if any(isinstance(value, (bool, np.bool_)) for value in series):

@@ -1742,7 +1742,7 @@ def _build_origin_graph(
         **geometry,
         "template_id": preparation.template_id,
         "plan_digest": preparation.plan_digest,
-        "plot_spec": asdict(preparation.plot_spec),
+        "plot_spec": preparation.plot_spec.to_dict(),
         "source_sha256": preparation.source_sha256,
         "source_columns": list(preparation.source_columns),
         "origin_helper_columns": list(table.helper_columns),
