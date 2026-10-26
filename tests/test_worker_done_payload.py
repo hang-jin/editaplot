@@ -182,7 +182,7 @@ def test_manifest_stage_contains_only_the_registry_lookup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     events: list[tuple[str, str] | str] = []
-    manifest = SimpleNamespace(name="Bar")
+    manifest = SimpleNamespace(name="Bar", status="implemented")
 
     class FakeRegistry:
         def get(self, template_id: str) -> SimpleNamespace:

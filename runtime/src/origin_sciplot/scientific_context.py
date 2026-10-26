@@ -92,6 +92,19 @@ def _validate_context_value(key: str, value: object) -> str | int | float:
     return value
 
 
+def freeze_scientific_context(value: object = None) -> tuple[tuple[str, str | int | float], ...]:
+    """Freeze supported scalar declarations before the route discriminator is available."""
+    pairs = _context_pairs(value)
+    known_keys = frozenset().union(*_ALLOWED_KEYS.values())
+    unknown = {key for key, _ in pairs} - known_keys
+    if unknown:
+        raise ScientificContextError(
+            "unknown_scientific_context_keys", "Scientific context contains unsupported keys.",
+            unknown_keys=sorted(unknown),
+        )
+    return tuple(sorted((key, _validate_context_value(key, item)) for key, item in pairs))
+
+
 def normalize_scientific_context(
     template_id: str,
     value: object = None,

@@ -53,6 +53,7 @@
     "tools/verify_public_release.py"
   ],
   "allow_exact": [
+    "tests/fixtures/legacy_bar_plot_spec.json",
     ".gitattributes",
     ".gitignore",
     ".github/CODEOWNERS",

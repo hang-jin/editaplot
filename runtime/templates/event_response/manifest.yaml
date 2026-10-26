@@ -1,0 +1,23 @@
+id: event_response
+name: 已提供事件锁定均值与区间（规划中）
+category: research/signals
+version: 0.1.0
+description: 数据合同与科学声明已接入；原生渲染验收完成前不提供正式绘图
+requires_origin: true
+runner: runner.py
+schema: schema.json
+example: example_standard.csv
+outputs: [opju, png, pdf, tif]
+status: planned
+visibility: public
+workflow: scientific_table
+family: research_imaging
+data_guide:
+  headline_zh: 此路线仍在开发；需要上游Time、Condition、Mean、Lower、Upper及明确区间定义。
+  required_columns: [Time (s), Condition, Mean (uV), Lower (uV), Upper (uV)]
+  optional_columns: []
+  accepted_layouts: [每行一个已提供条件下的时间、均值和上下界]
+  notes_zh:
+    - 不计算ERP、均值、SEM或CI，不滤波、归一化、插值或重采样。
+    - interval_label必须另行明确；单位可来自清楚的表头或科学声明，不补入原文件。
+    - 未通过原生Origin四格式、对象反读、独立重开与视觉检查前不计入已验证模板。

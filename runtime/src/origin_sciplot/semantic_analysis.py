@@ -158,6 +158,8 @@ def _scientific_disposition_for_role(
             return disposition
     if template_id == "xrd" and role == "support":
         return DataDisposition.SUPPORT_ONLY
+    if template_id == "event_response" and role == "condition":
+        return DataDisposition.RENDER_PRIMARY
     return _disposition_for_role(role, requires_confirmation=False)
 
 
@@ -179,7 +181,18 @@ def _ambiguities(prepared: Any, item_ids: dict[str, str]) -> tuple[SemanticAmbig
     if not bool(getattr(prepared, "requires_confirmation", False)):
         return ()
     reasons = tuple(str(item) for item in getattr(prepared, "confirmation_reasons", ()))
+    if getattr(prepared, "template_id", None) == "event_response":
+        reasons = tuple(getattr(prepared.payload, "confirmation_reasons", reasons))
+    context_reasons = tuple(reason for reason in reasons if reason.startswith("scientific_context_missing:"))
+    context_questions = tuple(SemanticAmbiguity(
+        ambiguity_id=f"scientific_context_{reason.split(':', 1)[1]}", code="scientific_context_missing",
+        question_zh=f"请明确 {reason.split(':', 1)[1]}（区间定义或原始单位），不计算或猜测。",
+        item_ids=tuple(item_ids.values()), options=("provide_scientific_context",), blocking=True,
+    ) for reason in context_reasons)
+    if context_reasons and len(context_reasons) == len(reasons):
+        return context_questions
     return (
+        *context_questions,
         SemanticAmbiguity(
             ambiguity_id="column_role_confirmation",
             code="column_roles_need_confirmation",
@@ -224,6 +237,11 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
     requires_confirmation = bool(prepared.requires_confirmation)
     spec = payload.plot_spec
     template_id = str(prepared.template_id)
+    reasons = tuple(getattr(payload, "confirmation_reasons", ()))
+    if template_id == "event_response" and reasons and all(
+        reason.startswith("scientific_context_missing:") for reason in reasons
+    ):
+        requires_confirmation = False  # Known column roles are not missing scientific declarations.
     plot_kind = str(getattr(spec, "plot_kind", ""))
     is_xrd_rietveld = template_id == "xrd" and plot_kind == "rietveld_refinement"
     item_ids = {
@@ -325,6 +343,27 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
             elements.append(FigureElement(
                 element_id=f"event_condition_legend_{index:02d}", element_kind="legend",
                 data_item_ids=(item_ids[raster.condition_column],), required=True, legend_label=condition,
+            ))
+
+    if plot_kind == "event_response" and spec.event_response_plan is not None:
+        response = spec.event_response_plan
+        for index, condition in enumerate(response.condition_order):
+            common = (item_ids[response.time_column], item_ids[response.condition_column])
+            elements.append(FigureElement(
+                element_id=f"response_mean_{index:02d}", element_kind="line",
+                data_item_ids=(*common, item_ids[response.mean_column]), required=True,
+                axis="supplied_response", legend_label=f"{condition}: Supplied mean",
+            ))
+            elements.append(FigureElement(
+                element_id=f"response_interval_{index:02d}", element_kind="uncertainty_band",
+                data_item_ids=(*common, item_ids[response.lower_column], item_ids[response.upper_column]),
+                required=True, axis="supplied_response", legend_label=f"{condition}: {response.interval_label}",
+            ))
+        if response.zero_time_visible:
+            elements.append(FigureElement(
+                element_id="response_event_origin", element_kind="reference_line",
+                data_item_ids=(item_ids[response.time_column],), required=True,
+                axis="declared_event_time_origin", legend_label="Event time 0 / 显示参考，非测量点",
             ))
 
     if plot_kind == "signal_stack":
@@ -647,7 +686,8 @@ def _scientific_proposal(prepared: Any) -> SemanticProposal:
 
     scientific_series = (
         ()
-        if plot_kind in {"circular_network", "density_ridgeline3d", "shap_summary", "signal_stack", "event_raster"}
+        if plot_kind in {"circular_network", "density_ridgeline3d", "shap_summary", "signal_stack", "event_raster",
+                         "event_response"}
         else spec.series
     )
     for index, series in enumerate(scientific_series):

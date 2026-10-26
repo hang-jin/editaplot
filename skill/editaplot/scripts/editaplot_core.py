@@ -1490,9 +1490,27 @@ def _prepare_with_mapping(service: Any, path: str | Path, mapping: dict[str, Any
     from origin_sciplot.template_service import ScientificTemplateService
 
     if isinstance(service, ScientificTemplateService):
-        return service.prepare(path, column_mapping=ScientificColumnMapping(
-            assignments=tuple(assignments.items()), plot_mode=context or None,
-        ))
+        from origin_sciplot.scientific_context import ScientificContextError
+
+        try:
+            mode = context or None
+            if service.manifest.id == "event_response":
+                unknown = set(mapping) - {"assignments", "plot_mode", "energy_kind", "scientific_context"}
+                if unknown:
+                    raise EditaPlotError(
+                        "mapping_invalid", "The event-response mapping has unsupported fields.",
+                    )
+                mode = mapping.get("plot_mode", mapping.get("energy_kind"))
+            return service.prepare(path, column_mapping=ScientificColumnMapping(
+                assignments=tuple(assignments.items()), plot_mode=mode,
+                scientific_context=mapping.get("scientific_context"),
+            ))
+        except ScientificContextError as exc:
+            raise EditaPlotError(exc.code, str(exc)) from exc
+    if mapping.get("scientific_context"):
+        raise EditaPlotError(
+            "unsupported_scientific_context", "This template does not support scientific context.",
+        )
     prepared = service.prepare(path)
     return service.confirm_mapping(prepared, assignments=assignments, energy_kind=context)
 
@@ -1617,11 +1635,14 @@ def understand_data(
     blocking_ambiguities = [
         item["ambiguity_id"] for item in proposal_payload["ambiguities"] if item["blocking"]
     ]
-    can_confirm = not uncertain_items
+    missing_context = any(item["code"] == "scientific_context_missing"
+                          for item in proposal_payload["ambiguities"])
+    can_confirm = not uncertain_items and not missing_context
     return {
         "schema_version": "1.0",
         "ok": True,
-        "state": ("awaiting_semantic_confirmation" if can_confirm else "awaiting_column_meaning_correction"),
+        "state": ("awaiting_scientific_context" if missing_context else
+                  "awaiting_semantic_confirmation" if can_confirm else "awaiting_column_meaning_correction"),
         "source": {
             "file_name": source_path.name,
             "sha256": proposal.source_sha256,
@@ -1645,6 +1666,8 @@ def understand_data(
             "derived_items": proposal_payload["derived_items"],
             "figure_elements": proposal_payload["figure_elements"],
             "ambiguities": proposal_payload["ambiguities"],
+            **({"scientific_context": proposal_payload["scientific_context"]}
+               if "scientific_context" in proposal_payload else {}),
         },
         "confirmation_gate": {
             "required": True,
@@ -1655,7 +1678,11 @@ def understand_data(
                 "请核对：数据类型、每列用途、需要画出的元素、只用于计算/验证的列，以及明确不画的列。"
                 "确认无误后，再把下面的确认对象交给 plan。"
                 if can_confirm
-                else "当前仍有不确定列；请先说明列含义或提供修正后的列映射，再重新生成元素清单。"
+                else "请先补充区间定义或单位等科学声明，再重新检查；已识别的列用途不会因此改变。"
+                if missing_context else (
+                    "当前仍有不确定列；请先说明列含义或提供修正后的列映射，"
+                    "再重新生成元素清单。"
+                )
             ),
             "confirmation_payload_template": _semantic_confirmation_template(proposal),
         },
@@ -2134,6 +2161,16 @@ def build_plan(
     except TemplateServiceError as exc:
         raise EditaPlotError(exc.code, str(exc)) from exc
 
+    if getattr(service.manifest, "status", "implemented") != "implemented":
+        try:
+            # Existing planned profiles may freeze a non-renderable plan. A new
+            # route without a capability contract must stop with a public error.
+            get_template_capability_profile(template_id)
+        except KeyError as exc:
+            raise EditaPlotError(
+                "template_not_implemented",
+                "This planned route has no formal Origin capability contract.",
+            ) from exc
     semantic_proposal = _proposal_for_prepared(
         prepared,
         template_id=template_id,

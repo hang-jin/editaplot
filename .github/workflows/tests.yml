@@ -42,6 +42,7 @@ jobs:
           runtime/src/origin_sciplot/event_raster.py
           runtime/src/origin_sciplot/event_raster_layout.py
           runtime/src/origin_sciplot/event_response.py
+          runtime/src/origin_sciplot/event_response_layout.py
           runtime/src/origin_sciplot/scientific_context.py
           runtime/src/origin_sciplot/reference_figure.py
           runtime/src/origin_sciplot/flim_phasor.py

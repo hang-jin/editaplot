@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "source_policy": "curated EditaPlot runtime; caches, tests, builds, outputs, binaries, and local paths excluded",
-  "file_count": 473,
+  "file_count": 475,
   "files": [
     {
       "path": "LICENSE",
@@ -69,6 +69,11 @@
       "sha256": "76a332afecdf746f4100ef2739c1220a6cfdd07c346feca90e59e1eaa071c81e"
     },
     {
+      "path": "src/origin_sciplot/event_response_layout.py",
+      "size_bytes": 3943,
+      "sha256": "95943565b253dba9662c14264e71cca337512b8ffe79ac8b54ae8af2cb19bc8f"
+    },
+    {
       "path": "src/origin_sciplot/flim_phasor.py",
       "size_bytes": 5870,
       "sha256": "064be821d9342459f06e72f0166b79e5d034250c35590da613c531442bcb905e"
@@ -105,13 +110,13 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/categorical_renderer.py",
-      "size_bytes": 67823,
-      "sha256": "1c8d0be0b303241141fb51f44195731309d660cce63cf8e517feefb46fa8deb5"
+      "size_bytes": 67817,
+      "sha256": "9ab06b219a184b42e19c2c368dc735a7c9246f6515076e573a7ac06886400580"
     },
     {
       "path": "src/origin_sciplot/origin_backend/density_ridgeline3d_renderer.py",
-      "size_bytes": 43207,
-      "sha256": "3450c568dd6e46d3d827f0cbe07346e892310573e11c544d9d9b6e762eba5f70"
+      "size_bytes": 43209,
+      "sha256": "0fde628d8e644f33f3309b1c0170400b0f68ea74d40b90c2eb48e25d9b37e6a1"
     },
     {
       "path": "src/origin_sciplot/origin_backend/event_raster_renderer.py",
@@ -120,8 +125,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/evidence_renderer.py",
-      "size_bytes": 151013,
-      "sha256": "8eb1b6e3d68477ad7d2565caef77120f793c0d73fab6a1431099b603b27b6eae"
+      "size_bytes": 150984,
+      "sha256": "c4ba21265a891b8393b1399bc6da7adbac052905b8575f668e2ad551ec548992"
     },
     {
       "path": "src/origin_sciplot/origin_backend/execution_context.py",
@@ -150,8 +155,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/network_renderer.py",
-      "size_bytes": 38196,
-      "sha256": "9b6bf313e8ad83678974770c3f0300736d9a191e0e408c51a4107b01887f1db5"
+      "size_bytes": 38198,
+      "sha256": "ebea8d02efba15958acd53cc912bb7949fc7ae390cb729fd3de7c6b04fcb761f"
     },
     {
       "path": "src/origin_sciplot/origin_backend/research_grid_renderer.py",
@@ -165,8 +170,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/scientific_renderer.py",
-      "size_bytes": 74075,
-      "sha256": "4f0a9671d0c4ca793b6f8c9a512bcebf78cfa2d4a0bf001202fc05f637ad05cb"
+      "size_bytes": 74077,
+      "sha256": "d415c64975769f32f7757d4828e96fabb69307adfe38c54a839084312948d860"
     },
     {
       "path": "src/origin_sciplot/origin_backend/session.py",
@@ -200,8 +205,8 @@
     },
     {
       "path": "src/origin_sciplot/origin_backend/trajectory3d_renderer.py",
-      "size_bytes": 19498,
-      "sha256": "1ae662d2ca320e29e9ab34fbcd8b0a7c2ef8ecea754986e88e51190780e1c141"
+      "size_bytes": 19500,
+      "sha256": "34d0adc9a2ea143f8d0e9a8b9fb254ab3febad79bd2b50c471b8ca41d70667f1"
     },
     {
       "path": "src/origin_sciplot/origin_backend/verify_utils.py",
@@ -235,8 +240,8 @@
     },
     {
       "path": "src/origin_sciplot/reference_adaptation.py",
-      "size_bytes": 29871,
-      "sha256": "5d48e471c9da9143db55ff8f4359db3c97c975778968a998c48433a01a6db069"
+      "size_bytes": 30001,
+      "sha256": "958aca8a21274404b961f1a04bdc297c0d10cd1add6fa8dc72a1fea2c6e0dee3"
     },
     {
       "path": "src/origin_sciplot/reference_figure.py",
@@ -265,13 +270,13 @@
     },
     {
       "path": "src/origin_sciplot/scientific_context.py",
-      "size_bytes": 4862,
-      "sha256": "9173f78f6276cc4fdbff48d6d584125b714964fbd826927ef17b6e1a14c7461d"
+      "size_bytes": 5494,
+      "sha256": "61a072788a372061dafc5fdf881783ffb323a58ff2c81b6ae697c25bf0055d72"
     },
     {
       "path": "src/origin_sciplot/scientific_preview.py",
-      "size_bytes": 98467,
-      "sha256": "5e896cc29b2de0f3bf88af98318efcce56db9f353c0bf0153a3a0ff585a55757"
+      "size_bytes": 98920,
+      "sha256": "038348179ac3d2fd149303b40f3926cf4ce2c1be4868ae0fcbebce39fb2b15e7"
     },
     {
       "path": "src/origin_sciplot/scientific_visual.py",
@@ -280,13 +285,13 @@
     },
     {
       "path": "src/origin_sciplot/scientific_workflow.py",
-      "size_bytes": 245253,
-      "sha256": "104341e7f5da1bf8527cb8d8d4bb6a220b6f15ed113a611f36abe7043b5daa70"
+      "size_bytes": 253305,
+      "sha256": "d10ce3996db0ea2938f4cafb959a03f9bda17f5d7d5f0005b6d35a60f3136268"
     },
     {
       "path": "src/origin_sciplot/semantic_analysis.py",
-      "size_bytes": 34812,
-      "sha256": "081b91127ae5dcae189126e591d58cdd0b281797f825c220199de23909ede1f4"
+      "size_bytes": 37408,
+      "sha256": "f7476bb2e5b9f96d3bcac242607134d329ba504717193e913f1cc03eb1517a7c"
     },
     {
       "path": "src/origin_sciplot/semantic_contract.py",
@@ -335,8 +340,8 @@
     },
     {
       "path": "src/origin_sciplot/template_service.py",
-      "size_bytes": 27567,
-      "sha256": "47c95e55d2373aecdb5416b283319fec651fa3bc2e7c889c49b8e7866e75ec38"
+      "size_bytes": 28875,
+      "sha256": "816edcd68bf96d865db8bcb09123d80f971f1f2c2172bb26f9dd7787cb135233"
     },
     {
       "path": "src/origin_sciplot/time_frequency.py",
@@ -380,8 +385,8 @@
     },
     {
       "path": "src/origin_sciplot/workers/run_template_worker.py",
-      "size_bytes": 43491,
-      "sha256": "ca9e9c3a1f4b90e83d787f4489fcd8ffa4df1eb510ec3164273bab14388f90d2"
+      "size_bytes": 44071,
+      "sha256": "f84f7d08079cae6c365c4cd2e3edb323182fcfaae065717f663d3be3d73b5223"
     },
     {
       "path": "src/origin_sciplot/xps_adaptive.py",
@@ -952,6 +957,11 @@
       "path": "templates/event_raster/visual_contract.md",
       "size_bytes": 4029,
       "sha256": "286a4a96181c244d0a94b34fa14d2d1e9c05d20c2ad5136604b2472bde9f365b"
+    },
+    {
+      "path": "templates/event_response/manifest.yaml",
+      "size_bytes": 1060,
+      "sha256": "f83a406819137b7d0df2aa6605266cbfdafdd526d5ff2bbe4d7c61b2bff80ca4"
     },
     {
       "path": "templates/flim_phasor/data_contract.md",

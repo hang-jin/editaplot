@@ -70,6 +70,30 @@ MAX_SUMMARY_TEXT_CHARS = 160
 MAX_SUMMARY_ITEMS = 16
 
 
+def parse_scientific_mapping_json(raw: str, *, template_id: str | None = None) -> ScientificColumnMapping:
+    """Decode mapping declarations before any output directory or COM operation."""
+    try:
+        payload = json.loads(raw)
+        assignments = payload["assignments"]
+        if not isinstance(assignments, dict):
+            raise TypeError("assignments must be an object")
+        if template_id == "event_response":
+            if set(payload) - {"assignments", "plot_mode", "scientific_context"}:
+                raise ValueError("Unsupported mapping fields")
+            mode = payload.get("plot_mode")
+            if mode is not None and (not isinstance(mode, str) or not mode):
+                raise ValueError("Invalid mapping mode")
+        return ScientificColumnMapping(
+            assignments=tuple((str(column), str(role)) for column, role in assignments.items()),
+            plot_mode=str(payload["plot_mode"]) if payload.get("plot_mode") else None,
+            scientific_context=payload.get("scientific_context"),
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise ScientificWorkflowError(
+            "mapping_json_invalid", "The confirmed column mapping is invalid.",
+        ) from exc
+
+
 def _load_runner(runner_path: Path):
     spec = importlib.util.spec_from_file_location("origin_sciplot_template_runner", runner_path)
     if spec is None or spec.loader is None:
@@ -86,6 +110,8 @@ def _load_template_manifest(template_id: str) -> TemplateManifest:
 
     proto.progress("load_template", "running", "正在读取模板 manifest")
     manifest = TemplateRegistry().get(template_id)
+    if manifest.status != "implemented":
+        raise ScientificWorkflowError("template_not_implemented", "This template is planned, not renderable.")
     proto.progress("load_template", "success", f"已读取模板：{manifest.name}")
     return manifest
 
@@ -710,26 +736,9 @@ def main(argv: list[str] | None = None) -> int:
                     "mapping_json_invalid", "The confirmed column mapping is invalid."
                 ) from exc
         elif args.column_mapping_json:
-            try:
-                mapping_payload = json.loads(args.column_mapping_json)
-                raw_assignments = mapping_payload["assignments"]
-                if not isinstance(raw_assignments, dict):
-                    raise TypeError("assignments must be an object")
-                scientific_mapping = ScientificColumnMapping(
-                    assignments=tuple(
-                        (str(column), str(role))
-                        for column, role in raw_assignments.items()
-                    ),
-                    plot_mode=(
-                        str(mapping_payload["plot_mode"])
-                        if mapping_payload.get("plot_mode")
-                        else None
-                    ),
-                )
-            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-                raise ScientificWorkflowError(
-                    "mapping_json_invalid", "The confirmed column mapping is invalid."
-                ) from exc
+            scientific_mapping = parse_scientific_mapping_json(
+                args.column_mapping_json, template_id=args.template_id,
+            )
         if args.template_id in {"auto", "xps"}:
             if scientific_text_overrides:
                 raise ScientificWorkflowError(

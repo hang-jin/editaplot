@@ -195,7 +195,7 @@ def _network_layout_summary(
 
 
 def _compact_plot_spec(preparation: ScientificPreparation) -> dict[str, Any]:
-    payload = asdict(preparation.plot_spec)
+    payload = preparation.plot_spec.to_dict()
     layout = preparation.plot_spec.network_layout
     payload["network_layout"] = (
         _network_layout_summary(layout)

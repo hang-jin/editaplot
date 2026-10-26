@@ -2300,6 +2300,14 @@ def _build_scientific_preview_figure(preparation: ScientificPreparation) -> Figu
         raise ScientificPreviewError(code, str(exc)) from exc
 
     spec = preparation.plot_spec
+    if spec.plot_kind == "event_response" and (
+        spec.event_response_plan is None or spec.event_response_layout is None
+    ):
+        raise ScientificPreviewError("scientific_context_required", "Provide the interval definition and units first.")
+    if spec.plot_kind == "event_response":
+        raise ScientificPreviewError(
+            "event_response_preview_unavailable", "The dedicated interval preview is not implemented yet.",
+        )
     if spec.plot_kind == "event_raster":
         figure, axis = _new_figure(preparation, frozen_geometry=True)
         _style_axis(axis)

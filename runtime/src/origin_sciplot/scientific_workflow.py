@@ -28,9 +28,14 @@ from .circular_network_layout import (
 from .data_loader import DataLoadError, LoadedTable, load_table
 from .event_raster import EventRasterPlan, build_event_raster_plan, validate_event_time_title
 from .event_raster_layout import EventRasterLayout, build_event_raster_layout
+from .event_response import EventResponsePlan, build_event_response_plan
+from .event_response_layout import EventResponseLayout, build_event_response_layout
 from .flim_phasor import PhasorPlan, build_phasor_plan
 from .heatmap_layout import HeatmapLayoutPlan, heatmap_cell_labels_enabled, resolve_heatmap_layout
 from .palette_catalog import get_palette
+from .scientific_context import (
+    ScientificContextError, freeze_scientific_context, normalize_scientific_context,
+)
 from .scientific_visual import (
     AdaptiveOriginStyle, resolve_adaptive_style, resolve_signal_stack_style, resolve_time_frequency_style,
 )
@@ -87,6 +92,7 @@ ScientificTemplateId = Literal[
     "time_frequency",
     "signal_stack",
     "event_raster",
+    "event_response",
     "grouped_box",
     "dsc",
     "nmr",
@@ -138,6 +144,7 @@ SUPPORTED_SCIENTIFIC_TEMPLATE_IDS = frozenset(
         "time_frequency",
         "signal_stack",
         "event_raster",
+        "event_response",
         "grouped_box",
         "dsc",
         "nmr",
@@ -187,9 +194,16 @@ class ScientificColumnMapping:
 
     assignments: tuple[tuple[str, str], ...]
     plot_mode: str | None = None
+    scientific_context: tuple[tuple[str, str | int | float], ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "scientific_context", freeze_scientific_context(self.scientific_context))
 
     def to_dict(self) -> dict[str, object]:
-        return {"assignments": dict(self.assignments), "plot_mode": self.plot_mode}
+        payload = {"assignments": dict(self.assignments), "plot_mode": self.plot_mode}
+        if self.scientific_context:
+            payload["scientific_context"] = dict(self.scientific_context)
+        return payload
 
 
 @dataclass(frozen=True)
@@ -298,6 +312,16 @@ class ScientificPlotSpec:
     event_raster_layout: EventRasterLayout | None = None
     color_scale_hex: tuple[str, ...] = ()
     heatmap_layout: HeatmapLayoutPlan | None = None
+    event_response_plan: EventResponsePlan | None = None
+    event_response_layout: EventResponseLayout | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        """Keep legacy report fields intact, omitting only absent new response fields."""
+        payload = asdict(self)
+        for name in ("event_response_plan", "event_response_layout"):
+            if getattr(self, name) is None:
+                payload.pop(name)
+        return payload
 
 
 @dataclass(frozen=True)
@@ -319,9 +343,14 @@ class ScientificPreparation:
     warnings: tuple[str, ...]
     mapping_confirmed: bool
     plan_digest: str
+    scientific_context: tuple[tuple[str, str | int | float], ...] = ()
 
     def to_dict(self) -> dict[str, object]:
-        return asdict(self)
+        payload = asdict(self)
+        if not self.scientific_context:
+            payload.pop("scientific_context")
+        payload["plot_spec"] = self.plot_spec.to_dict()
+        return payload
 
 
 def _plot_digest_payload(spec: ScientificPlotSpec) -> dict:
@@ -344,6 +373,10 @@ def _plot_digest_payload(spec: ScientificPlotSpec) -> dict:
         payload.pop("color_scale_hex")
     if spec.heatmap_layout is None:
         payload.pop("heatmap_layout")
+    if spec.event_response_plan is None:
+        payload.pop("event_response_plan")
+    if spec.event_response_layout is None:
+        payload.pop("event_response_layout")
     return payload
 
 
@@ -359,6 +392,8 @@ def _scientific_plan_digest(
         "plot_spec": _plot_digest_payload(plot_spec),
         "mapping_confirmed": preparation.mapping_confirmed,
     }
+    if preparation.scientific_context:
+        digest_payload["scientific_context"] = dict(preparation.scientific_context)
     return hashlib.sha256(
         json.dumps(digest_payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
     ).hexdigest()
@@ -1267,6 +1302,10 @@ def role_label(role: str) -> str:
 
 
 def role_options(template_id: str) -> tuple[tuple[str, str, bool], ...]:
+    if template_id == "event_response":
+        return (("x", "X / 横坐标", True), ("condition", "Condition / 条件", True),
+                ("mean", "Mean / 上游均值", True), ("lower", "Lower / 上游下界", True),
+                ("upper", "Upper / 上游上界", True), ("ignored", "Ignored / 不绘制", False))
     """Return role key, bilingual label, and uniqueness for the mapping UI."""
     if template_id == "xrd":
         keys = (
@@ -3191,6 +3230,13 @@ def _validate_assignment_shape(
             mode = "events_only"
         if mode != "events_only":
             raise ScientificWorkflowError("mapping_plot_mode", "Select events_only mode; event detection and PSTH are not performed.")
+    if template_id == "event_response":
+        if mapping.plot_mode is not None and (not isinstance(mapping.plot_mode, str) or not mapping.plot_mode):
+            raise ScientificWorkflowError("mapping_plot_mode", "The event-response mode must be a string or null.")
+        if mode == "default":
+            mode = "supplied_mean_interval"
+        if mode != "supplied_mean_interval":
+            raise ScientificWorkflowError("mapping_plot_mode", "Select supplied_mean_interval; no ERP is computed.")
     if template_id == "diagnostic_curve" and mode not in {"roc", "pr"}:
         raise ScientificWorkflowError("mapping_plot_mode", "Select ROC or Precision-Recall mode.")
     if template_id == "pl" and mode not in {"steady_state", "trpl"}:
@@ -6093,9 +6139,13 @@ def _eis_axis_title(symbol: str, source_column: str) -> str:
     return f"{symbol} ({formatted})" if unit else symbol
 
 
-def _explicit_header_unit(column: str) -> str:
+def _header_unit_if_present(column: str) -> str:
     match = re.search(r"(?:\(([^()]+)\)|\[([^\[\]]+)\]|（([^（）]+)）|［([^［］]+)］)\s*$", column)
-    unit = next((part.strip() for part in match.groups() if part), "") if match else ""
+    return next((part.strip() for part in match.groups() if part), "") if match else ""
+
+
+def _explicit_header_unit(column: str) -> str:
+    unit = _header_unit_if_present(column)
     if not unit or len(column) > 80:
         raise ScientificWorkflowError("research_unit_required", f"{column}: provide an explicit unit in parentheses or brackets.")
     return unit
@@ -6309,6 +6359,66 @@ def _build_phasor_spec(
     ), plan.warnings
 
 
+def _resolve_event_response_context(assignments, context):
+    """Resolve explicit header units without converting values or guessing interval meaning."""
+    declarations = dict(context)
+    time_column = _require_one(assignments, "x")
+    mean_column = _require_one(assignments, "mean")
+    bounds = [_require_one(assignments, role) for role in ("lower", "upper")]
+    for key, column in (("time_unit", time_column), ("response_unit", mean_column)):
+        header_unit = _header_unit_if_present(column)
+        if header_unit:
+            if key in declarations and declarations[key] != header_unit:
+                raise ScientificWorkflowError(
+                    "scientific_context_unit_conflict", f"{column}: declared unit conflicts with its source header.",
+                )
+            declarations[key] = header_unit
+    declared_response = declarations.get("response_unit")
+    bound_units = {_header_unit_if_present(column) for column in bounds} - {""}
+    if len(bound_units) > 1 or (declared_response and bound_units - {declared_response}):
+        raise ScientificWorkflowError(
+            "scientific_context_unit_conflict", "Mean, Lower and Upper have conflicting response units.",
+        )
+    return normalize_scientific_context("event_response", declarations)
+
+
+def _build_event_response_spec(frame, assignments, context):
+    columns = {role: _require_one(assignments, role) for role in ("x", "condition", "mean", "lower", "upper")}
+    declarations = dict(context)
+    x_title = f"Time ({declarations['time_unit']})" if "time_unit" in declarations else "Time"
+    y_title = f"Response ({declarations['response_unit']})" if "response_unit" in declarations else "Response"
+    plan = layout = None
+    # A draft has no numerical axis contract or physical layout. Consumers must
+    # not preview/render it until all scientific declarations have been supplied.
+    axis = ScientificAxisPlan(None, None, None, None, None, None)
+    display = ScientificDisplayPlan(4.0, 0.8, 0.7)
+    if all(key in declarations for key in ("interval_label", "time_unit", "response_unit")):
+        try:
+            plan = build_event_response_plan(
+                frame, time_column=columns["x"], condition_column=columns["condition"],
+                mean_column=columns["mean"], lower_column=columns["lower"], upper_column=columns["upper"],
+                time_unit=declarations["time_unit"], response_unit=declarations["response_unit"],
+                interval_label=declarations["interval_label"],
+            )
+            layout = build_event_response_layout(plan, x_title, y_title)
+        except ValueError as exc:
+            raise ScientificWorkflowError("event_response_invalid", str(exc)) from exc
+        axis = ScientificAxisPlan(
+            *plan.x_range, _nice_number(plan.x_range[1] / 5 - plan.x_range[0] / 5, round_value=True),
+            *plan.y_range, _nice_number(plan.y_range[1] / 5 - plan.y_range[0] / 5, round_value=True),
+        )
+        display = replace(display, figure_style=layout.style)
+    return ScientificPlotSpec(
+        plot_kind="event_response", plot_mode="supplied_mean_interval",
+        x_column=columns["x"], category_column=columns["condition"],
+        series=(ScientificSeries(columns["mean"], "Supplied mean", lower_column=columns["lower"],
+                                 upper_column=columns["upper"], series_role="upstream_mean"),),
+        x_title=x_title, y_title=y_title, y2_title=None, x_scale="linear", y_scale="linear",
+        display_transform="identity", display_plan=display, axis_plan=axis,
+        event_response_plan=plan, event_response_layout=layout,
+    ), ()
+
+
 def _build_plot_spec(
     template_id: str,
     frame: pd.DataFrame,
@@ -6316,7 +6426,10 @@ def _build_plot_spec(
     plot_mode: str,
     *,
     source_profile: str | None = None,
+    scientific_context: tuple[tuple[str, str | int | float], ...] = (),
 ) -> tuple[ScientificPlotSpec, tuple[str, ...]]:
+    if template_id == "event_response":
+        return _build_event_response_spec(frame, assignments, scientific_context)
     if template_id == "event_raster":
         return _build_event_raster_spec(frame, assignments)
     if template_id == "signal_stack":
@@ -6374,6 +6487,15 @@ def _build_plot_spec(
 
 
 def _automatic_mapping(loaded: LoadedTable, template_id: str) -> _AutoMapping:
+    if template_id == "event_response":
+        aliases = {"x": {"time", "时间", "相对时间"}, "condition": {"condition", "条件", "组别"},
+                   "mean": {"mean", "均值", "平均值"}, "lower": {"lower", "下界", "下限"},
+                   "upper": {"upper", "上界", "上限"}}
+        assignments = {}
+        for column in loaded.columns:
+            base = _canonical(re.split(r"[（(\[【]", column, maxsplit=1)[0])
+            assignments[column] = next((role for role, names in aliases.items() if base in names), "ignored")
+        return _AutoMapping(assignments, "default", 0.95, (), ())
     if template_id == "event_raster":
         return _automatic_event_raster_mapping(loaded)
     if template_id == "signal_stack":
@@ -6458,10 +6580,20 @@ def prepare_scientific(
     else:
         assignments, plot_mode = _validate_assignment_shape(loaded, template_id, column_mapping)
         assignments = {column: assignments[column] for column in loaded.columns}
+    try:
+        scientific_context = normalize_scientific_context(
+            template_id, column_mapping.scientific_context if column_mapping is not None else (),
+        )
+    except ScientificContextError as exc:
+        raise ScientificWorkflowError(exc.code, str(exc)) from exc
+    if template_id == "event_response":
+        scientific_context = _resolve_event_response_context(assignments, scientific_context)
     # Physical-cell validation must see Excel's original bool/date types.
     # The source-bound reload still creates a numeric working copy for COM.
     frame = (
-        loaded.copy_frame() if template_id in {"time_frequency", "signal_stack", "flim_phasor", "event_raster"}
+        loaded.copy_frame() if template_id in {
+            "time_frequency", "signal_stack", "flim_phasor", "event_raster", "event_response",
+        }
         else _coerced_selected_frame(loaded, assignments)
     )
     source_profile = detect_xrd_source_profile(loaded) if template_id == "xrd" else None
@@ -6471,6 +6603,7 @@ def prepare_scientific(
         assignments,
         plot_mode,
         source_profile=source_profile,
+        scientific_context=scientific_context,
     )
 
     warnings = list(automatic.warnings if column_mapping is None else ())
@@ -6479,7 +6612,15 @@ def prepare_scientific(
         warnings.append("empty_rows_ignored")
     warnings = list(dict.fromkeys(warnings))
     confirmation_reasons = automatic.reasons if column_mapping is None else ()
-    requires_confirmation = bool(confirmation_reasons) and not mapping_confirmed
+    if template_id == "event_response":
+        declared = dict(scientific_context)
+        confirmation_reasons = (*confirmation_reasons, *(
+            f"scientific_context_missing:{name}" for name in ("interval_label", "time_unit", "response_unit")
+            if name not in declared
+        ))
+    requires_confirmation = bool(confirmation_reasons) and (
+        not mapping_confirmed or template_id == "event_response"
+    )
     confidence = 1.0 if mapping_confirmed else automatic.confidence
     digest_payload = {
         "template_id": template_id,
@@ -6489,12 +6630,15 @@ def prepare_scientific(
         "plot_spec": _plot_digest_payload(spec),
         "mapping_confirmed": mapping_confirmed,
     }
+    if scientific_context:
+        digest_payload["scientific_context"] = dict(scientific_context)
     plan_digest = hashlib.sha256(
         json.dumps(digest_payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
     ).hexdigest()
     return ScientificPreparation(
         template_id=template_id,
         source_path=loaded.source_path,
+        scientific_context=scientific_context,
         source_sha256=loaded.source_sha256,
         source_size_bytes=loaded.source_size_bytes,
         source_format=loaded.source_format,
