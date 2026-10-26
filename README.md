@@ -1,20 +1,22 @@
 <div align="center">
   <img src="runtime/src/origin_sciplot/resources/app_icon.png" width="64" alt="EditaPlot 图标">
   <h1>EditaPlot · 艾迪图</h1>
-  <p><strong>先看懂数据，再生成可编辑的 Origin 科研图</strong></p>
-  <p>给 Codex 一份表格，确认数据用途，拿到 OPJU 与 PNG / PDF / TIF。</p>
+  <p><strong>把表格交给 Codex，把可编辑的科研图带回 Origin</strong></p>
+  <p>理解数据 · 选择表达 · 定制样式 · 检查交付</p>
   <p>
     <img alt="Apache-2.0 开源" src="https://img.shields.io/badge/license-Apache--2.0-0f766e?style=flat-square">
     <img alt="Windows 10/11 x64" src="https://img.shields.io/badge/Windows-10%2F11%20x64-315b7d?style=flat-square">
     <img alt="Python 3.11–3.12" src="https://img.shields.io/badge/Python-3.11%E2%80%933.12-315b7d?style=flat-square">
     <a href="https://github.com/hang-jin/editaplot"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/hang-jin/editaplot?style=social"></a>
   </p>
-  <p><a href="#开始使用">开始使用</a> · <a href="docs/gallery.md">看图选模板</a> · <a href="docs/quickstart.zh-CN.md">中文教程</a> · <a href="README.en.md">English</a></p>
+  <p><a href="#开始使用">三步开始</a> · <a href="docs/gallery.md">看图选模板</a> · <a href="#三种常用提问直接复制">复制提示词</a> · <a href="docs/quickstart.zh-CN.md">完整教程</a> · <a href="README.en.md">English</a></p>
 </div>
 
-我把 EditaPlot 做成了一个面向 Codex 的科研绘图 Skill：先说明每列数据的作用，再选图、确认、调用本机 Origin，最后检查交付结果。你负责科学判断，程序负责把确认过的表达落到可继续编辑的图里。
+我做 EditaPlot，是想少花一些时间反复调图，多留一些时间讨论数据本身。你把表格和想表达的问题告诉 Codex，它会先说明每列的用途，等你确认后，再调用本机 Origin 绘图和检查结果。
 
-**适用环境：Windows 10/11 x64 实体电脑 + Codex + 本机 Origin/OriginPro。** Mac、Linux、WSL 和虚拟机暂不支持。日常使用不需要先手动打开 Origin。
+它是一个 **Codex Skill，不是独立绘图软件**。你仍然可以在 Origin 中继续编辑曲线、坐标轴和图例；配色、线宽与版式也可以在已支持的范围内按你的需求调整。
+
+**使用前提：Windows 10/11 x64 实体电脑 + Codex + 本机 Origin/OriginPro。** 日常使用不需要提前打开 Origin；Mac、Linux、WSL 和虚拟机暂不支持。
 
 ## 先看看能画什么
 
@@ -33,25 +35,25 @@
   </tr>
   <tr>
     <td width="50%" align="center" valign="top">
-      <a href="assets/gallery/time-frequency.png"><img src="assets/gallery/time-frequency.png" width="420" alt="真实 Origin 预处理时频矩阵及独立数值色标，合成教学数据"></a><br>
-      <strong>预处理时频矩阵</strong><br>
-      <sub>保留全部网格、物理坐标和单位，使用独立色标。</sub>
+      <a href="assets/gallery/shap-dashboard-blue-red.png"><img src="assets/gallery/shap-dashboard-blue-red.png" width="420" alt="真实 Origin SHAP 特征重要性、分组贡献环图与蜂群分栏，合成教学数据"></a><br>
+      <strong>SHAP：重要性、贡献与蜂群</strong><br>
+      <sub>使用上游已提供的逐样本 SHAP；绘图层不训练模型。</sub>
     </td>
     <td width="50%" align="center" valign="top">
-      <a href="assets/gallery/flim-phasor.png"><img src="assets/gallery/flim-phasor.png" width="420" alt="真实 Origin FLIM G-S 相量点云及数学参考半圆，合成教学数据"></a><br>
-      <strong>FLIM G–S 相量</strong><br>
-      <sub>显示上游提供的相量坐标，不从原图反演寿命。</sub>
+      <a href="assets/gallery/heatmap-dense-30x30.png"><img src="assets/gallery/heatmap-dense-30x30.png" width="420" alt="真实 Origin 30乘30高密度热力图与独立色标，900个合成教学源值"></a><br>
+      <strong>30 × 30 高密度热力图</strong><br>
+      <sub>保留全部 900 个源值与行列顺序，不插值、不自动聚类。</sub>
     </td>
   </tr>
 </table>
 
 这些示例都用**合成教学数据，由真实 Origin 生成**，不代表实验或临床结论。点击图片可以看原图。
 
-**[浏览全部 45 条绘图路线 →](docs/gallery.md)**　[English gallery](docs/gallery.en.md)
+**[浏览全部 45 条绘图路线 →](docs/gallery.md)**　[荧光 / EEG 研究信号](docs/research_signals.md)　[English gallery](docs/gallery.en.md)
 
 ## 开始使用
 
-### 1. 让 Codex 安装完整仓库
+### 1 / 安装：这段话交给 Codex
 
 不会 GitHub 也没关系，把下面这段话复制给 Codex：
 
@@ -73,29 +75,36 @@
 git clone https://github.com/hang-jin/editaplot.git
 Set-Location editaplot
 .\editaplot.cmd setup
+.\editaplot.cmd doctor
 ~~~
 
 首次运行缺少兼容 Python 时，先按[安装指南](docs/installation.md)完成确认与配置。项目依赖只进入本项目环境，不修改全局 Python。
 
 </details>
 
-### 2. 附上表格，说清楚想表达什么
+### 2 / 提供数据：说清楚想比较什么
 
 在新的 Codex 对话中使用 <code>$editaplot</code>，附上 CSV、TXT、XLS 或 XLSX。可以先这样说：
 
 ~~~text
-请用 $editaplot 处理这份数据，不要修改原文件。
-先用中文说明每列用途，推荐 1–3 种合适的图，并列出需要我确认的单位、误差和图形元素。
-我确认后，再调用 Origin 绘图，交付可编辑 OPJU、PNG、PDF、TIF，并检查轴、字体和视觉结果。
+请用 $editaplot 看这份数据，先不要画图，也不要修改原文件。
+请用中文说明每列用途，推荐最多三种合适的图，并告诉我还需要确认什么。
 ~~~
 
 支持中文列名和中文路径。不确定该画哪种图，就让它先推荐；已经有目标，也可以直接说“分组箱线图”“XPS 多谱线对比”或“预计算 SHAP”。
 
-医学数据和参考图请先按机构要求去标识化，并检查图像中的身份文字。EditaPlot **不承诺自动发现 PHI**。
+不会整理列名？可以先打开[对应模板的数据样例](docs/gallery.md)，也可以让 Codex 解释现有表格与样例的差异。需要的辅助列只在内存或可编辑 Origin 工作簿中创建，原文件保持不变。
 
-### 3. 确认表达，收下可编辑结果
+### 3 / 确认绘图：收下可继续编辑的结果
 
-确认清单会说明：**哪些列画出来，哪些只作辅助，哪些保留但不画，哪些还需要问清楚**。原文件没有的测量值、分峰和误差不会被补造。
+确认组别、单位、误差含义和要呈现的图形元素后，就可以继续说：
+
+~~~text
+按刚才确认的方案调用 Origin 绘图，导出可编辑 OPJU 和 PNG、PDF、TIF。
+请检查数据映射、坐标轴、字体和导出后的视觉效果，最后简要告诉我输出位置与检查结果。
+~~~
+
+我会让 Skill 先完成本机绘图检查，再处理正式数据；不会补造原文件没有的测量值、分峰或误差。
 
 正式结果默认集中保存在原始数据旁的新文件夹中：
 
@@ -110,7 +119,7 @@ Set-Location editaplot
   ……反读与验证报告
 ~~~
 
-完成后可以保留 Origin 可编辑窗口，继续调整图例等细节。图例遮挡允许后续手动调整；缺轴、错字体、色标重叠或文字裁切仍需要修正。完整教程见[中文快速开始](docs/quickstart.zh-CN.md)。
+想在 Origin 里接着改，就补一句“完成后保留可编辑窗口”。**有图片不等于已经完成**：正式交付还需要真实的 OPJU、其他导出格式以及数据和图形检查。完整过程见[中文教程](docs/quickstart.zh-CN.md)。
 
 <details>
 <summary>已经安装旧版，怎样更新？</summary>
@@ -120,6 +129,30 @@ Set-Location editaplot
 当前安全运行时使用 Python 3.11/3.12 与 Pillow 13，新建环境优先 3.12；Python 3.10 不再承载当前依赖。旧项目环境和替换下来的 Skill 会保留为备份，不会悄悄退回旧依赖。旧方案若提示 <code>analysis_changed</code>，请重新理解、确认并生成方案，不要手改 JSON。
 
 </details>
+
+## 三种常用提问，直接复制
+
+### 不确定该画什么
+
+~~~text
+请用 $editaplot 只读分析这份表格。我想比较不同组的差异，暂时没有确定图形。
+请推荐最多三种表达方式，说明各自需要哪些列，等我确认后再绘图。
+~~~
+
+### 已经知道要画什么
+
+~~~text
+请用 $editaplot 画分组箱线图，并叠加原始观测点。
+先确认分组、纵轴单位、每个观测的含义与样本量，不要自动添加显著性标记。
+~~~
+
+### 想参考一张图的风格
+
+~~~text
+请用 $editaplot 参考这张图的配色、线宽和布局，数据只用我提供的表格。
+先列出当前模板能采用的样式、保留的默认值和无法实现的部分，等我确认后再画。
+不要复制参考图的数据、结论、样品名或水印。
+~~~
 
 ## 按你的数据选择模板
 
@@ -140,11 +173,11 @@ XPS、GSAS、SHAP、寿命或带隙等有专门的科学边界。绘图层不会
 
 可以选择**模板默认、参考图建议、精确自定义**三种方式。你的明确选择优先；参考图只提供可采用的图形语法与风格，不复制它的数据、结论、样品名或水印。
 
-例如：“Raw 用 <code>#173F5F</code>、线宽 <code>2.4 pt</code>、填充透明度 <code>38%</code>、画幅 <code>18 × 18 cm</code>，隐藏图例。”Codex 会核对该模板是否支持，并逐项记录采用、保留默认或拒绝，不把不支持的参数装成已经生效。
+例如在 XPS 中说：“Raw 用 <code>#173F5F</code>、线宽 <code>2.4 pt</code>、填充透明度 <code>38%</code>、画幅 <code>18 × 18 cm</code>，隐藏图例。”不同模板支持的调整项不同；Codex 会逐项说明采用、保留默认或拒绝，不把不支持的参数装成已经生效。
 
 [查看中文配色卡](docs/palette-guide.md) · [参考图与精确样式规则](skill/editaplot/references/reference-figures.md)
 
-## 环境与权限
+## 使用前，知道这几件事就够了
 
 | 项目 | 当前范围 |
 |---|---|
@@ -154,7 +187,7 @@ XPS、GSAS、SHAP、寿命或带隙等有专门的科学边界。绘图层不会
 | 当前实机基线 | Python 3.12.14 + Pillow 13.0.0 + Origin 2024b（10.15.132），已完成 6 个代表案例回归；其他环境需先过 smoke 与模板能力检查 |
 | 安装内容 | 完整仓库与项目隔离依赖；不捆绑、安装或修改 Origin |
 
-**只给当前任务需要的权限**：读取仓库和选定数据；写入仓库、当前用户的 <code>$HOME\.codex\skills\editaplot</code> 及原始数据父文件夹；运行本地命令与自有 Origin 实例。联网主要用于下载、更新和锁定依赖安装。
+**权限只给本次任务需要的范围**：读取仓库和选定数据；写入项目、当前用户的 <code>$HOME\.codex\skills\editaplot</code> 及数据所在文件夹；运行本地命令与专用 Origin 实例。下载和更新依赖时需要联网。
 
 普通使用不需要管理员权限、鼠标控制、全盘写入或 DCOM、注册表、防火墙修改。遇到输出目录受保护时，只处理当前文件夹或明确指定另一个可写位置。
 
@@ -167,7 +200,17 @@ XPS、GSAS、SHAP、寿命或带隙等有专门的科学边界。绘图层不会
 
 </details>
 
-本地 runtime 与 Origin 自动化**不会主动把你的数据上传到网络**；但你交给 Codex 的文件仍受当前账号、组织和数据保留政策约束。详见[隐私说明](PRIVACY.md)。
+**涉及隐私的数据先去标识化**，包括参考图里残留的姓名、编号等文字；我不承诺自动发现 PHI 或其他全部敏感信息。本地绘图程序不会主动把你的数据上传到网络，但交给 Codex 的文件仍受当前账号、组织和数据保留政策约束。详见[隐私说明](PRIVACY.md)。
+
+<details>
+<summary>常见疑问：卡住、排队、参考图没完全照着画？</summary>
+
+- **安装或绘图一直不动**：先看最后停在哪一步，不要反复提交。环境与确认都已完成后，4–5 分钟是合理的本地流程参考，不是时限保证；无新进度却持续几十分钟时请让 Codex 按[分阶段排障](docs/installation.md#runtime-duration)检查。
+- **同时开多个对话**：数据分析可以并行；同一 Windows 会话里的新版 EditaPlot 会让真正调用 Origin 的步骤排队，不要把等待提示当作失败。
+- **参考图不能完全照搬**：参考图是视觉简报，不是任意图片一键复制。可支持的配色、线宽等可以定制，数据含义和已验证的绘图能力仍然是边界。
+- **如何反馈问题**：告诉我 Windows / Origin 版本、最后的简短错误和能公开的最小样例即可。不要公开整份实验数据、病历、凭据或私人路径。
+
+</details>
 
 ## 继续了解
 
