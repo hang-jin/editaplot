@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="280" viewBox="0 0 760 280" role="img">
+  <title>EditaPlot GitHub Star trend</title>
+  <desc>Anonymous daily aggregate Star totals for hang-jin/editaplot; no account-level data.</desc>
+  <defs>
+    <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2563eb" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+  <rect width="760" height="280" rx="18" fill="#ffffff"/>
+  <rect x="18" y="20" width="724" height="244" rx="15" fill="#cbd5e1" opacity="0.18"/>
+  <rect x="16" y="16" width="728" height="248" rx="15" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="42" y="48" fill="#0f172a" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="19" font-weight="700">GitHub Star Trend</text>
+  <text x="42" y="68" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11.5">Daily aggregate only · no account data</text>
+  <rect x="622" y="34" width="94" height="38" rx="11" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="669" y="59" text-anchor="middle" fill="#1d4ed8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="21" font-weight="750">1054</text>
+  <line x1="86.0" y1="220.0" x2="726.0" y2="220.0" stroke="#dbe4ee" stroke-width="1" stroke-dasharray="3 5"/>
+  <text x="72" y="224.0" text-anchor="end" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">0</text>
+  <line x1="86.0" y1="150.9" x2="726.0" y2="150.9" stroke="#dbe4ee" stroke-width="1" stroke-dasharray="3 5"/>
+  <text x="72" y="154.9" text-anchor="end" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">620</text>
+  <line x1="86.0" y1="82.0" x2="726.0" y2="82.0" stroke="#dbe4ee" stroke-width="1" stroke-dasharray="3 5"/>
+  <text x="72" y="86.0" text-anchor="end" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">1239</text>
+  <line x1="86.0" y1="220.0" x2="726.0" y2="220.0" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="86.0" y="246" text-anchor="middle" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">2026-07-22</text>
+  <path data-role="trend-area" d="M 86.0,220.0 L 86.0,216.5 L 92.3,215.3 L 98.7,214.2 L 105.0,212.9 L 111.3,212.9 L 117.7,212.0 L 124.0,211.3 L 130.4,210.5 L 136.7,209.6 L 143.0,208.4 L 149.4,207.7 L 155.7,207.2 L 162.0,206.7 L 168.4,205.7 L 174.7,205.1 L 181.0,204.5 L 187.4,204.2 L 193.7,203.7 L 200.1,203.5 L 206.4,203.2 L 212.7,203.1 L 219.1,202.4 L 225.4,202.1 L 231.7,201.4 L 238.1,201.4 L 244.4,201.1 L 250.8,201.0 L 257.1,200.5 L 263.4,200.1 L 269.8,200.0 L 276.1,199.8 L 282.4,199.4 L 288.8,199.3 L 295.1,199.1 L 301.4,198.8 L 307.8,198.2 L 314.1,197.5 L 320.5,197.3 L 326.8,197.3 L 333.1,196.9 L 339.5,196.4 L 345.8,190.8 L 352.1,180.9 L 358.5,174.2 L 364.8,170.7 L 371.1,166.8 L 377.5,163.6 L 383.8,161.2 L 390.2,159.2 L 396.5,157.7 L 402.8,156.5 L 409.2,154.7 L 415.5,153.4 L 421.8,152.3 L 428.2,150.8 L 434.5,149.2 L 440.9,147.4 L 447.2,146.3 L 453.5,145.4 L 459.9,144.0 L 466.2,143.1 L 472.5,142.5 L 478.9,140.4 L 485.2,138.8 L 491.5,136.8 L 497.9,135.8 L 504.2,134.8 L 510.6,133.9 L 516.9,132.5 L 523.2,131.0 L 529.6,130.1 L 535.9,129.3 L 542.2,128.8 L 548.6,128.3 L 554.9,127.7 L 561.2,127.0 L 567.6,126.3 L 573.9,125.9 L 580.3,124.8 L 586.6,123.8 L 592.9,122.4 L 599.3,121.1 L 605.6,120.4 L 611.9,118.1 L 618.3,117.3 L 624.6,116.3 L 631.0,115.0 L 637.3,114.2 L 643.6,113.9 L 650.0,112.9 L 656.3,112.3 L 662.6,111.5 L 669.0,110.6 L 675.3,110.1 L 681.6,109.6 L 688.0,109.0 L 694.3,108.0 L 700.7,107.1 L 707.0,105.5 L 713.3,104.5 L 719.7,103.2 L 726.0,102.6 L 726.0,220.0 Z" fill="url(#trendFill)"/>
+  <polyline data-role="trend-line" points="86.0,216.5 92.3,215.3 98.7,214.2 105.0,212.9 111.3,212.9 117.7,212.0 124.0,211.3 130.4,210.5 136.7,209.6 143.0,208.4 149.4,207.7 155.7,207.2 162.0,206.7 168.4,205.7 174.7,205.1 181.0,204.5 187.4,204.2 193.7,203.7 200.1,203.5 206.4,203.2 212.7,203.1 219.1,202.4 225.4,202.1 231.7,201.4 238.1,201.4 244.4,201.1 250.8,201.0 257.1,200.5 263.4,200.1 269.8,200.0 276.1,199.8 282.4,199.4 288.8,199.3 295.1,199.1 301.4,198.8 307.8,198.2 314.1,197.5 320.5,197.3 326.8,197.3 333.1,196.9 339.5,196.4 345.8,190.8 352.1,180.9 358.5,174.2 364.8,170.7 371.1,166.8 377.5,163.6 383.8,161.2 390.2,159.2 396.5,157.7 402.8,156.5 409.2,154.7 415.5,153.4 421.8,152.3 428.2,150.8 434.5,149.2 440.9,147.4 447.2,146.3 453.5,145.4 459.9,144.0 466.2,143.1 472.5,142.5 478.9,140.4 485.2,138.8 491.5,136.8 497.9,135.8 504.2,134.8 510.6,133.9 516.9,132.5 523.2,131.0 529.6,130.1 535.9,129.3 542.2,128.8 548.6,128.3 554.9,127.7 561.2,127.0 567.6,126.3 573.9,125.9 580.3,124.8 586.6,123.8 592.9,122.4 599.3,121.1 605.6,120.4 611.9,118.1 618.3,117.3 624.6,116.3 631.0,115.0 637.3,114.2 643.6,113.9 650.0,112.9 656.3,112.3 662.6,111.5 669.0,110.6 675.3,110.1 681.6,109.6 688.0,109.0 694.3,108.0 700.7,107.1 707.0,105.5 713.3,104.5 719.7,103.2 726.0,102.6" fill="none" stroke="#2563eb" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <text x="726.0" y="246" text-anchor="end" fill="#64748b" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11">2026-10-31</text>
+  <circle data-role="series-point" data-date="2026-07-22" data-stars="31" cx="86.0" cy="216.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-23" data-stars="42" cx="92.3" cy="215.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-24" data-stars="52" cx="98.7" cy="214.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-25" data-stars="64" cx="105.0" cy="212.9" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-26" data-stars="64" cx="111.3" cy="212.9" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-27" data-stars="72" cx="117.7" cy="212.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-28" data-stars="78" cx="124.0" cy="211.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-29" data-stars="85" cx="130.4" cy="210.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-30" data-stars="93" cx="136.7" cy="209.6" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-07-31" data-stars="104" cx="143.0" cy="208.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-01" data-stars="110" cx="149.4" cy="207.7" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-02" data-stars="115" cx="155.7" cy="207.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-03" data-stars="119" cx="162.0" cy="206.7" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-04" data-stars="128" cx="168.4" cy="205.7" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-05" data-stars="134" cx="174.7" cy="205.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-06" data-stars="139" cx="181.0" cy="204.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-07" data-stars="142" cx="187.4" cy="204.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-08" data-stars="146" cx="193.7" cy="203.7" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-09" data-stars="148" cx="200.1" cy="203.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-10" data-stars="151" cx="206.4" cy="203.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-11" data-stars="152" cx="212.7" cy="203.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-12" data-stars="158" cx="219.1" cy="202.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-13" data-stars="161" cx="225.4" cy="202.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-14" data-stars="167" cx="231.7" cy="201.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-15" data-stars="167" cx="238.1" cy="201.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-16" data-stars="170" cx="244.4" cy="201.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-17" data-stars="171" cx="250.8" cy="201.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-18" data-stars="175" cx="257.1" cy="200.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-19" data-stars="179" cx="263.4" cy="200.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-20" data-stars="180" cx="269.8" cy="200.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-21" data-stars="181" cx="276.1" cy="199.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-22" data-stars="185" cx="282.4" cy="199.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-23" data-stars="186" cx="288.8" cy="199.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-24" data-stars="188" cx="295.1" cy="199.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-25" data-stars="190" cx="301.4" cy="198.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-26" data-stars="196" cx="307.8" cy="198.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-27" data-stars="202" cx="314.1" cy="197.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-28" data-stars="204" cx="320.5" cy="197.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-29" data-stars="204" cx="326.8" cy="197.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-30" data-stars="207" cx="333.1" cy="196.9" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-08-31" data-stars="212" cx="339.5" cy="196.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-01" data-stars="262" cx="345.8" cy="190.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-02" data-stars="351" cx="352.1" cy="180.9" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-03" data-stars="411" cx="358.5" cy="174.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-04" data-stars="443" cx="364.8" cy="170.7" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-05" data-stars="478" cx="371.1" cy="166.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-06" data-stars="506" cx="377.5" cy="163.6" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-07" data-stars="528" cx="383.8" cy="161.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-08" data-stars="546" cx="390.2" cy="159.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-09" data-stars="559" cx="396.5" cy="157.7" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-10" data-stars="570" cx="402.8" cy="156.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-11" data-stars="586" cx="409.2" cy="154.7" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-12" data-stars="598" cx="415.5" cy="153.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-13" data-stars="608" cx="421.8" cy="152.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-14" data-stars="621" cx="428.2" cy="150.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-15" data-stars="636" cx="434.5" cy="149.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-16" data-stars="652" cx="440.9" cy="147.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-17" data-stars="662" cx="447.2" cy="146.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-18" data-stars="670" cx="453.5" cy="145.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-19" data-stars="682" cx="459.9" cy="144.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-20" data-stars="690" cx="466.2" cy="143.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-21" data-stars="696" cx="472.5" cy="142.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-22" data-stars="715" cx="478.9" cy="140.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-23" data-stars="729" cx="485.2" cy="138.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-24" data-stars="747" cx="491.5" cy="136.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-25" data-stars="756" cx="497.9" cy="135.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-26" data-stars="765" cx="504.2" cy="134.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-27" data-stars="773" cx="510.6" cy="133.9" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-28" data-stars="786" cx="516.9" cy="132.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-29" data-stars="799" cx="523.2" cy="131.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-09-30" data-stars="807" cx="529.6" cy="130.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-01" data-stars="814" cx="535.9" cy="129.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-02" data-stars="819" cx="542.2" cy="128.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-03" data-stars="823" cx="548.6" cy="128.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-04" data-stars="829" cx="554.9" cy="127.7" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-05" data-stars="835" cx="561.2" cy="127.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-06" data-stars="841" cx="567.6" cy="126.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-07" data-stars="845" cx="573.9" cy="125.9" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-08" data-stars="855" cx="580.3" cy="124.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-09" data-stars="864" cx="586.6" cy="123.8" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-10" data-stars="876" cx="592.9" cy="122.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-11" data-stars="888" cx="599.3" cy="121.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-12" data-stars="894" cx="605.6" cy="120.4" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-13" data-stars="915" cx="611.9" cy="118.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-14" data-stars="922" cx="618.3" cy="117.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-15" data-stars="931" cx="624.6" cy="116.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-16" data-stars="943" cx="631.0" cy="115.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-17" data-stars="950" cx="637.3" cy="114.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-18" data-stars="953" cx="643.6" cy="113.9" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-19" data-stars="962" cx="650.0" cy="112.9" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-20" data-stars="967" cx="656.3" cy="112.3" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-21" data-stars="974" cx="662.6" cy="111.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-22" data-stars="982" cx="669.0" cy="110.6" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-23" data-stars="987" cx="675.3" cy="110.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-24" data-stars="991" cx="681.6" cy="109.6" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-25" data-stars="997" cx="688.0" cy="109.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-26" data-stars="1006" cx="694.3" cy="108.0" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-27" data-stars="1014" cx="700.7" cy="107.1" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-28" data-stars="1028" cx="707.0" cy="105.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-29" data-stars="1037" cx="713.3" cy="104.5" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-30" data-stars="1049" cx="719.7" cy="103.2" r="4.7" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <circle data-role="series-point" data-date="2026-10-31" data-stars="1054" cx="726.0" cy="102.6" r="6.4" fill="#ffffff" stroke="#2563eb" stroke-width="3"/>
+  <text x="724.0" y="90.6" text-anchor="end" fill="#0f172a" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">1054</text>
+  <text x="718" y="258" text-anchor="end" fill="#94a3b8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="9.5">hang-jin/editaplot</text>
+</svg>
